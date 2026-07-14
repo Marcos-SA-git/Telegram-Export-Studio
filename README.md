@@ -1,145 +1,123 @@
 # Telegram Export Studio
 
-**Fusiona, compacta y mejora exportaciones de chats de Telegram — 100% en local.
-Sin servidores, sin cuentas, sin telemetría: tus chats nunca salen de tu equipo.**
+*[Read this in English](README.en.md)*
 
-Telegram Desktop exporta los chats en HTML, pero cada export es una foto fija:
-si exportas el mismo chat varias veces a lo largo del tiempo acabas con carpetas
-duplicadas y solapadas. Telegram Export Studio las **fusiona** en un único
-historial sin duplicados, **compacta** las decenas de `messagesN.html` en las
-páginas que tú quieras, y **mejora** la visualización para que parezca un chat
-de verdad (burbujas, citas de respuesta, modo oscuro, vídeo y audio
-reproducibles…) — de forma **reversible**.
+**Fusiona, compacta y mejora tus exportaciones de chats de Telegram — 100% en local. Sin servidores, sin cuentas, sin telemetría: tus chats nunca salen de tu equipo.**
+
+Telegram Desktop exporta los chats en HTML, pero cada exportación es una foto fija: si exportas el mismo chat varias veces a lo largo del tiempo acabas con carpetas duplicadas y solapadas. Telegram Export Studio las **fusiona** en un único historial sin duplicados, **compacta** las decenas de archivos `messagesN.html` en las páginas que tú quieras, y **mejora** la visualización para que parezca un chat de verdad (burbujas, citas de respuesta, modo oscuro, vídeo y audio reproducibles…) de forma **reversible**, para poder deshacerlo cuando quieras.
+
+> **Importante — qué tipo de exportación acepta:** esta herramienta está pensada para exportaciones de **un chat concreto** (dentro del chat → menú de los tres puntos → *Exportar chat*), no para la exportación completa de todos tus datos de Telegram (*Ajustes → Avanzados → Exportar datos de Telegram*), que tiene una estructura distinta y no está soportada todavía. Ver el [issue de seguimiento](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/2) para esta funcionalidad futura.
 
 ## Privacidad, en serio
 
-- **Nada se sube a ningún sitio.** No hay backend: la versión de escritorio es
-  un servidor exclusivamente en `127.0.0.1`, y la versión web ejecuta el mismo
-  motor Python **dentro de tu navegador** vía WebAssembly (Pyodide).
-- **Código abierto y auditable.** Todo el procesado son cuatro scripts de
-  Python de biblioteca estándar, sin dependencias.
+- **Nada se sube a ningún sitio.** No hay backend: la versión de escritorio es un servidor que solo escucha en tu propio ordenador (`127.0.0.1`), y la versión web ejecuta el mismo motor Python **dentro de tu navegador** (WebAssembly, vía Pyodide).
+- **Código abierto y auditable.** Todo el procesado son cuatro scripts de Python con la biblioteca estándar, sin dependencias externas.
 - La versión web funciona incluso **sin conexión** una vez cargada.
 
-## Tres formas de usarlo
+## Cómo usarlo
 
-### 1 · Versión web (GitHub Pages) — sin instalar nada
+### Opción 1 · Versión web — sin instalar nada
 
-Abre la página publicada, pulsa *Iniciar* y elige tus carpetas de export.
-Requiere un navegador basado en Chromium (Chrome, Edge, Opera) por la File
-System Access API. El procesado corre íntegramente en tu navegador.
+Abre la [página publicada](https://marcos-sa-git.github.io/Telegram-Export-Studio/), pulsa *Iniciar* y elige tus carpetas de exportación. El procesado corre íntegramente en tu navegador; no se envía nada a ningún servidor.
 
-### 2 · Versión de escritorio All-In-One — un solo archivo para el usuario final
+Requiere un navegador basado en Chromium (Chrome, Edge, Opera) por la File System Access API.
 
-Pensada para quien solo quiere *usar* la herramienta, sin tocar código:
-un único archivo que llevarte, sin que importe la estructura del
-repositorio ni si tienes los cuatro módulos a mano.
+### Opción 2 · Aplicación de escritorio — un solo archivo, sin tocar código
 
-**Doble click (Windows):** descarga
-[`releases/Telegram Export Studio.pyw`](releases/Telegram%20Export%20Studio.pyw)
-y haz doble click — se abre la interfaz en tu navegador sin ninguna ventana de
-terminal (requiere tener Python 3.10+ instalado, con la casilla
-*"Add to PATH"* del instalador oficial).
+La forma más sencilla de usarlo si no quieres nada relacionado con programación. Descarga uno de estos archivos desde la [página de releases](https://github.com/Marcos-SA-git/Telegram-Export-Studio/releases/latest) y ya está:
 
-**Ejecutable .exe (Windows, sin Python):**
-`releases/TelegramExportStudio.exe` es la misma app compilada con
-PyInstaller (~11 MB, autocontenida) — ni siquiera necesitas Python
-instalado. Doble click y listo.
+- **`TelegramExportStudio.exe`** (Windows, sin necesidad de tener Python instalado): doble click y listo. Es la opción más cómoda si no quieres instalar nada más.
+  > Al ser un `.exe` sin firmar, puede que el antivirus o SmartScreen de Windows lo marquen como sospechoso la primera vez. Es un falso positivo habitual con este tipo de ejecutables; si prefieres evitarlo, usa la opción `.pyw` de abajo.
+- **`Telegram Export Studio.pyw`** (Windows, requiere Python 3.10+): doble click y se abre la interfaz en tu navegador, sin ninguna ventana de terminal. Necesitas tener [Python](https://www.python.org/downloads/) instalado marcando la casilla *"Add to PATH"* durante la instalación.
+- **`telegram_export_studio_aio.py`** (cualquier sistema operativo, requiere Python 3.10+): la misma app en un único archivo `.py`. Ejecútalo desde la terminal:
 
-> Nota: los .exe de PyInstaller sin firmar a veces disparan falsos
-> positivos en antivirus/SmartScreen. El `.pyw` o el `.py` no tienen ese
-> problema y son igual de cómodos si ya hay Python instalado.
+  ```bash
+  python telegram_export_studio_aio.py
+  ```
 
-**Desde la terminal (cualquier SO):** descarga
-[`releases/telegram_export_studio_aio.py`](releases/telegram_export_studio_aio.py)
-y ejecútalo (Python 3.10+, sin dependencias):
+  Esto abre la interfaz gráfica en tu navegador (en `localhost`, sin salir de tu equipo). En Windows también puedes usar `py telegram_export_studio_aio.py`; en macOS/Linux, `python3 telegram_export_studio_aio.py`.
+
+  Si prefieres la línea de comandos en vez de la interfaz gráfica, el mismo archivo admite subcomandos:
+
+  ```bash
+  python telegram_export_studio_aio.py fuse export1 export2 -o fusionado
+  python telegram_export_studio_aio.py compact fusionado --files 1
+  python telegram_export_studio_aio.py enhance fusionado --me "Tu Nombre"
+  python telegram_export_studio_aio.py enhance fusionado --restore
+  ```
+
+La interfaz está disponible en español, inglés, francés, alemán, portugués, italiano, ruso, chino, japonés, hindi y árabe (con diseño derecha-a-izquierda).
+
+## Referencia de la CLI
+
+Si prefieres la línea de comandos a la interfaz gráfica, estos son los tres comandos disponibles (con `telegram_export_studio_aio.py <comando> ...` o con el módulo suelto correspondiente — ver la tabla de la sección "Para desarrolladores").
+
+### `fuse` — fusionar varias exportaciones en una
 
 ```bash
-# interfaz gráfica en el navegador (localhost)
-python telegram_export_studio_aio.py
-
-# o por línea de comandos: mismos subcomandos que los módulos por
-# separado (ver la sección de abajo), reunidos en un solo archivo
-python telegram_export_studio_aio.py fuse export1 export2 -o fusionado
-python telegram_export_studio_aio.py compact fusionado --files 1
-python telegram_export_studio_aio.py enhance fusionado --me "Tu Nombre"
-python telegram_export_studio_aio.py enhance fusionado --restore
+python telegram_export_studio_aio.py fuse export1 export2 [export3 …] -o carpeta_salida [-s TAMAÑO] [-f]
 ```
 
-En Windows: `py telegram_export_studio_aio.py` · macOS/Linux:
-`python3 telegram_export_studio_aio.py`
+- `export1 export2 …` (obligatorio): carpetas de exportación de Telegram a fusionar, cada una con su `messages.html`. Puedes indicar dos o más.
+- `-o, --output CARPETA`: carpeta donde se escribe el resultado fusionado. Por defecto, `ChatExport_merged`.
+- `-s, --page-size TAMAÑO`: tamaño aproximado de cada página `messagesN.html` de salida, por ejemplo `500KB` o `1MB`; con `0` se genera un único archivo sin paginar. Por defecto, `500KB`.
+- `-f, --force`: fusiona igualmente aunque las exportaciones parezcan pertenecer a chats distintos (por ejemplo, si tienen títulos diferentes). Sin este flag, el programa se detiene y avisa para evitar mezclar chats por error.
 
-#### ¿Por qué existe el All-In-One, y qué hace `build_aio.py`?
+### `compact` — reducir el número de páginas de un export ya fusionado
 
-El proyecto está escrito como cuatro módulos independientes (ver más
-abajo) porque así es más fácil de mantener y de leer. Pero repartir
-cuatro archivos que se importan entre sí es incómodo para quien solo
-quiere descargar *una cosa* y que funcione. `build_aio.py` resuelve
-eso: toma los cuatro módulos fuente, quita los `import` cruzados entre
-ellos, renombra sus `main()` para que no choquen entre sí y los
-concatena en un único archivo autocontenido con un punto de entrada
-que decide, según el primer argumento, si arrancar la interfaz gráfica
-o actuar como CLI de fusión/compactación/mejora. A partir de ese mismo
-archivo genera también la copia `.pyw` (idéntica, pero con la
-extensión que Windows asocia a `pythonw.exe`, así no aparece ninguna
-consola) y, si tienes `pyinstaller` instalado (`pip install
-pyinstaller`), el `.exe` autocontenido.
+```bash
+python telegram_export_studio_aio.py compact carpeta [--files N | --size TAMAÑO]
+```
 
-En resumen: **los módulos son el código fuente real** (lo que editas)
-y **el All-In-One es un artefacto generado** (lo que descarga el
-usuario final). Cada vez que cambies algo en los módulos, vuelve a
-ejecutar `python build_aio.py` para que las tres variantes de
-`releases/` se actualicen a la vez. Nunca edites
-`telegram_export_studio_aio.py` a mano: el propio archivo lo avisa en
-su cabecera, y el siguiente `build_aio.py` sobrescribiría el cambio.
+- `carpeta` (obligatorio): la carpeta del export que quieres repaginar (contiene los `messages*.html`).
+- `-f, --files N`: número máximo de páginas de salida. Por defecto, `1` (todo en un único `messages.html`).
+- `-s, --size TAMAÑO`: en vez de fijar un número de páginas, fija su tamaño aproximado, por ejemplo `5MB`.
+- `--files` y `--size` son excluyentes entre sí: se usa uno u otro, nunca los dos a la vez.
 
-La versión web (GitHub Pages) tiene su propio generador,
-`build_pages.py`, y se actualiza sola — ver la tabla de abajo.
+Esta operación reescribe los `messages*.html` in situ; no toca fotos, vídeos ni audios.
 
-### 3 · Módulos separados — el código fuente
+### `enhance` — mejorar (o revertir) la visualización
 
-Pensada para quien quiere *entender*, *modificar* o *automatizar* con
-piezas concretas, en vez de la app entera. Cada módulo hace una sola
-cosa y se puede usar solo, por línea de comandos, sin ninguno de los
-otros tres:
+```bash
+python telegram_export_studio_aio.py enhance carpeta [--me "Tu Nombre"] [--layout both|chat|original] [--no-bubbles] [--no-quotes] [--no-theme] [--no-media] [--no-note] [--no-fullwidth] [--restore]
+```
 
-| Script | Por qué es un módulo aparte | Uso por CLI |
-|---|---|---|
-| `telegram_export_fuser.py` | El corazón del proyecto: dedup por id de mensaje, re-paginado estilo Telegram y copiado de media. Útil suelto cuando solo quieres fusionar, por ejemplo en un script propio o una tarea programada. | `python telegram_export_fuser.py export1 export2 [export3 …] -o carpeta_salida [--page-size 500KB\|1MB\|0] [-f]` — avisa si los exports parecen de chats distintos; `-f`/`--force` fusiona igualmente. |
-| `telegram_export_compactor.py` | Repaginar es una operación distinta a fusionar (no dedup, no copia media) y a veces la quieres sin pasar por una fusión completa — por ejemplo, para reducir un historial ya fusionado antes de compartirlo. | `python telegram_export_compactor.py carpeta [--files N \| --size 5MB]` — reescribe los `messages*.html` in situ; las fotos, vídeos y audios no se tocan. |
-| `telegram_export_enhancer.py` | La visualización es opcional y reversible por diseño: quien solo quiere el HTML plano de Telegram no necesita este módulo, y quien lo usa puede deshacerlo por completo en cualquier momento. | `python telegram_export_enhancer.py carpeta [--me "Tu Nombre"] [--layout both\|chat\|original] [--no-bubbles] [--no-quotes] [--no-theme] [--no-media] [--no-note] [--no-fullwidth]` · para deshacer todo: `python telegram_export_enhancer.py carpeta --restore` |
-| `telegram_export_studio.py` | La interfaz gráfica es una capa por encima de los otros tres; separarla permite usarlos sin servidor ni navegador (por ejemplo en remoto por SSH) y probarlos de forma aislada. | `python telegram_export_studio.py` — arranca el servidor local y abre el navegador; toda la interacción es desde ahí (incluido cerrar el servidor cuando termines, con el botón de la interfaz). |
-
-Cada módulo importa de los otros solo lo estrictamente necesario
-(p. ej. el enhancer reutiliza los parsers del fuser) — así que si
-alguna vez quieres construir tu propia herramienta con una sola pieza,
-puedes importar el módulo Python directamente en vez de invocarlo por
-CLI.
-
-La versión web usa exactamente estos mismos tres módulos (sin
-`telegram_export_studio.py`: no hay servidor en el navegador). Las
-páginas en sí (`web/index.html`, `web/app.html`) sí se mantienen a
-mano, pero las copias del motor nunca se commitean: un workflow de
-GitHub Actions (`.github/workflows/deploy-pages.yml`) ejecuta
-`build_pages.py` en cada push que toque un módulo o `web/`, junta todo
-en `_site/` y lo publica en GitHub Pages automáticamente — no hay
-ningún paso manual de "subir a Pages" que recordar. `build_pages.py`
-también se puede ejecutar en local solo para previsualizar antes de
-pushear.
-
-Idiomas de la interfaz (escritorio, web y landing): español, inglés,
-francés, alemán, portugués, italiano, ruso, chino, japonés, hindi y
-árabe (con diseño derecha-a-izquierda).
+- `carpeta` (obligatorio): la carpeta del export a mejorar (contiene los `messages*.html`).
+- `--me "Tu Nombre"`: tu nombre tal y como aparece en el chat exportado. Necesario si usas la disposición `chat`, para que el programa sepa qué mensajes son tuyos y colocarlos a la derecha.
+- `--layout {both,chat,original}`: disposición visual. `chat` muestra tus mensajes a la derecha como en la app de Telegram; `original` conserva el ancho completo tal cual lo exporta Telegram; `both` (por defecto) añade un conmutador para alternar entre las dos sin volver a procesar nada.
+- `--no-bubbles`: desactiva las burbujas y el fondo de chat.
+- `--no-quotes`: desactiva las citas de respuesta (el fragmento del mensaje citado al responder).
+- `--no-theme`: desactiva el conmutador de modo claro/oscuro.
+- `--no-media`: desactiva la reproducción en línea de vídeo/audio y el visor de fotos.
+- `--no-note`: omite la nota final con instrucciones que añade el enhancer al export.
+- `--no-fullwidth`: mantiene la columna de mensajes centrada en vez de ocupar toda la pantalla.
+- `--restore`: deshace todas las mejoras aplicadas y devuelve el export a su HTML original exacto, sin pérdidas. Incompatible con el resto de flags (no hace falta combinarlo con nada).
 
 ## Compatibilidad
 
-- Los exports mejorados siguen siendo fusionables y compactables (y viceversa),
-  en cualquier orden. "Desmejorar" devuelve el HTML original exacto.
-- Las notas de voz `.ogg` no se reproducen en Safari (códec Opus); en
-  Chrome/Firefox/Edge sí.
-- La app web necesita Chromium; la de escritorio funciona con cualquier
-  navegador moderno.
+- Los exports mejorados siguen siendo fusionables y compactables (y viceversa), en cualquier orden. "Desmejorar" (`--restore`) devuelve el HTML original exacto, sin pérdidas.
+- Las notas de voz `.ogg` no se reproducen en Safari (por el códec Opus); en Chrome, Firefox y Edge sí.
+- La app web necesita un navegador basado en Chromium; la de escritorio funciona con cualquier navegador moderno.
+
+## Para desarrolladores
+
+El proyecto está escrito como cuatro módulos de Python independientes, cada uno con una sola responsabilidad y usable por su cuenta desde la línea de comandos:
+
+| Script | Qué hace |
+|---|---|
+| `telegram_export_fuser.py` | Fusiona varias exportaciones en una sola: deduplica por id de mensaje, re-pagina al estilo Telegram y copia la media. `python telegram_export_fuser.py export1 export2 [export3 …] -o carpeta_salida [--page-size 500KB\|1MB\|0] [-f]` |
+| `telegram_export_compactor.py` | Re-pagina un historial ya fusionado sin tocar la media. `python telegram_export_compactor.py carpeta [--files N \| --size 5MB]` |
+| `telegram_export_enhancer.py` | Aplica (o revierte) la visualización mejorada. `python telegram_export_enhancer.py carpeta [--me "Tu Nombre"] [--layout both\|chat\|original] [--restore]` |
+| `telegram_export_studio.py` | Interfaz gráfica local por encima de los tres anteriores: arranca un servidor en `127.0.0.1` y abre el navegador. |
+
+Los archivos de `releases/` (`telegram_export_studio_aio.py`, `.pyw`, `.exe`) son **artefactos generados**, no código fuente: los produce `build_aio.py` concatenando los cuatro módulos en un único archivo autocontenido. Nunca se editan a mano — el propio archivo lo indica en su cabecera. Tras cambiar algo en los módulos, vuelve a ejecutar:
+
+```bash
+python build_aio.py
+```
+
+La versión web tiene su propio generador, `build_pages.py`, que reutiliza los mismos tres módulos (sin `telegram_export_studio.py`, ya que no hay servidor en el navegador). Un workflow de GitHub Actions (`.github/workflows/deploy-pages.yml`) lo ejecuta automáticamente en cada push que toque un módulo o la carpeta `web/`, y publica el resultado en GitHub Pages — no hace falta ningún paso manual.
 
 ## Licencia
 
-[Apache License 2.0](LICENSE) — código abierto, uso comercial permitido,
-con concesión explícita de patentes.
+[Apache License 2.0](LICENSE) — código abierto, uso comercial permitido, con concesión explícita de patentes.
