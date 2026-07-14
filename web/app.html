@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telegram Export Studio — App</title>
+<meta name="description" content="Fusiona, compacta y mejora exportaciones de Telegram, 100% en tu navegador.">
+<style>
+:root {
+  --bg: #f6f8fb; --surface: #fff; --surface-2: #eef3f9; --outline: #e2e8f0;
+  --on: #1a1f24; --muted: #62707d;
+  --primary: #2296d4; --primary-strong: #1181bd; --primary-soft: #e5f3fb;
+  --ok: #1e8e3e; --err: #d93025; --warn: #b26a00; --warn-soft: #fdf3e3;
+  --shadow: 0 1px 2px rgba(20,40,60,.06), 0 4px 16px rgba(20,40,60,.07);
+  --radius: 20px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1418; --surface: #1a2128; --surface-2: #232c35; --outline: #2d3944;
+    --on: #e8edf2; --muted: #94a3b1;
+    --primary: #4db8ec; --primary-strong: #6ec6f1; --primary-soft: #173341;
+    --ok: #6dd58c; --err: #f28b82; --warn: #f5b954; --warn-soft: #33290f;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+* { box-sizing: border-box; margin: 0; }
+html { color-scheme: light dark; }
+body {
+  background: var(--bg); color: var(--on);
+  font: 15px/1.5 "Segoe UI Variable Text", "Segoe UI", -apple-system,
+        "SF Pro Text", Roboto, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 70px;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+
+/* topbar */
+.topbar { display: flex; align-items: center; gap: 12px;
+  max-width: 720px; margin: 0 auto; padding: 18px 20px 22px; }
+.topbar .mini-logo { width: 38px; height: 38px; border-radius: 11px; flex: none;
+  background: linear-gradient(135deg, #2aabee, #1683c9);
+  display: grid; place-items: center; box-shadow: 0 4px 14px rgba(34,150,212,.35); }
+.topbar .mini-logo svg { width: 20px; height: 20px; fill: #fff; transform: translateX(-1px); }
+.topbar a.home { font-weight: 650; font-size: 16px; color: var(--on); text-decoration: none; }
+.topbar .grow { flex: 1; }
+select.lang { appearance: none; font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--muted); background: var(--surface-2); border: 0;
+  border-radius: 999px; padding: 8px 14px; cursor: pointer; outline: none; }
+
+/* loader */
+#loader .spinner-big { width: 44px; height: 44px; border-radius: 50%;
+  border: 4px solid var(--primary-soft); border-top-color: var(--primary);
+  animation: spin .8s linear infinite; margin: 6px auto 16px; }
+#loader { text-align: center; }
+#loader h2 { text-transform: none; letter-spacing: 0; font-size: 16.5px;
+  color: var(--on); margin-bottom: 6px; }
+#loader p { font-size: 13.5px; color: var(--muted); }
+#loader .progress { margin-top: 18px; }
+
+/* shared UI */
+.card { background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 22px 24px; margin-bottom: 16px;
+  animation: rise .35s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+.card h2 { font-size: 12.5px; font-weight: 650; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+.btn { appearance: none; border: 0; cursor: pointer; font: inherit; font-weight: 600;
+  border-radius: 999px; transition: all .2s; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+.btn:active { transform: scale(.97); }
+.btn.filled { background: linear-gradient(135deg, #2aabee, #1a8fd1); color: #fff;
+  padding: 14px 30px; font-size: 15.5px; box-shadow: 0 6px 20px rgba(34,150,212,.35); }
+.btn.filled:hover { box-shadow: 0 8px 26px rgba(34,150,212,.45); filter: brightness(1.04); }
+.btn.filled:disabled { background: var(--surface-2); color: var(--muted);
+  box-shadow: none; cursor: default; transform: none; }
+.btn.filled.wide { width: 100%; }
+.btn.tonal { background: var(--primary-soft); color: var(--primary-strong);
+  padding: 12px 24px; font-size: 14.5px; }
+.btn.danger-tonal { background: color-mix(in srgb, var(--err) 12%, transparent);
+  color: var(--err); padding: 14px 20px; font-size: 14.5px; }
+.btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+.tabs { display: inline-flex; background: var(--surface-2); border-radius: 999px;
+  padding: 4px; margin-bottom: 20px; position: relative; }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted);
+  font: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+  padding: 8px 20px; border-radius: 999px; position: relative; z-index: 1; transition: color .25s; }
+.tabs button.active { color: var(--on); }
+.tabs .pill { position: absolute; top: 4px; bottom: 4px; border-radius: 999px;
+  background: var(--surface); box-shadow: var(--shadow);
+  transition: left .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1); }
+
+.empty { border: 1.5px dashed var(--outline); border-radius: 14px; padding: 26px;
+  text-align: center; color: var(--muted); font-size: 13.5px; margin-bottom: 10px;
+  cursor: pointer; transition: all .2s; }
+.empty:hover { border-color: var(--primary); color: var(--primary-strong); }
+.empty.mini { padding: 13px; }
+.empty svg { width: 28px; height: 28px; fill: var(--muted); opacity: .55;
+  display: block; margin: 0 auto 8px; }
+.empty.mini svg { width: 18px; height: 18px; margin-bottom: 3px; }
+.card.dropping { outline: 2px dashed var(--primary); outline-offset: -8px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface)); }
+
+.export-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+  border: 1px solid var(--outline); border-radius: 14px; margin-bottom: 10px;
+  animation: rise .3s cubic-bezier(.2,.7,.3,1) both; }
+.export-item .ficon { width: 40px; height: 40px; border-radius: 11px; flex: none;
+  background: var(--primary-soft); display: grid; place-items: center; }
+.export-item .ficon svg { width: 20px; height: 20px; fill: var(--primary); }
+.export-item .info { flex: 1; min-width: 0; }
+.export-item .info b { font-size: 14.5px; font-weight: 600; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.export-item .info span { font-size: 12.5px; color: var(--muted); display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.iconbtn { appearance: none; border: 0; background: none; cursor: pointer;
+  width: 36px; height: 36px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; transition: background .2s; }
+.iconbtn svg { width: 19px; height: 19px; fill: var(--muted); }
+.iconbtn:hover { background: var(--surface-2); }
+.iconbtn:hover svg { fill: var(--err); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { appearance: none; cursor: pointer; font: inherit; font-size: 13.5px;
+  font-weight: 600; color: var(--muted); background: var(--surface);
+  border: 1.5px solid var(--outline); border-radius: 999px; padding: 8px 16px; transition: all .2s; }
+.chip:hover { background: var(--surface-2); }
+.chip.sel { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-strong); }
+.label { font-size: 13.5px; font-weight: 600; margin: 18px 0 10px; }
+.label:first-of-type { margin-top: 0; }
+.hint { font-size: 12.5px; color: var(--muted); margin-top: 12px; }
+.field { display: flex; gap: 10px; align-items: center; }
+.field input, .field select { flex: 1; font: inherit; color: var(--on);
+  background: var(--surface-2); border: 1.5px solid transparent; border-radius: 12px;
+  padding: 11px 14px; outline: none; min-width: 0; transition: all .2s; }
+.field input:focus, .field select:focus { border-color: var(--primary); background: var(--surface); }
+select.unit { flex: none; width: 84px; }
+.custom-size { display: none; margin-top: 12px; max-width: 260px; }
+.custom-size.show { display: flex; }
+
+.switchrow { display: flex; align-items: center; gap: 14px; padding: 11px 0;
+  border-bottom: 1px solid var(--outline); }
+.switchrow:last-of-type { border-bottom: 0; }
+.switchrow .sw-txt { flex: 1; min-width: 0; }
+.switchrow .sw-txt b { font-size: 14px; font-weight: 600; display: block; }
+.switchrow .sw-txt span { font-size: 12.5px; color: var(--muted); display: block; }
+.switch { position: relative; width: 46px; height: 26px; flex: none; }
+.switch input { position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.switch i { position: absolute; inset: 0; border-radius: 999px;
+  background: var(--surface-2); border: 1.5px solid var(--outline); transition: all .2s; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px;
+  width: 17px; height: 17px; border-radius: 50%; background: var(--muted); transition: all .2s; }
+.switch input:checked + i { background: var(--primary); border-color: var(--primary); }
+.switch input:checked + i::after { left: 22px; background: #fff; }
+.subopts { transition: opacity .25s; }
+.subopts.off { opacity: .4; pointer-events: none; }
+.seg2 { display: inline-flex; background: var(--surface-2); border-radius: 12px;
+  padding: 4px; gap: 2px; }
+.seg2 button { appearance: none; border: 0; background: none; font: inherit;
+  font-size: 13.5px; font-weight: 600; color: var(--muted); padding: 8px 16px;
+  border-radius: 9px; cursor: pointer; transition: all .2s; }
+.seg2 button.active { background: var(--surface); color: var(--on); box-shadow: var(--shadow); }
+.action-row { display: flex; gap: 10px; }
+.action-row .btn.filled { flex: 1; }
+
+#job { display: none; }
+#job.show { display: block; }
+.job-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.spinner { width: 22px; height: 22px; flex: none; border-radius: 50%;
+  border: 3px solid var(--primary-soft); border-top-color: var(--primary);
+  animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.job-head b { flex: 1; font-size: 15px; font-weight: 600; }
+.job-head .pct { font-size: 13.5px; font-weight: 700; color: var(--primary-strong); }
+.progress { height: 6px; border-radius: 6px; overflow: hidden;
+  background: var(--primary-soft); margin-bottom: 4px; }
+.progress i { display: block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, #2aabee, #1a8fd1); border-radius: 6px;
+  transition: width .3s cubic-bezier(.2,.7,.3,1); }
+.progress.indet i { width: 40% !important;
+  animation: slide 1.2s cubic-bezier(.4,0,.6,1) infinite; }
+@keyframes slide { 0% { transform: translateX(-120%); } 100% { transform: translateX(320%); } }
+.warns { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.warn-item { display: flex; gap: 10px; align-items: flex-start;
+  background: var(--warn-soft); border-radius: 12px; padding: 10px 14px;
+  font-size: 13px; color: var(--warn); animation: rise .3s both; }
+.warn-item svg { width: 17px; height: 17px; fill: var(--warn); flex: none; margin-top: 1px; }
+.warn-item span { word-break: break-all; }
+.result { display: none; align-items: flex-start; gap: 14px; margin-top: 16px; }
+.result.show { display: flex; }
+.result .ricon { width: 40px; height: 40px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; }
+.result .ricon.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.result .ricon.err { background: color-mix(in srgb, var(--err) 14%, transparent); }
+.result .ricon svg { width: 22px; height: 22px; }
+.result .ricon.ok svg { fill: var(--ok); }
+.result .ricon.err svg { fill: var(--err); }
+.result b { display: block; font-size: 15px; margin-bottom: 2px; }
+.result p { font-size: 13.5px; color: var(--muted); word-break: break-word; }
+
+#snack { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 80px);
+  background: var(--on); color: var(--bg); font-size: 14px; font-weight: 500;
+  padding: 13px 22px; border-radius: 12px; box-shadow: var(--shadow);
+  opacity: 0; transition: all .3s cubic-bezier(.2,.7,.3,1); max-width: 90vw; z-index: 50; }
+#snack.show { transform: translate(-50%, 0); opacity: 1; }
+.srclink { display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 14px; font-size: 12.5px; color: var(--muted);
+  text-decoration: none; opacity: .75; transition: opacity .2s; }
+.srclink:hover { opacity: 1; text-decoration: underline; }
+.srclink svg { width: 14px; height: 14px; fill: currentColor; flex: none; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="mini-logo"><svg viewBox="0 0 24 24"><path d="M21.4 3.1 2.2 10.5c-1 .4-1 1.8.1 2.1l4.9 1.5 1.9 5.9c.3.9 1.4 1.1 2 .4l2.7-2.8 4.9 3.6c.8.6 2 .2 2.2-.9l3-15.3c.2-1.2-.9-2.1-2-1.7l-.5-.2zM8.5 13.8l9.5-6-7.3 7.1-.3 3.2-1.9-4.3z"/></svg></div>
+  <a class="home" href="index.html">Telegram Export Studio</a>
+  <div class="grow"></div>
+  <select class="lang" id="lang">
+    <option value="es">🌐 ES</option><option value="en">🌐 EN</option>
+    <option value="fr">🌐 FR</option><option value="de">🌐 DE</option>
+    <option value="pt">🌐 PT</option><option value="it">🌐 IT</option>
+    <option value="ru">🌐 RU</option><option value="zh">🌐 中文</option>
+    <option value="ja">🌐 日本語</option><option value="hi">🌐 हिन्दी</option>
+    <option value="ar">🌐 العربية</option>
+  </select>
+</div>
+
+<div class="wrap">
+  <div class="card" id="unsupported" style="display:none">
+    <h2 data-i18n="unsup_h"></h2>
+    <p style="font-size:14px" data-i18n="unsup_p"></p>
+    <div style="margin-top:14px"><a class="btn tonal" id="download-link" target="_blank" rel="noopener" data-i18n="cta_download"></a></div>
+  </div>
+
+  <div class="card" id="loader">
+    <div class="spinner-big"></div>
+    <h2 data-i18n="loader_h"></h2>
+    <p id="boot-status"></p>
+    <div class="progress indet"><i></i></div>
+    <p class="hint" data-i18n="loader_hint"></p>
+  </div>
+
+  <div id="studio" style="display:none">
+    <div class="tabs" id="tabs">
+      <div class="pill" id="pill"></div>
+      <button data-view="fuse" class="active" data-i18n="tab_fuse"></button>
+      <button data-view="compact" data-i18n="tab_compact"></button>
+      <button data-view="enhance" data-i18n="tab_enhance"></button>
+    </div>
+
+    <!-- FUSE -->
+    <section id="view-fuse">
+      <div class="card" id="fuse-card">
+        <h2 data-i18n="fuse_sources"></h2>
+        <div id="export-list"></div>
+        <div class="empty" id="export-empty" onclick="addExport()">
+          <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+          <span id="export-empty-text"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dest_pagination"></h2>
+        <div class="label" data-i18n="size_label"></div>
+        <div class="chips" id="fuse-chips">
+          <button class="chip sel" data-size="500KB">500 KB</button>
+          <button class="chip" data-size="1MB">1 MB</button>
+          <button class="chip" data-size="5MB">5 MB</button>
+          <button class="chip" data-size="0" data-i18n="chip_single"></button>
+          <button class="chip" data-size="custom" data-i18n="chip_custom"></button>
+        </div>
+        <div class="field custom-size" id="fuse-custom">
+          <input type="number" id="fuse-custom-n" value="2" min="1">
+          <select class="unit" id="fuse-custom-u"><option>MB</option><option>KB</option></select>
+        </div>
+        <div class="hint" data-i18n="fuse_out_hint"></div>
+      </div>
+      <button class="btn filled wide" id="fuse-btn" onclick="runFuse()" disabled>
+        <svg viewBox="0 0 24 24"><path d="M17 20.41 18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z"/></svg>
+        <span id="fuse-btn-label"></span>
+      </button>
+      <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a></div>
+    </section>
+
+    <!-- COMPACT -->
+    <section id="view-compact" style="display:none">
+      <div class="card" id="compact-card">
+        <h2 data-i18n="compact_source"></h2>
+        <div id="compact-sel" class="empty" onclick="pickCompact()">
+          <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+          <span data-i18n="compact_pick"></span>
+        </div>
+        <div id="compact-info" style="display:none">
+          <div class="export-item" style="margin-bottom:0">
+            <div class="ficon"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>
+            <div class="info"><b id="ci-name"></b><span id="ci-sub"></span></div>
+            <button class="iconbtn" onclick="clearCompact()"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="goal"></h2>
+        <div class="seg2" id="compact-mode">
+          <button data-mode="files" class="active" data-i18n="mode_files"></button>
+          <button data-mode="size" data-i18n="mode_size"></button>
+        </div>
+        <div id="compact-files" style="margin-top:16px">
+          <div class="field" style="max-width:200px"><input type="number" id="files-n" value="1" min="1"></div>
+        </div>
+        <div class="hint" style="margin-top:12px" id="goal-hint"></div>
+        <div id="compact-size" style="display:none;margin-top:16px">
+          <div class="chips" id="compact-chips">
+            <button class="chip sel" data-size="1MB">1 MB</button>
+            <button class="chip" data-size="5MB">5 MB</button>
+            <button class="chip" data-size="custom" data-i18n="chip_custom"></button>
+          </div>
+          <div class="field custom-size" id="compact-custom">
+            <input type="number" id="compact-custom-n" value="2" min="1">
+            <select class="unit" id="compact-custom-u"><option>MB</option><option>KB</option></select>
+          </div>
+        </div>
+      </div>
+      <button class="btn filled wide" id="compact-btn" onclick="runCompact()" disabled>
+        <svg viewBox="0 0 24 24"><path d="M7.41 18.59 8.83 20 12 16.83 15.17 20l1.41-1.41L12 14l-4.59 4.59zm9.18-13.18L15.17 4 12 7.17 8.83 4 7.41 5.41 12 10l4.59-4.59z"/></svg>
+        <span data-i18n="compact_btn"></span>
+      </button>
+      <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a></div>
+    </section>
+
+    <!-- ENHANCE -->
+    <section id="view-enhance" style="display:none">
+      <div class="card" id="enhance-card">
+        <h2 data-i18n="enhance_source"></h2>
+        <div id="enhance-sel" class="empty" onclick="pickEnhance()">
+          <svg viewBox="0 0 24 24"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7z"/></svg>
+          <span data-i18n="enhance_pick"></span>
+        </div>
+        <div id="enhance-info" style="display:none">
+          <div class="export-item" style="margin-bottom:0">
+            <div class="ficon"><svg viewBox="0 0 24 24"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7z"/></svg></div>
+            <div class="info"><b id="ei-name"></b><span id="ei-sub"></span></div>
+            <button class="iconbtn" onclick="clearEnhance()"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="enhance_opts"></h2>
+        <div class="switchrow">
+          <div class="sw-txt"><b data-i18n="feat_bubbles"></b><span data-i18n="feat_bubbles_d"></span></div>
+          <label class="switch"><input type="checkbox" id="opt-bubbles" checked><i></i></label>
+        </div>
+        <div class="subopts" id="bubbles-sub" style="padding:4px 0 10px">
+          <div class="label" data-i18n="me_label"></div>
+          <div class="field"><select id="me-select"></select></div>
+          <div class="label" data-i18n="layout_label"></div>
+          <div class="chips" id="layout-chips">
+            <button class="chip sel" data-layout="both" data-i18n="layout_both"></button>
+            <button class="chip" data-layout="chat" data-i18n="layout_chat"></button>
+            <button class="chip" data-layout="original" data-i18n="layout_original"></button>
+          </div>
+          <div class="hint" id="layout-hint" style="margin:2px 0 10px"></div>
+        </div>
+        <div class="switchrow"><div class="sw-txt"><b data-i18n="feat_fullwidth"></b><span data-i18n="feat_fullwidth_d"></span></div>
+          <label class="switch"><input type="checkbox" id="opt-fullwidth" checked><i></i></label></div>
+        <div class="switchrow"><div class="sw-txt"><b data-i18n="feat_quotes"></b><span data-i18n="feat_quotes_d"></span></div>
+          <label class="switch"><input type="checkbox" id="opt-quotes" checked><i></i></label></div>
+        <div class="switchrow"><div class="sw-txt"><b data-i18n="feat_theme"></b><span data-i18n="feat_theme_d"></span></div>
+          <label class="switch"><input type="checkbox" id="opt-theme" checked><i></i></label></div>
+        <div class="switchrow"><div class="sw-txt"><b data-i18n="feat_media"></b><span data-i18n="feat_media_d"></span></div>
+          <label class="switch"><input type="checkbox" id="opt-media" checked><i></i></label></div>
+        <div class="switchrow"><div class="sw-txt"><b data-i18n="feat_note"></b><span data-i18n="feat_note_d"></span></div>
+          <label class="switch"><input type="checkbox" id="opt-note" checked><i></i></label></div>
+      </div>
+      <div class="action-row">
+        <button class="btn filled" id="enhance-btn" onclick="runEnhance()" disabled>
+          <svg viewBox="0 0 24 24"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7z"/></svg>
+          <span data-i18n="enhance_btn"></span>
+        </button>
+        <button class="btn danger-tonal" id="restore-btn" onclick="runRestore()" style="display:none">
+          <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.9 3.9L8.8 12H6a7 7 0 1 1 2.1 5l-1.4 1.4A9 9 0 1 0 13 3z"/></svg>
+          <span data-i18n="restore_btn"></span>
+        </button>
+      </div>
+      <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a></div>
+    </section>
+
+    <!-- JOB -->
+    <div class="card" id="job">
+      <div class="job-head">
+        <div class="spinner" id="job-spin"></div>
+        <b id="job-stage"></b>
+        <span class="pct" id="job-pct"></span>
+      </div>
+      <div class="progress indet" id="job-progress"><i id="job-bar"></i></div>
+      <div class="warns" id="job-warns"></div>
+      <div class="result" id="job-result">
+        <div class="ricon" id="job-ricon"></div>
+        <div style="flex:1"><b id="job-rtitle"></b><p id="job-rsub"></p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="snack"></div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+"use strict";
+/* ====== EDITA ESTO: URL de tu repositorio en GitHub ====== */
+const REPO_URL = "https://github.com/Marcos-SA-git/Telegram-Export-Studio";
+
+const $ = id => document.getElementById(id);
+const state = { exports: [], compact: null, enhance: null, forceMix: false };
+let pyodide = null, glue = null, mediaDone = 0;
+
+/* ================= i18n (ES/EN) ================= */
+const I18N = {
+es: {
+  cta_download: "Versión de escritorio",
+  unsup_h: "Navegador no compatible",
+  unsup_p: "Esta app necesita la File System Access API (Chrome, Edge u Opera en escritorio). En Firefox o Safari usa la versión de escritorio: es igual de local.",
+  loader_h: "Preparando la aplicación…",
+  loader_hint: "Solo la primera vez: el intérprete queda cacheado. Todo el procesado ocurre en tu equipo.",
+  boot_loading: "Descargando Python para tu navegador (~15 MB)…",
+  boot_engine: "Cargando el motor…",
+  tab_fuse: "Fusionar", tab_compact: "Compactar", tab_enhance: "Mejorar",
+  fuse_sources: "Exports de origen",
+  fuse_empty: "Añade o arrastra aquí dos o más carpetas de export de Telegram",
+  fuse_add_more: "Añade o arrastra aquí otra carpeta",
+  dest_pagination: "Paginación",
+  size_label: "Tamaño de página", chip_single: "Archivo único", chip_custom: "Personalizado",
+  fuse_out_hint: "Al fusionar se te pedirá elegir la carpeta de destino (usa una carpeta vacía).",
+  fuse_btn: "Fusionar exports", fuse_btn_n: "Fusionar {n} exports",
+  compact_source: "Export a compactar",
+  compact_pick: "Elige o arrastra aquí la carpeta del export",
+  goal: "Objetivo", mode_files: "Número de archivos", mode_size: "Tamaño por página",
+  goal_hint_files: "Eliges cuántos messages.html quieres al final (1 = todo el historial en uno) y el tamaño de cada página se calcula solo.",
+  goal_hint_size: "Fijas el tamaño máximo de cada messages.html y la cantidad de archivos resulta del total del historial.",
+  srclink: "Código abierto · ver en GitHub",
+  compact_btn: "Compactar",
+  enhance_source: "Export a mejorar",
+  enhance_pick: "Elige o arrastra aquí la carpeta del export",
+  enhance_opts: "Opciones de visualización",
+  me_label: "¿Quién eres tú? (los mensajes de la persona elegida se resaltarán con otro color)",
+  me_none: "— Solo diseño original, sin lado propio —",
+  layout_label: "Disposición de los mensajes",
+  layout_both: "Ambos (conmutable)", layout_chat: "Conversación", layout_original: "Original",
+  layout_hint_original: "Todos los avatares a la izquierda, como en el export original de Telegram.",
+  layout_hint_chat: "Avatares a ambos lados: el interlocutor a la izquierda y tú a la derecha.",
+  layout_hint_both: "Un botón flotante en el chat permite alternar entre ambas disposiciones.",
+  feat_fullwidth: "Ancho completo", feat_fullwidth_d: "El chat ocupa toda la pantalla, sin columna centrada",
+  feat_bubbles: "Burbujas y fondo de chat", feat_bubbles_d: "Apariencia de Telegram real",
+  feat_quotes: "Citas de respuesta", feat_quotes_d: "Recuadro con autor y fragmento del mensaje citado",
+  feat_theme: "Modo claro / oscuro", feat_theme_d: "Botón flotante para cambiar de tema",
+  feat_media: "Media en vivo", feat_media_d: "Vídeos y audios reproducibles, fotos en visor",
+  feat_note: "Mensaje final", feat_note_d: "Nota al final del chat con cómo usar estas herramientas",
+  enhance_btn: "Mejorar export", restore_btn: "Desmejorar",
+  need_me: "Elige quién eres tú para el modo conversación",
+  already_enhanced: "Este export ya estaba mejorado; se actualizará",
+  kind_group: "👥 Grupo · {n} participantes", kind_private: "👤 Chat privado",
+  item_sub: "{msgs} mensajes · {pages} página(s)",
+  confirm_mix: "«{a}» no coincide con «{b}». Los exports parecen de chats diferentes. ¿Añadirlo igualmente?",
+  confirm_kind: "Estás mezclando un chat grupal con uno privado. ¿Añadirlo igualmente?",
+  snack_dup: "Ese export ya está en la lista",
+  drop_no_messages: "«{name}» no contiene messages.html",
+  job_fusing: "Fusionando exports…", job_compacting: "Compactando…",
+  job_enhancing: "Mejorando…", job_restoring: "Restaurando el diseño original…",
+  job_done: "Completado", job_error: "Error", job_failed: "La operación ha fallado",
+  res_summary: "{msgs} mensajes en {pages} página(s)",
+  res_written: "Escrito directamente en tu carpeta. Abre messages.html para verlo.",
+  stage_scan: "Escaneando {name}…", stage_merge: "Combinando mensajes…",
+  stage_media: "Copiando media · {n} archivos…", stage_write: "Escribiendo páginas…",
+  stage_enhance: "Mejorando {name}…", stage_restore: "Restaurando {name}…",
+  stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…"
+},
+en: {
+  cta_download: "Desktop version",
+  unsup_h: "Unsupported browser",
+  unsup_p: "This app needs the File System Access API (Chrome, Edge or Opera on desktop). On Firefox or Safari use the desktop version — it is just as local.",
+  loader_h: "Preparing the app…",
+  loader_hint: "First time only: the interpreter gets cached. All processing happens on your device.",
+  boot_loading: "Downloading Python for your browser (~15 MB)…",
+  boot_engine: "Loading the engine…",
+  tab_fuse: "Merge", tab_compact: "Compact", tab_enhance: "Enhance",
+  fuse_sources: "Source exports",
+  fuse_empty: "Add or drag two or more Telegram export folders here",
+  fuse_add_more: "Add or drag another folder here",
+  dest_pagination: "Pagination",
+  size_label: "Page size", chip_single: "Single file", chip_custom: "Custom",
+  fuse_out_hint: "When merging you will be asked to choose the destination folder (use an empty one).",
+  fuse_btn: "Merge exports", fuse_btn_n: "Merge {n} exports",
+  compact_source: "Export to compact",
+  compact_pick: "Choose or drag the export folder here",
+  goal: "Target", mode_files: "Number of files", mode_size: "Size per page",
+  goal_hint_files: "You choose how many messages.html you want in the end (1 = the whole history in one) and the size of each page is computed automatically.",
+  goal_hint_size: "You set the maximum size of each messages.html and the number of files follows from the total history.",
+  srclink: "Open source · view on GitHub",
+  compact_btn: "Compact",
+  enhance_source: "Export to enhance",
+  enhance_pick: "Choose or drag the export folder here",
+  enhance_opts: "Viewing options",
+  me_label: "Who are you? (the chosen person's messages get highlighted in a different color)",
+  me_none: "— Original design only, no own side —",
+  layout_label: "Message layout",
+  layout_both: "Both (switchable)", layout_chat: "Chat", layout_original: "Original",
+  layout_hint_original: "Every avatar on the left, like the original Telegram export.",
+  layout_hint_chat: "Avatars on both sides: theirs on the left, yours on the right.",
+  layout_hint_both: "A floating button in the chat switches between both layouts.",
+  feat_fullwidth: "Full width", feat_fullwidth_d: "The chat fills the whole screen, no centered column",
+  feat_bubbles: "Bubbles & chat background", feat_bubbles_d: "Real Telegram look",
+  feat_quotes: "Reply quotes", feat_quotes_d: "Box with author and snippet of the quoted message",
+  feat_theme: "Light / dark mode", feat_theme_d: "Floating button to switch theme",
+  feat_media: "Live media", feat_media_d: "Playable videos and audio, photos in a viewer",
+  feat_note: "Final note", feat_note_d: "Note at the end of the chat on how to use these tools",
+  enhance_btn: "Enhance export", restore_btn: "Un-enhance",
+  need_me: "Choose who you are for chat mode",
+  already_enhanced: "This export was already enhanced; it will be updated",
+  kind_group: "👥 Group · {n} participants", kind_private: "👤 Private chat",
+  item_sub: "{msgs} messages · {pages} page(s)",
+  confirm_mix: "“{a}” doesn't match “{b}”. These exports look like different chats. Add it anyway?",
+  confirm_kind: "You are mixing a group chat with a private one. Add it anyway?",
+  snack_dup: "That export is already on the list",
+  drop_no_messages: "“{name}” doesn't contain messages.html",
+  job_fusing: "Merging exports…", job_compacting: "Compacting…",
+  job_enhancing: "Enhancing…", job_restoring: "Restoring the original design…",
+  job_done: "Done", job_error: "Error", job_failed: "The operation failed",
+  res_summary: "{msgs} messages in {pages} page(s)",
+  res_written: "Written straight into your folder. Open messages.html to view it.",
+  stage_scan: "Scanning {name}…", stage_merge: "Merging messages…",
+  stage_media: "Copying media · {n} files…", stage_write: "Writing pages…",
+  stage_enhance: "Enhancing {name}…", stage_restore: "Restoring {name}…",
+  stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…"
+},
+fr: {
+  cta_download: "Version de bureau",
+  unsup_h: "Navigateur non compatible",
+  unsup_p: "Cette app nécessite la File System Access API (Chrome, Edge ou Opera sur ordinateur). Sur Firefox ou Safari, utilisez la version de bureau — tout aussi locale.",
+  loader_h: "Préparation de l'application…",
+  loader_hint: "Seulement la première fois : l'interpréteur est mis en cache. Tout le traitement se fait sur votre appareil.",
+  boot_loading: "Téléchargement de Python pour votre navigateur (~15 Mo)…",
+  boot_engine: "Chargement du moteur…",
+  tab_fuse: "Fusionner", tab_compact: "Compacter", tab_enhance: "Améliorer",
+  fuse_sources: "Exports source",
+  fuse_empty: "Ajoutez ou déposez ici deux dossiers d'export Telegram ou plus",
+  fuse_add_more: "Ajoutez ou déposez ici un autre dossier",
+  dest_pagination: "Pagination",
+  size_label: "Taille de page", chip_single: "Fichier unique", chip_custom: "Personnalisé",
+  fuse_out_hint: "Lors de la fusion, on vous demandera le dossier de destination (utilisez un dossier vide).",
+  fuse_btn: "Fusionner les exports", fuse_btn_n: "Fusionner {n} exports",
+  compact_source: "Export à compacter",
+  compact_pick: "Choisissez ou déposez ici le dossier de l'export",
+  goal: "Objectif", mode_files: "Nombre de fichiers", mode_size: "Taille par page",
+  goal_hint_files: "Vous choisissez combien de messages.html il restera au final (1 = tout l'historique dans un seul) et la taille de chaque page se calcule automatiquement.",
+  goal_hint_size: "Vous fixez la taille maximale de chaque messages.html et le nombre de fichiers en découle.",
+  srclink: "Open source · voir sur GitHub",
+  compact_btn: "Compacter",
+  enhance_source: "Export à améliorer",
+  enhance_pick: "Choisissez ou déposez ici le dossier de l'export",
+  enhance_opts: "Options d'affichage",
+  me_label: "Qui êtes-vous ? (les messages de la personne choisie seront mis en évidence d'une autre couleur)",
+  me_none: "— Design original uniquement —",
+  layout_label: "Disposition des messages",
+  layout_both: "Les deux (commutable)", layout_chat: "Conversation", layout_original: "Original",
+  layout_hint_original: "Tous les avatars à gauche, comme dans l'export original de Telegram.",
+  layout_hint_chat: "Avatars des deux côtés : votre interlocuteur à gauche, vous à droite.",
+  layout_hint_both: "Un bouton flottant dans le chat permet de basculer entre les deux dispositions.",
+  feat_fullwidth: "Pleine largeur", feat_fullwidth_d: "Le chat occupe tout l'écran, sans colonne centrée",
+  feat_bubbles: "Bulles et fond de chat", feat_bubbles_d: "Apparence Telegram réelle",
+  feat_quotes: "Citations de réponse", feat_quotes_d: "Encadré avec auteur et extrait du message cité",
+  feat_theme: "Mode clair / sombre", feat_theme_d: "Bouton flottant pour changer de thème",
+  feat_media: "Médias intégrés", feat_media_d: "Vidéos et audios lisibles, photos dans une visionneuse",
+  feat_note: "Note finale", feat_note_d: "Note à la fin du chat sur l'utilisation de ces outils",
+  enhance_btn: "Améliorer l'export", restore_btn: "Rétablir l'original",
+  need_me: "Indiquez qui vous êtes pour le mode conversation",
+  already_enhanced: "Cet export était déjà amélioré ; il sera mis à jour",
+  kind_group: "👥 Groupe · {n} participants", kind_private: "👤 Chat privé",
+  item_sub: "{msgs} messages · {pages} page(s)",
+  confirm_mix: "« {a} » ne correspond pas à « {b} ». Ces exports semblent provenir de chats différents. L'ajouter quand même ?",
+  confirm_kind: "Vous mélangez un chat de groupe avec un chat privé. L'ajouter quand même ?",
+  snack_dup: "Cet export est déjà dans la liste",
+  drop_no_messages: "« {name} » ne contient pas messages.html",
+  job_fusing: "Fusion des exports…", job_compacting: "Compactage…",
+  job_enhancing: "Amélioration…", job_restoring: "Restauration du design original…",
+  job_done: "Terminé", job_error: "Erreur", job_failed: "L'opération a échoué",
+  res_summary: "{msgs} messages sur {pages} page(s)",
+  res_written: "Écrit directement dans votre dossier. Ouvrez messages.html pour le voir.",
+  stage_scan: "Analyse de {name}…", stage_merge: "Fusion des messages…",
+  stage_media: "Copie des médias · {n} fichiers…", stage_write: "Écriture des pages…",
+  stage_enhance: "Amélioration de {name}…", stage_restore: "Restauration de {name}…",
+  stage_working: "Traitement…", stage_reading: "Lecture des exports…", stage_saving: "Enregistrement dans votre dossier…"
+},
+de: {
+  cta_download: "Desktop-Version",
+  unsup_h: "Browser nicht unterstützt",
+  unsup_p: "Diese App benötigt die File System Access API (Chrome, Edge oder Opera am Desktop). Nutze in Firefox oder Safari die Desktop-Version — genauso lokal.",
+  loader_h: "App wird vorbereitet…",
+  loader_hint: "Nur beim ersten Mal: Der Interpreter wird zwischengespeichert. Die gesamte Verarbeitung passiert auf deinem Gerät.",
+  boot_loading: "Python für deinen Browser wird geladen (~15 MB)…",
+  boot_engine: "Engine wird geladen…",
+  tab_fuse: "Zusammenführen", tab_compact: "Verdichten", tab_enhance: "Verbessern",
+  fuse_sources: "Quell-Exporte",
+  fuse_empty: "Füge zwei oder mehr Telegram-Exportordner hinzu oder ziehe sie hierher",
+  fuse_add_more: "Weiteren Ordner hinzufügen oder hierher ziehen",
+  dest_pagination: "Seitenaufteilung",
+  size_label: "Seitengröße", chip_single: "Einzelne Datei", chip_custom: "Benutzerdefiniert",
+  fuse_out_hint: "Beim Zusammenführen wirst du nach dem Zielordner gefragt (nutze einen leeren).",
+  fuse_btn: "Exporte zusammenführen", fuse_btn_n: "{n} Exporte zusammenführen",
+  compact_source: "Zu verdichtender Export",
+  compact_pick: "Wähle den Exportordner oder ziehe ihn hierher",
+  goal: "Ziel", mode_files: "Anzahl der Dateien", mode_size: "Größe pro Seite",
+  goal_hint_files: "Du wählst, wie viele messages.html am Ende übrig bleiben (1 = der gesamte Verlauf in einer), die Seitengröße wird automatisch berechnet.",
+  goal_hint_size: "Du legst die maximale Größe jeder messages.html fest, die Dateianzahl ergibt sich aus dem Gesamtverlauf.",
+  srclink: "Open Source · auf GitHub ansehen",
+  compact_btn: "Verdichten",
+  enhance_source: "Zu verbessernder Export",
+  enhance_pick: "Wähle den Exportordner oder ziehe ihn hierher",
+  enhance_opts: "Anzeigeoptionen",
+  me_label: "Wer bist du? (Die Nachrichten der gewählten Person werden farblich hervorgehoben)",
+  me_none: "— Nur Originaldesign, keine eigene Seite —",
+  layout_label: "Nachrichten-Layout",
+  layout_both: "Beide (umschaltbar)", layout_chat: "Unterhaltung", layout_original: "Original",
+  layout_hint_original: "Alle Avatare links, wie im ursprünglichen Telegram-Export.",
+  layout_hint_chat: "Avatare auf beiden Seiten: dein Gegenüber links, du rechts.",
+  layout_hint_both: "Ein schwebender Button im Chat wechselt zwischen beiden Layouts.",
+  feat_fullwidth: "Volle Breite", feat_fullwidth_d: "Der Chat füllt den ganzen Bildschirm, ohne zentrierte Spalte",
+  feat_bubbles: "Blasen & Chat-Hintergrund", feat_bubbles_d: "Echter Telegram-Look",
+  feat_quotes: "Antwort-Zitate", feat_quotes_d: "Rahmen mit Autor und Ausschnitt der zitierten Nachricht",
+  feat_theme: "Heller / dunkler Modus", feat_theme_d: "Schwebender Button zum Themenwechsel",
+  feat_media: "Live-Medien", feat_media_d: "Abspielbare Videos und Audios, Fotos im Viewer",
+  feat_note: "Abschlussnotiz", feat_note_d: "Notiz am Ende des Chats zur Nutzung dieser Tools",
+  enhance_btn: "Export verbessern", restore_btn: "Zurücksetzen",
+  need_me: "Wähle, wer du bist, für den Unterhaltungsmodus",
+  already_enhanced: "Dieser Export war bereits verbessert; er wird aktualisiert",
+  kind_group: "👥 Gruppe · {n} Teilnehmer", kind_private: "👤 Privater Chat",
+  item_sub: "{msgs} Nachrichten · {pages} Seite(n)",
+  confirm_mix: "„{a}“ passt nicht zu „{b}“. Diese Exporte scheinen aus verschiedenen Chats zu stammen. Trotzdem hinzufügen?",
+  confirm_kind: "Du mischst einen Gruppenchat mit einem privaten. Trotzdem hinzufügen?",
+  snack_dup: "Dieser Export ist bereits in der Liste",
+  drop_no_messages: "„{name}“ enthält keine messages.html",
+  job_fusing: "Exporte werden zusammengeführt…", job_compacting: "Wird verdichtet…",
+  job_enhancing: "Wird verbessert…", job_restoring: "Originaldesign wird wiederhergestellt…",
+  job_done: "Fertig", job_error: "Fehler", job_failed: "Der Vorgang ist fehlgeschlagen",
+  res_summary: "{msgs} Nachrichten auf {pages} Seite(n)",
+  res_written: "Direkt in deinen Ordner geschrieben. Öffne messages.html, um es anzusehen.",
+  stage_scan: "{name} wird gescannt…", stage_merge: "Nachrichten werden zusammengeführt…",
+  stage_media: "Medien werden kopiert · {n} Dateien…", stage_write: "Seiten werden geschrieben…",
+  stage_enhance: "{name} wird verbessert…", stage_restore: "{name} wird wiederhergestellt…",
+  stage_working: "Verarbeitung…", stage_reading: "Exporte werden gelesen…", stage_saving: "Wird in deinem Ordner gespeichert…"
+},
+pt: {
+  cta_download: "Versão para computador",
+  unsup_h: "Navegador não compatível",
+  unsup_p: "Este app precisa da File System Access API (Chrome, Edge ou Opera no computador). No Firefox ou Safari use a versão para computador — igualmente local.",
+  loader_h: "Preparando o aplicativo…",
+  loader_hint: "Só na primeira vez: o interpretador fica em cache. Todo o processamento acontece no seu dispositivo.",
+  boot_loading: "Baixando Python para o seu navegador (~15 MB)…",
+  boot_engine: "Carregando o motor…",
+  tab_fuse: "Mesclar", tab_compact: "Compactar", tab_enhance: "Melhorar",
+  fuse_sources: "Exports de origem",
+  fuse_empty: "Adicione ou arraste aqui duas ou mais pastas de export do Telegram",
+  fuse_add_more: "Adicione ou arraste outra pasta aqui",
+  dest_pagination: "Paginação",
+  size_label: "Tamanho da página", chip_single: "Arquivo único", chip_custom: "Personalizado",
+  fuse_out_hint: "Ao mesclar, será pedido que escolha a pasta de destino (use uma pasta vazia).",
+  fuse_btn: "Mesclar exports", fuse_btn_n: "Mesclar {n} exports",
+  compact_source: "Export a compactar",
+  compact_pick: "Escolha ou arraste aqui a pasta do export",
+  goal: "Objetivo", mode_files: "Número de arquivos", mode_size: "Tamanho por página",
+  goal_hint_files: "Você escolhe quantos messages.html quer no final (1 = todo o histórico em um só) e o tamanho de cada página é calculado automaticamente.",
+  goal_hint_size: "Você define o tamanho máximo de cada messages.html e o número de arquivos resulta do histórico total.",
+  srclink: "Código aberto · ver no GitHub",
+  compact_btn: "Compactar",
+  enhance_source: "Export a melhorar",
+  enhance_pick: "Escolha ou arraste aqui a pasta do export",
+  enhance_opts: "Opções de visualização",
+  me_label: "Quem é você? (as mensagens da pessoa escolhida serão destacadas com outra cor)",
+  me_none: "— Somente design original, sem lado próprio —",
+  layout_label: "Disposição das mensagens",
+  layout_both: "Ambos (alternável)", layout_chat: "Conversa", layout_original: "Original",
+  layout_hint_original: "Todos os avatares à esquerda, como no export original do Telegram.",
+  layout_hint_chat: "Avatares dos dois lados: o interlocutor à esquerda e você à direita.",
+  layout_hint_both: "Um botão flutuante no chat alterna entre as duas disposições.",
+  feat_fullwidth: "Largura total", feat_fullwidth_d: "O chat ocupa a tela inteira, sem coluna centralizada",
+  feat_bubbles: "Balões e fundo de chat", feat_bubbles_d: "Aparência real do Telegram",
+  feat_quotes: "Citações de resposta", feat_quotes_d: "Caixa com autor e trecho da mensagem citada",
+  feat_theme: "Modo claro / escuro", feat_theme_d: "Botão flutuante para trocar o tema",
+  feat_media: "Mídia ao vivo", feat_media_d: "Vídeos e áudios reproduzíveis, fotos em um visualizador",
+  feat_note: "Nota final", feat_note_d: "Nota no fim do chat sobre como usar estas ferramentas",
+  enhance_btn: "Melhorar export", restore_btn: "Desfazer melhorias",
+  need_me: "Escolha quem é você para o modo conversa",
+  already_enhanced: "Este export já estava melhorado; será atualizado",
+  kind_group: "👥 Grupo · {n} participantes", kind_private: "👤 Chat privado",
+  item_sub: "{msgs} mensagens · {pages} página(s)",
+  confirm_mix: "“{a}” não corresponde a “{b}”. Estes exports parecem de chats diferentes. Adicionar mesmo assim?",
+  confirm_kind: "Você está misturando um chat de grupo com um privado. Adicionar mesmo assim?",
+  snack_dup: "Esse export já está na lista",
+  drop_no_messages: "“{name}” não contém messages.html",
+  job_fusing: "Mesclando exports…", job_compacting: "Compactando…",
+  job_enhancing: "Melhorando…", job_restoring: "Restaurando o design original…",
+  job_done: "Concluído", job_error: "Erro", job_failed: "A operação falhou",
+  res_summary: "{msgs} mensagens em {pages} página(s)",
+  res_written: "Gravado diretamente na sua pasta. Abra messages.html para ver.",
+  stage_scan: "Escaneando {name}…", stage_merge: "Mesclando mensagens…",
+  stage_media: "Copiando mídia · {n} arquivos…", stage_write: "Gravando páginas…",
+  stage_enhance: "Melhorando {name}…", stage_restore: "Restaurando {name}…",
+  stage_working: "Processando…", stage_reading: "Lendo exports…", stage_saving: "Salvando na sua pasta…"
+},
+it: {
+  cta_download: "Versione desktop",
+  unsup_h: "Browser non compatibile",
+  unsup_p: "Questa app richiede la File System Access API (Chrome, Edge o Opera su desktop). Su Firefox o Safari usa la versione desktop — altrettanto locale.",
+  loader_h: "Preparazione dell'app…",
+  loader_hint: "Solo la prima volta: l'interprete viene messo in cache. Tutta l'elaborazione avviene sul tuo dispositivo.",
+  boot_loading: "Download di Python per il tuo browser (~15 MB)…",
+  boot_engine: "Caricamento del motore…",
+  tab_fuse: "Unisci", tab_compact: "Compatta", tab_enhance: "Migliora",
+  fuse_sources: "Export di origine",
+  fuse_empty: "Aggiungi o trascina qui due o più cartelle di export di Telegram",
+  fuse_add_more: "Aggiungi o trascina qui un'altra cartella",
+  dest_pagination: "Impaginazione",
+  size_label: "Dimensione pagina", chip_single: "File unico", chip_custom: "Personalizzato",
+  fuse_out_hint: "Durante l'unione ti verrà chiesto di scegliere la cartella di destinazione (usane una vuota).",
+  fuse_btn: "Unisci export", fuse_btn_n: "Unisci {n} export",
+  compact_source: "Export da compattare",
+  compact_pick: "Scegli o trascina qui la cartella dell'export",
+  goal: "Obiettivo", mode_files: "Numero di file", mode_size: "Dimensione per pagina",
+  goal_hint_files: "Scegli quanti messages.html vuoi alla fine (1 = tutta la cronologia in uno) e la dimensione di ogni pagina viene calcolata da sola.",
+  goal_hint_size: "Fissi la dimensione massima di ogni messages.html e il numero di file dipende dalla cronologia totale.",
+  srclink: "Open source · vedi su GitHub",
+  compact_btn: "Compatta",
+  enhance_source: "Export da migliorare",
+  enhance_pick: "Scegli o trascina qui la cartella dell'export",
+  enhance_opts: "Opzioni di visualizzazione",
+  me_label: "Chi sei tu? (i messaggi della persona scelta saranno evidenziati con un altro colore)",
+  me_none: "— Solo design originale, senza lato proprio —",
+  layout_label: "Disposizione dei messaggi",
+  layout_both: "Entrambi (commutabile)", layout_chat: "Conversazione", layout_original: "Originale",
+  layout_hint_original: "Tutti gli avatar a sinistra, come nell'export originale di Telegram.",
+  layout_hint_chat: "Avatar su entrambi i lati: l'interlocutore a sinistra e tu a destra.",
+  layout_hint_both: "Un pulsante flottante nella chat alterna tra le due disposizioni.",
+  feat_fullwidth: "Larghezza piena", feat_fullwidth_d: "La chat occupa tutto lo schermo, senza colonna centrata",
+  feat_bubbles: "Bolle e sfondo chat", feat_bubbles_d: "Aspetto reale di Telegram",
+  feat_quotes: "Citazioni di risposta", feat_quotes_d: "Riquadro con autore ed estratto del messaggio citato",
+  feat_theme: "Modalità chiara / scura", feat_theme_d: "Pulsante flottante per cambiare tema",
+  feat_media: "Media dal vivo", feat_media_d: "Video e audio riproducibili, foto in un visualizzatore",
+  feat_note: "Nota finale", feat_note_d: "Nota alla fine della chat su come usare questi strumenti",
+  enhance_btn: "Migliora export", restore_btn: "Ripristina originale",
+  need_me: "Scegli chi sei per la modalità conversazione",
+  already_enhanced: "Questo export era già migliorato; verrà aggiornato",
+  kind_group: "👥 Gruppo · {n} partecipanti", kind_private: "👤 Chat privata",
+  item_sub: "{msgs} messaggi · {pages} pagina(e)",
+  confirm_mix: "«{a}» non corrisponde a «{b}». Questi export sembrano di chat diverse. Aggiungerlo comunque?",
+  confirm_kind: "Stai mescolando una chat di gruppo con una privata. Aggiungerla comunque?",
+  snack_dup: "Quell'export è già nella lista",
+  drop_no_messages: "«{name}» non contiene messages.html",
+  job_fusing: "Unione degli export…", job_compacting: "Compattazione…",
+  job_enhancing: "Miglioramento…", job_restoring: "Ripristino del design originale…",
+  job_done: "Completato", job_error: "Errore", job_failed: "L'operazione non è riuscita",
+  res_summary: "{msgs} messaggi in {pages} pagina(e)",
+  res_written: "Scritto direttamente nella tua cartella. Apri messages.html per vederlo.",
+  stage_scan: "Scansione di {name}…", stage_merge: "Unione dei messaggi…",
+  stage_media: "Copia dei media · {n} file…", stage_write: "Scrittura delle pagine…",
+  stage_enhance: "Miglioramento di {name}…", stage_restore: "Ripristino di {name}…",
+  stage_working: "Elaborazione…", stage_reading: "Lettura degli export…", stage_saving: "Salvataggio nella tua cartella…"
+},
+ru: {
+  cta_download: "Настольная версия",
+  unsup_h: "Браузер не поддерживается",
+  unsup_p: "Приложению нужна File System Access API (Chrome, Edge или Opera на компьютере). В Firefox или Safari используйте настольную версию — она так же локальна.",
+  loader_h: "Подготовка приложения…",
+  loader_hint: "Только в первый раз: интерпретатор кэшируется. Вся обработка происходит на вашем устройстве.",
+  boot_loading: "Загрузка Python для вашего браузера (~15 МБ)…",
+  boot_engine: "Загрузка движка…",
+  tab_fuse: "Объединить", tab_compact: "Сжать", tab_enhance: "Улучшить",
+  fuse_sources: "Исходные экспорты",
+  fuse_empty: "Добавьте или перетащите сюда две или более папки экспорта Telegram",
+  fuse_add_more: "Добавьте или перетащите сюда ещё одну папку",
+  dest_pagination: "Разбиение на страницы",
+  size_label: "Размер страницы", chip_single: "Один файл", chip_custom: "Свой размер",
+  fuse_out_hint: "При объединении вас попросят выбрать папку назначения (используйте пустую).",
+  fuse_btn: "Объединить экспорты", fuse_btn_n: "Объединить {n} экспорта(ов)",
+  compact_source: "Экспорт для сжатия",
+  compact_pick: "Выберите или перетащите сюда папку экспорта",
+  goal: "Цель", mode_files: "Число файлов", mode_size: "Размер страницы",
+  goal_hint_files: "Вы выбираете, сколько messages.html останется в итоге (1 = вся история в одном), а размер страниц рассчитывается автоматически.",
+  goal_hint_size: "Вы задаёте максимальный размер каждого messages.html, а число файлов зависит от всей истории.",
+  srclink: "Открытый код · смотреть на GitHub",
+  compact_btn: "Сжать",
+  enhance_source: "Экспорт для улучшения",
+  enhance_pick: "Выберите или перетащите сюда папку экспорта",
+  enhance_opts: "Параметры отображения",
+  me_label: "Кто вы? (сообщения выбранного человека будут выделены другим цветом)",
+  me_none: "— Только оригинальный дизайн, без своей стороны —",
+  layout_label: "Расположение сообщений",
+  layout_both: "Оба (переключаемо)", layout_chat: "Диалог", layout_original: "Оригинал",
+  layout_hint_original: "Все аватары слева, как в исходном экспорте Telegram.",
+  layout_hint_chat: "Аватары с обеих сторон: собеседник слева, вы справа.",
+  layout_hint_both: "Плавающая кнопка в чате переключает между двумя вариантами.",
+  feat_fullwidth: "Во всю ширину", feat_fullwidth_d: "Чат занимает весь экран, без центральной колонки",
+  feat_bubbles: "Пузыри и фон чата", feat_bubbles_d: "Настоящий вид Telegram",
+  feat_quotes: "Цитаты ответов", feat_quotes_d: "Рамка с автором и фрагментом цитируемого сообщения",
+  feat_theme: "Светлая / тёмная тема", feat_theme_d: "Плавающая кнопка для смены темы",
+  feat_media: "Живое медиа", feat_media_d: "Воспроизводимые видео и аудио, фото в просмотрщике",
+  feat_note: "Заключительная заметка", feat_note_d: "Заметка в конце чата о том, как пользоваться этими инструментами",
+  enhance_btn: "Улучшить экспорт", restore_btn: "Вернуть оригинал",
+  need_me: "Укажите, кто вы, для режима диалога",
+  already_enhanced: "Этот экспорт уже был улучшен; он будет обновлён",
+  kind_group: "👥 Группа · {n} участников", kind_private: "👤 Личный чат",
+  item_sub: "{msgs} сообщений · {pages} страниц(ы)",
+  confirm_mix: "«{a}» не совпадает с «{b}». Похоже, это экспорты разных чатов. Всё равно добавить?",
+  confirm_kind: "Вы смешиваете групповой чат с личным. Всё равно добавить?",
+  snack_dup: "Этот экспорт уже в списке",
+  drop_no_messages: "«{name}» не содержит messages.html",
+  job_fusing: "Объединение экспортов…", job_compacting: "Сжатие…",
+  job_enhancing: "Улучшение…", job_restoring: "Восстановление оригинального дизайна…",
+  job_done: "Готово", job_error: "Ошибка", job_failed: "Операция не удалась",
+  res_summary: "{msgs} сообщений на {pages} страниц(ах)",
+  res_written: "Записано прямо в вашу папку. Откройте messages.html, чтобы посмотреть.",
+  stage_scan: "Сканирование {name}…", stage_merge: "Объединение сообщений…",
+  stage_media: "Копирование медиа · {n} файлов…", stage_write: "Запись страниц…",
+  stage_enhance: "Улучшение {name}…", stage_restore: "Восстановление {name}…",
+  stage_working: "Обработка…", stage_reading: "Чтение экспортов…", stage_saving: "Сохранение в вашу папку…"
+},
+zh: {
+  cta_download: "桌面版",
+  unsup_h: "浏览器不受支持",
+  unsup_p: "此应用需要 File System Access API（桌面版 Chrome、Edge 或 Opera）。在 Firefox 或 Safari 上请使用桌面版 — 同样完全本地运行。",
+  loader_h: "正在准备应用…",
+  loader_hint: "仅首次需要：解释器会被缓存。所有处理都在你的设备上进行。",
+  boot_loading: "正在为你的浏览器下载 Python（约 15 MB）…",
+  boot_engine: "正在加载引擎…",
+  tab_fuse: "合并", tab_compact: "压缩", tab_enhance: "美化",
+  fuse_sources: "源导出",
+  fuse_empty: "添加或拖入两个及以上的 Telegram 导出文件夹",
+  fuse_add_more: "在此添加或拖入另一个文件夹",
+  dest_pagination: "分页",
+  size_label: "页面大小", chip_single: "单个文件", chip_custom: "自定义",
+  fuse_out_hint: "合并时会要求你选择目标文件夹（请使用空文件夹）。",
+  fuse_btn: "合并导出", fuse_btn_n: "合并 {n} 个导出",
+  compact_source: "要压缩的导出",
+  compact_pick: "选择或拖入导出文件夹",
+  goal: "目标", mode_files: "文件数量", mode_size: "每页大小",
+  goal_hint_files: "你决定最终要多少个 messages.html（1 = 全部合一），每页大小自动计算。",
+  goal_hint_size: "你设定每个 messages.html 的最大体积，文件数量由历史记录总量决定。",
+  srclink: "开源项目 · 在 GitHub 上查看",
+  compact_btn: "压缩",
+  enhance_source: "要美化的导出",
+  enhance_pick: "选择或拖入导出文件夹",
+  enhance_opts: "显示选项",
+  me_label: "你是谁？（所选人的消息将以不同颜色高亮）",
+  me_none: "— 仅原始设计，不区分己方 —",
+  layout_label: "消息布局",
+  layout_both: "两者（可切换）", layout_chat: "对话", layout_original: "原始",
+  layout_hint_original: "所有头像在左侧，与原始 Telegram 导出一致。",
+  layout_hint_chat: "头像分列两侧：对方在左，你在右。",
+  layout_hint_both: "聊天中的悬浮按钮可在两种布局间切换。",
+  feat_fullwidth: "全宽显示", feat_fullwidth_d: "聊天占满整个屏幕，没有居中栏",
+  feat_bubbles: "气泡与聊天背景", feat_bubbles_d: "真实的 Telegram 外观",
+  feat_quotes: "回复引用", feat_quotes_d: "显示作者和被引用消息片段的引用框",
+  feat_theme: "明亮 / 暗黑模式", feat_theme_d: "悬浮按钮切换主题",
+  feat_media: "实时媒体", feat_media_d: "视频和音频可播放，照片在查看器中打开",
+  feat_note: "结尾说明", feat_note_d: "在聊天末尾附上这些工具的使用说明",
+  enhance_btn: "美化导出", restore_btn: "撤销美化",
+  need_me: "请选择你是谁以启用对话模式",
+  already_enhanced: "此导出已经美化过；将会更新",
+  kind_group: "👥 群组 · {n} 位成员", kind_private: "👤 私聊",
+  item_sub: "{msgs} 条消息 · {pages} 页",
+  confirm_mix: "「{a}」与「{b}」不匹配。这些导出似乎来自不同的聊天。仍要添加吗？",
+  confirm_kind: "你正在把群聊和私聊混在一起。仍要添加吗？",
+  snack_dup: "该导出已在列表中",
+  drop_no_messages: "「{name}」不包含 messages.html",
+  job_fusing: "正在合并导出…", job_compacting: "正在压缩…",
+  job_enhancing: "正在美化…", job_restoring: "正在恢复原始设计…",
+  job_done: "完成", job_error: "错误", job_failed: "操作失败",
+  res_summary: "{msgs} 条消息，共 {pages} 页",
+  res_written: "已直接写入你的文件夹。打开 messages.html 查看。",
+  stage_scan: "正在扫描 {name}…", stage_merge: "正在合并消息…",
+  stage_media: "正在复制媒体 · {n} 个文件…", stage_write: "正在写入页面…",
+  stage_enhance: "正在美化 {name}…", stage_restore: "正在恢复 {name}…",
+  stage_working: "处理中…", stage_reading: "正在读取导出…", stage_saving: "正在保存到你的文件夹…"
+},
+ja: {
+  cta_download: "デスクトップ版",
+  unsup_h: "非対応のブラウザ",
+  unsup_p: "このアプリには File System Access API が必要です（デスクトップ版 Chrome・Edge・Opera）。Firefox や Safari ではデスクトップ版をご利用ください — 同じく完全ローカルです。",
+  loader_h: "アプリを準備中…",
+  loader_hint: "初回のみ：インタープリタはキャッシュされます。すべての処理はあなたの端末上で行われます。",
+  boot_loading: "ブラウザ用の Python をダウンロード中（約 15 MB）…",
+  boot_engine: "エンジンを読み込み中…",
+  tab_fuse: "結合", tab_compact: "圧縮", tab_enhance: "強化",
+  fuse_sources: "元のエクスポート",
+  fuse_empty: "Telegram のエクスポートフォルダを 2 つ以上追加またはドラッグ",
+  fuse_add_more: "別のフォルダをここに追加またはドラッグ",
+  dest_pagination: "ページ分割",
+  size_label: "ページサイズ", chip_single: "単一ファイル", chip_custom: "カスタム",
+  fuse_out_hint: "結合時に保存先フォルダの選択を求められます（空のフォルダを使ってください）。",
+  fuse_btn: "エクスポートを結合", fuse_btn_n: "{n} 件のエクスポートを結合",
+  compact_source: "圧縮するエクスポート",
+  compact_pick: "エクスポートフォルダを選択またはドラッグ",
+  goal: "目標", mode_files: "ファイル数", mode_size: "ページあたりのサイズ",
+  goal_hint_files: "最終的に残す messages.html の数を指定します（1 = すべてを 1 つに）。ページサイズは自動計算されます。",
+  goal_hint_size: "各 messages.html の最大サイズを指定します。ファイル数は履歴の総量で決まります。",
+  srclink: "オープンソース · GitHub で見る",
+  compact_btn: "圧縮",
+  enhance_source: "強化するエクスポート",
+  enhance_pick: "エクスポートフォルダを選択またはドラッグ",
+  enhance_opts: "表示オプション",
+  me_label: "あなたは誰ですか？（選んだ人のメッセージは別の色でハイライトされます）",
+  me_none: "— オリジナルデザインのみ、自分側なし —",
+  layout_label: "メッセージのレイアウト",
+  layout_both: "両方（切替可）", layout_chat: "会話", layout_original: "オリジナル",
+  layout_hint_original: "元のエクスポートと同じく、すべてのアバターが左側に表示されます。",
+  layout_hint_chat: "アバターが両側に：相手は左、あなたは右。",
+  layout_hint_both: "チャット内のフローティングボタンで両方のレイアウトを切り替えられます。",
+  feat_fullwidth: "全幅表示", feat_fullwidth_d: "中央カラムなしでチャットが画面全体に広がります",
+  feat_bubbles: "吹き出しとチャット背景", feat_bubbles_d: "本物の Telegram の見た目",
+  feat_quotes: "返信の引用", feat_quotes_d: "作者と引用元の抜粋を表示する引用枠",
+  feat_theme: "ライト / ダークモード", feat_theme_d: "フローティングボタンでテーマを切替",
+  feat_media: "ライブメディア", feat_media_d: "動画と音声を再生可能、写真はビューアで表示",
+  feat_note: "最終メッセージ", feat_note_d: "チャットの最後にツールの使い方を記載",
+  enhance_btn: "エクスポートを強化", restore_btn: "元に戻す",
+  need_me: "会話モードにはあなたが誰かを選んでください",
+  already_enhanced: "このエクスポートは既に強化済みです。更新されます",
+  kind_group: "👥 グループ · {n} 人", kind_private: "👤 個人チャット",
+  item_sub: "{msgs} 件のメッセージ · {pages} ページ",
+  confirm_mix: "「{a}」は「{b}」と一致しません。別のチャットのエクスポートのようです。それでも追加しますか？",
+  confirm_kind: "グループチャットと個人チャットを混ぜようとしています。それでも追加しますか？",
+  snack_dup: "そのエクスポートは既にリストにあります",
+  drop_no_messages: "「{name}」に messages.html がありません",
+  job_fusing: "エクスポートを結合中…", job_compacting: "圧縮中…",
+  job_enhancing: "強化中…", job_restoring: "オリジナルデザインを復元中…",
+  job_done: "完了", job_error: "エラー", job_failed: "操作に失敗しました",
+  res_summary: "{msgs} 件のメッセージ、{pages} ページ",
+  res_written: "フォルダに直接書き込みました。messages.html を開いてご覧ください。",
+  stage_scan: "{name} をスキャン中…", stage_merge: "メッセージを結合中…",
+  stage_media: "メディアをコピー中 · {n} ファイル…", stage_write: "ページを書き込み中…",
+  stage_enhance: "{name} を強化中…", stage_restore: "{name} を復元中…",
+  stage_working: "処理中…", stage_reading: "エクスポートを読み込み中…", stage_saving: "フォルダに保存中…"
+},
+hi: {
+  cta_download: "डेस्कटॉप संस्करण",
+  unsup_h: "ब्राउज़र समर्थित नहीं है",
+  unsup_p: "इस ऐप को File System Access API चाहिए (डेस्कटॉप पर Chrome, Edge या Opera)। Firefox या Safari पर डेस्कटॉप संस्करण इस्तेमाल करें — वह भी उतना ही लोकल है।",
+  loader_h: "ऐप तैयार हो रहा है…",
+  loader_hint: "केवल पहली बार: इंटरप्रेटर कैश हो जाता है। सारी प्रोसेसिंग आपके डिवाइस पर होती है।",
+  boot_loading: "आपके ब्राउज़र के लिए Python डाउनलोड हो रहा है (~15 MB)…",
+  boot_engine: "इंजन लोड हो रहा है…",
+  tab_fuse: "मिलाएँ", tab_compact: "संक्षिप्त करें", tab_enhance: "बेहतर बनाएँ",
+  fuse_sources: "स्रोत एक्सपोर्ट",
+  fuse_empty: "दो या अधिक Telegram एक्सपोर्ट फ़ोल्डर यहाँ जोड़ें या खींचें",
+  fuse_add_more: "यहाँ एक और फ़ोल्डर जोड़ें या खींचें",
+  dest_pagination: "पेज विभाजन",
+  size_label: "पेज का आकार", chip_single: "एक ही फ़ाइल", chip_custom: "कस्टम",
+  fuse_out_hint: "मिलाते समय आपसे गंतव्य फ़ोल्डर चुनने को कहा जाएगा (खाली फ़ोल्डर इस्तेमाल करें)।",
+  fuse_btn: "एक्सपोर्ट मिलाएँ", fuse_btn_n: "{n} एक्सपोर्ट मिलाएँ",
+  compact_source: "संक्षिप्त करने के लिए एक्सपोर्ट",
+  compact_pick: "एक्सपोर्ट फ़ोल्डर चुनें या यहाँ खींचें",
+  goal: "लक्ष्य", mode_files: "फ़ाइलों की संख्या", mode_size: "प्रति पेज आकार",
+  goal_hint_files: "आप तय करते हैं कि अंत में कितनी messages.html रहें (1 = सब एक में) और हर पेज का आकार अपने आप तय होता है।",
+  goal_hint_size: "आप हर messages.html का अधिकतम आकार तय करते हैं और फ़ाइलों की संख्या पूरे इतिहास पर निर्भर करती है।",
+  srclink: "ओपन सोर्स · GitHub पर देखें",
+  compact_btn: "संक्षिप्त करें",
+  enhance_source: "बेहतर बनाने के लिए एक्सपोर्ट",
+  enhance_pick: "एक्सपोर्ट फ़ोल्डर चुनें या यहाँ खींचें",
+  enhance_opts: "देखने के विकल्प",
+  me_label: "आप कौन हैं? (चुने गए व्यक्ति के संदेश अलग रंग में हाइलाइट होंगे)",
+  me_none: "— केवल मूल डिज़ाइन, अपना पक्ष नहीं —",
+  layout_label: "संदेशों का लेआउट",
+  layout_both: "दोनों (बदल सकते हैं)", layout_chat: "बातचीत", layout_original: "मूल",
+  layout_hint_original: "सभी अवतार बाईं ओर, मूल Telegram एक्सपोर्ट की तरह।",
+  layout_hint_chat: "अवतार दोनों ओर: सामने वाला बाईं ओर, आप दाईं ओर।",
+  layout_hint_both: "चैट में एक फ़्लोटिंग बटन दोनों लेआउट के बीच बदलता है।",
+  feat_fullwidth: "पूरी चौड़ाई", feat_fullwidth_d: "चैट पूरी स्क्रीन घेरती है, बीच वाला कॉलम नहीं",
+  feat_bubbles: "बबल और चैट बैकग्राउंड", feat_bubbles_d: "असली Telegram जैसा रूप",
+  feat_quotes: "जवाब के उद्धरण", feat_quotes_d: "लेखक और उद्धृत संदेश के अंश वाला बॉक्स",
+  feat_theme: "लाइट / डार्क मोड", feat_theme_d: "थीम बदलने के लिए फ़्लोटिंग बटन",
+  feat_media: "लाइव मीडिया", feat_media_d: "वीडियो-ऑडियो चलते हैं, फ़ोटो व्यूअर में खुलती हैं",
+  feat_note: "अंतिम संदेश", feat_note_d: "चैट के अंत में इन टूल्स के इस्तेमाल की जानकारी",
+  enhance_btn: "एक्सपोर्ट बेहतर बनाएँ", restore_btn: "मूल रूप लौटाएँ",
+  need_me: "बातचीत मोड के लिए चुनें कि आप कौन हैं",
+  already_enhanced: "यह एक्सपोर्ट पहले से बेहतर बनाया गया था; इसे अपडेट किया जाएगा",
+  kind_group: "👥 समूह · {n} सदस्य", kind_private: "👤 निजी चैट",
+  item_sub: "{msgs} संदेश · {pages} पेज",
+  confirm_mix: "«{a}» का «{b}» से मेल नहीं है। ये एक्सपोर्ट अलग-अलग चैट के लगते हैं। फिर भी जोड़ें?",
+  confirm_kind: "आप एक समूह चैट को निजी चैट के साथ मिला रहे हैं। फिर भी जोड़ें?",
+  snack_dup: "वह एक्सपोर्ट पहले से सूची में है",
+  drop_no_messages: "«{name}» में messages.html नहीं है",
+  job_fusing: "एक्सपोर्ट मिलाए जा रहे हैं…", job_compacting: "संक्षिप्त हो रहा है…",
+  job_enhancing: "बेहतर बनाया जा रहा है…", job_restoring: "मूल डिज़ाइन बहाल हो रहा है…",
+  job_done: "पूरा हुआ", job_error: "त्रुटि", job_failed: "कार्रवाई विफल रही",
+  res_summary: "{pages} पेज में {msgs} संदेश",
+  res_written: "सीधे आपके फ़ोल्डर में लिखा गया। देखने के लिए messages.html खोलें।",
+  stage_scan: "{name} स्कैन हो रहा है…", stage_merge: "संदेश मिलाए जा रहे हैं…",
+  stage_media: "मीडिया कॉपी हो रहा है · {n} फ़ाइलें…", stage_write: "पेज लिखे जा रहे हैं…",
+  stage_enhance: "{name} बेहतर बनाया जा रहा है…", stage_restore: "{name} बहाल हो रहा है…",
+  stage_working: "प्रोसेस हो रहा है…", stage_reading: "एक्सपोर्ट पढ़े जा रहे हैं…", stage_saving: "आपके फ़ोल्डर में सहेजा जा रहा है…"
+},
+ar: {
+  cta_download: "نسخة سطح المكتب",
+  unsup_h: "المتصفح غير مدعوم",
+  unsup_p: "يحتاج هذا التطبيق إلى File System Access API ‏(Chrome أو Edge أو Opera على الحاسوب). في Firefox أو Safari استخدم نسخة سطح المكتب — محلية تمامًا كذلك.",
+  loader_h: "جارٍ تجهيز التطبيق…",
+  loader_hint: "في المرة الأولى فقط: يُخزَّن المفسّر مؤقتًا. كل المعالجة تتم على جهازك.",
+  boot_loading: "جارٍ تنزيل Python لمتصفحك (~15 ميجابايت)…",
+  boot_engine: "جارٍ تحميل المحرك…",
+  tab_fuse: "دمج", tab_compact: "ضغط", tab_enhance: "تحسين",
+  fuse_sources: "التصديرات المصدر",
+  fuse_empty: "أضف أو اسحب هنا مجلدين أو أكثر من تصديرات تيليجرام",
+  fuse_add_more: "أضف أو اسحب هنا مجلدًا آخر",
+  dest_pagination: "تقسيم الصفحات",
+  size_label: "حجم الصفحة", chip_single: "ملف واحد", chip_custom: "مخصص",
+  fuse_out_hint: "عند الدمج سيُطلب منك اختيار مجلد الوجهة (استخدم مجلدًا فارغًا).",
+  fuse_btn: "دمج التصديرات", fuse_btn_n: "دمج {n} تصديرات",
+  compact_source: "التصدير المراد ضغطه",
+  compact_pick: "اختر أو اسحب هنا مجلد التصدير",
+  goal: "الهدف", mode_files: "عدد الملفات", mode_size: "حجم كل صفحة",
+  goal_hint_files: "تختار كم ملف messages.html تريد في النهاية (1 = الكل في ملف واحد) ويُحسب حجم كل صفحة تلقائيًا.",
+  goal_hint_size: "تحدد الحجم الأقصى لكل messages.html ويتحدد عدد الملفات حسب إجمالي السجل.",
+  srclink: "مفتوح المصدر · شاهده على GitHub",
+  compact_btn: "ضغط",
+  enhance_source: "التصدير المراد تحسينه",
+  enhance_pick: "اختر أو اسحب هنا مجلد التصدير",
+  enhance_opts: "خيارات العرض",
+  me_label: "من أنت؟ (ستُميَّز رسائل الشخص المختار بلون مختلف)",
+  me_none: "— التصميم الأصلي فقط، بدون جانب خاص —",
+  layout_label: "تخطيط الرسائل",
+  layout_both: "كلاهما (قابل للتبديل)", layout_chat: "محادثة", layout_original: "أصلي",
+  layout_hint_original: "كل الصور الرمزية على اليسار، كما في تصدير تيليجرام الأصلي.",
+  layout_hint_chat: "الصور الرمزية على الجانبين: محدِّثك في جهة وأنت في الأخرى.",
+  layout_hint_both: "زر عائم في المحادثة يبدّل بين التخطيطين.",
+  feat_fullwidth: "عرض كامل", feat_fullwidth_d: "تشغل المحادثة الشاشة كاملة، بدون عمود مركزي",
+  feat_bubbles: "الفقاعات وخلفية المحادثة", feat_bubbles_d: "مظهر تيليجرام الحقيقي",
+  feat_quotes: "اقتباسات الردود", feat_quotes_d: "إطار يعرض الكاتب ومقتطفًا من الرسالة المقتبسة",
+  feat_theme: "الوضع الفاتح / الداكن", feat_theme_d: "زر عائم لتغيير السمة",
+  feat_media: "وسائط مباشرة", feat_media_d: "فيديو وصوت قابلان للتشغيل، وصور في عارض",
+  feat_note: "رسالة ختامية", feat_note_d: "ملاحظة في نهاية المحادثة عن كيفية استخدام هذه الأدوات",
+  enhance_btn: "تحسين التصدير", restore_btn: "إزالة التحسين",
+  need_me: "اختر من أنت لوضع المحادثة",
+  already_enhanced: "هذا التصدير محسَّن مسبقًا؛ سيتم تحديثه",
+  kind_group: "👥 مجموعة · {n} مشاركًا", kind_private: "👤 محادثة خاصة",
+  item_sub: "{msgs} رسالة · {pages} صفحة",
+  confirm_mix: "«{a}» لا يطابق «{b}». يبدو أن هذه التصديرات من محادثات مختلفة. أتريد إضافته على أي حال؟",
+  confirm_kind: "أنت تخلط محادثة جماعية بمحادثة خاصة. أتريد الإضافة على أي حال؟",
+  snack_dup: "هذا التصدير موجود في القائمة بالفعل",
+  drop_no_messages: "«{name}» لا يحتوي على messages.html",
+  job_fusing: "جارٍ دمج التصديرات…", job_compacting: "جارٍ الضغط…",
+  job_enhancing: "جارٍ التحسين…", job_restoring: "جارٍ استعادة التصميم الأصلي…",
+  job_done: "اكتمل", job_error: "خطأ", job_failed: "فشلت العملية",
+  res_summary: "{msgs} رسالة في {pages} صفحة",
+  res_written: "كُتب مباشرة في مجلدك. افتح messages.html لعرضه.",
+  stage_scan: "جارٍ فحص {name}…", stage_merge: "جارٍ دمج الرسائل…",
+  stage_media: "جارٍ نسخ الوسائط · {n} ملفًا…", stage_write: "جارٍ كتابة الصفحات…",
+  stage_enhance: "جارٍ تحسين {name}…", stage_restore: "جارٍ استعادة {name}…",
+  stage_working: "جارٍ المعالجة…", stage_reading: "جارٍ قراءة التصديرات…", stage_saving: "جارٍ الحفظ في مجلدك…"
+}
+};
+document.querySelectorAll(".srclink").forEach(a => { a.href = REPO_URL; });
+
+let LANG = localStorage.getItem("tgxweb-lang");
+if (!I18N[LANG]) {
+  const nav = (navigator.language || "en").slice(0, 2).toLowerCase();
+  LANG = I18N[nav] ? nav : "en";
+}
+function t(key, vars) {
+  let s = (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+  if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
+  return s;
+}
+function applyLang() {
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === "ar" ? "rtl" : "ltr";
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  $("lang").value = LANG;
+  updateGoalHint();
+  updateLayoutHint();
+  renderExports();
+  renderMeOptions();
+  requestAnimationFrame(movePill);
+}
+$("lang").onchange = () => {
+  LANG = $("lang").value;
+  localStorage.setItem("tgxweb-lang", LANG);
+  applyLang();
+};
+
+/* ================= helpers ================= */
+function snack(msg) {
+  const s = $("snack");
+  s.textContent = msg;
+  s.classList.add("show");
+  clearTimeout(s._t);
+  s._t = setTimeout(() => s.classList.remove("show"), 4000);
+}
+function pyError(e) {
+  const m = String(e.message || e);
+  const lines = m.trim().split("\n");
+  return lines[lines.length - 1].replace(/^\w+Error: /, "");
+}
+function movePill() {
+  const btn = document.querySelector("#tabs button.active");
+  if (!btn) return;
+  $("pill").style.left = btn.offsetLeft + "px";
+  $("pill").style.width = btn.offsetWidth + "px";
+}
+document.querySelectorAll("#tabs button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#tabs button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    ["fuse", "compact", "enhance"].forEach(v => {
+      $("view-" + v).style.display = v === b.dataset.view ? "" : "none";
+    });
+    movePill();
+  };
+});
+window.addEventListener("resize", movePill);
+
+function wireChips(chipsId, customId, onSel) {
+  $(chipsId).querySelectorAll(".chip").forEach(c => {
+    c.onclick = () => {
+      $(chipsId).querySelectorAll(".chip").forEach(x => x.classList.remove("sel"));
+      c.classList.add("sel");
+      if (customId) $(customId).classList.toggle("show", c.dataset.size === "custom");
+      if (onSel) onSel();
+    };
+  });
+}
+wireChips("fuse-chips", "fuse-custom");
+wireChips("compact-chips", "compact-custom");
+wireChips("layout-chips", null, updateLayoutHint);
+
+/* explicaciones dinamicas: cambian con la opcion elegida */
+function updateGoalHint() {
+  const mode = document.querySelector("#compact-mode button.active").dataset.mode;
+  $("goal-hint").textContent = t(mode === "files" ? "goal_hint_files" : "goal_hint_size");
+}
+function updateLayoutHint() {
+  const l = $("layout-chips").querySelector(".chip.sel").dataset.layout;
+  $("layout-hint").textContent = t("layout_hint_" + l);
+}
+function chipValue(chipsId, nId, uId) {
+  const sel = $(chipsId).querySelector(".chip.sel");
+  if (sel.dataset.size !== "custom") return sel.dataset.size;
+  return ($(nId).value || "1") + $(uId).value;
+}
+document.querySelectorAll("#compact-mode button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#compact-mode button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    $("compact-files").style.display = b.dataset.mode === "files" ? "" : "none";
+    $("compact-size").style.display = b.dataset.mode === "size" ? "" : "none";
+    updateGoalHint();
+  };
+});
+$("opt-bubbles").onchange = () => {
+  $("bubbles-sub").classList.toggle("off", !$("opt-bubbles").checked);
+};
+
+/* ================= boot (automático) ================= */
+const ENGINE = ["telegram_export_fuser.py", "telegram_export_compactor.py",
+                "telegram_export_enhancer.py"];
+
+const GLUE_PY = String.raw`
+import json, re
+from collections import Counter
+from pathlib import Path
+import telegram_export_fuser as F
+import telegram_export_compactor as C
+import telegram_export_enhancer as E
+
+def set_progress(cb):
+    F.progress_hook = (lambda kind, payload:
+                       cb(kind, json.dumps(payload, default=str)))
+
+def inspect(path):
+    d = Path(path)
+    pages = sorted(d.glob("messages*.html"),
+                   key=lambda p: int(re.search(r"(\d*)\.html", p.name)
+                                     .group(1) or 0))
+    if not pages:
+        raise ValueError("no messages.html")
+    ids = set()
+    senders = Counter()
+    title = None
+    first = last = None
+    for p in pages:
+        h = p.read_text(encoding="utf-8")
+        ids.update(int(m) for m in re.findall(r'id="message(\d+)"', h))
+        senders.update(s.strip() for s in F.FROM_NAME_RE.findall(h))
+        if title is None:
+            tm = re.search(r'<div class="text bold">\s*\n(.*?)\n', h)
+            title = tm.group(1).strip() if tm else None
+        ds = F.DATE_TITLE_RE.findall(h)
+        if ds:
+            if first is None:
+                first = "/".join(ds[0][:3])
+            last = "/".join(ds[-1][:3])
+    return json.dumps({
+        "title": title, "messages": len(ids),
+        "pages": [p.name for p in pages],
+        "first": first, "last": last,
+        "senders": [{"name": n, "count": c} for n, c in senders.most_common()],
+        "kind": "group" if len(senders) > 2 else "private",
+        "enhanced": "css/enhanced.css" in
+                    pages[0].read_text(encoding="utf-8")[:4000],
+    })
+
+def run_fuse(paths_json, out, page_size, force, media_maps_json):
+    paths = [Path(p) for p in json.loads(paths_json)]
+    F.media_maps = json.loads(media_maps_json)
+    try:
+        res = F.fuse(F.order_exports(paths), Path(out),
+                     F.parse_size(page_size), force=bool(force))
+    finally:
+        F.media_maps = None
+    return json.dumps(res)
+
+def run_compact(path, files, size):
+    if files:
+        res = C.compact(Path(path), int(files), None)
+    else:
+        res = C.compact(Path(path), None, F.parse_size(size))
+    return json.dumps(res)
+
+def run_enhance(path, me, layout, features_json, fullwidth):
+    res = E.enhance(Path(path), me or None, layout,
+                    json.loads(features_json), fullwidth=bool(fullwidth))
+    return json.dumps(res)
+
+def run_restore(path):
+    return json.dumps(E.restore(Path(path)))
+`;
+
+async function boot() {
+  $("boot-status").textContent = t("boot_loading");
+  try {
+    pyodide = await loadPyodide();
+    $("boot-status").textContent = t("boot_engine");
+    for (const f of ENGINE) {
+      const r = await fetch(f);
+      if (!r.ok) throw new Error("fetch " + f + ": " + r.status);
+      pyodide.FS.writeFile("/home/pyodide/" + f, await r.text());
+    }
+    pyodide.FS.writeFile("/home/pyodide/web_glue.py", GLUE_PY);
+    glue = pyodide.pyimport("web_glue");
+    glue.set_progress(onPyProgress);
+    $("loader").style.display = "none";
+    $("studio").style.display = "";
+    applyLang();
+  } catch (e) {
+    $("boot-status").textContent = String(e);
+  }
+}
+
+/* ================= FS plumbing ================= */
+const HTML_RE = /^messages\d*\.html$/;
+const ASSETS = ["css", "js", "images"];
+
+async function dirFromDrop(e) {
+  const out = [];
+  for (const item of e.dataTransfer.items) {
+    if (item.getAsFileSystemHandle) {
+      const h = await item.getAsFileSystemHandle();
+      if (h && h.kind === "directory") out.push(h);
+    }
+  }
+  return out;
+}
+function wireDrop(el, onHandle) {
+  ["dragover", "dragenter"].forEach(ev => el.addEventListener(ev, e => {
+    e.preventDefault();
+    el.classList.add("dropping");
+  }));
+  el.addEventListener("dragleave", e => {
+    if (!el.contains(e.relatedTarget)) el.classList.remove("dropping");
+  });
+  el.addEventListener("drop", async e => {
+    e.preventDefault();
+    el.classList.remove("dropping");
+    if (!glue) return;
+    for (const h of await dirFromDrop(e)) {
+      try { await onHandle(h); } catch (err) { snack(pyError(err)); }
+    }
+  });
+}
+
+async function loadHtmlsToFS(handle, target) {
+  try { pyodide.FS.mkdirTree(target); } catch (_) {}
+  for (const n of pyodide.FS.readdir(target)) {
+    if (HTML_RE.test(n)) pyodide.FS.unlink(target + "/" + n);
+  }
+  let found = false;
+  for await (const [name, h] of handle.entries()) {
+    if (h.kind === "file" && HTML_RE.test(name)) {
+      const buf = new Uint8Array(await (await h.getFile()).arrayBuffer());
+      pyodide.FS.writeFile(target + "/" + name, buf);
+      found = true;
+    }
+  }
+  if (!found) throw new Error(t("drop_no_messages", { name: handle.name }));
+}
+
+async function writeBackPages(target, handle, pageNames) {
+  for (const name of pageNames) {
+    const data = pyodide.FS.readFile(target + "/" + name);
+    const fh = await handle.getFileHandle(name, { create: true });
+    const w = await fh.createWritable();
+    await w.write(data);
+    await w.close();
+  }
+  const keep = new Set(pageNames);
+  const stale = [];
+  for await (const [name, h] of handle.entries()) {
+    if (h.kind === "file" && HTML_RE.test(name) && !keep.has(name)) stale.push(name);
+  }
+  for (const name of stale) await handle.removeEntry(name);
+}
+
+async function copyMediaTree(srcHandle, outHandle, written, includeAssets) {
+  const renames = {};
+  async function walk(src, dst, rel) {
+    for await (const [name, h] of src.entries()) {
+      if (h.kind === "directory") {
+        const isAsset = rel === "" && ASSETS.includes(name);
+        if (isAsset && !includeAssets) continue;
+        await walk(h, await dst.getDirectoryHandle(name, { create: true }),
+                   rel + name + "/");
+        continue;
+      }
+      if (rel === "") continue;
+      const isAsset = ASSETS.includes(rel.split("/")[0]);
+      const f = await h.getFile();
+      let target = rel + name;
+      if (written.has(target)) {
+        if (isAsset || written.get(target) === f.size) continue;
+        let n = 2;
+        const dot = name.indexOf(".");
+        const stem = dot < 0 ? name : name.slice(0, dot);
+        const ext = dot < 0 ? "" : name.slice(dot);
+        let cand;
+        do { cand = rel + stem + "__" + n + ext; n++; }
+        while (written.has(cand) && written.get(cand) !== f.size);
+        renames[target] = cand;
+        if (written.has(cand)) continue;
+        target = cand;
+      }
+      const tName = target.slice(target.lastIndexOf("/") + 1);
+      const fh = await dst.getFileHandle(tName, { create: true });
+      await f.stream().pipeTo(await fh.createWritable());
+      written.set(target, f.size);
+      mediaDone++;
+      setStage(t("stage_media", { n: mediaDone }), null);
+    }
+  }
+  await walk(srcHandle, outHandle, "");
+  return renames;
+}
+
+/* ================= job UI ================= */
+function showJob(title) {
+  $("job").classList.add("show");
+  $("job-stage").textContent = title;
+  $("job-pct").textContent = "";
+  $("job-spin").style.display = "";
+  $("job-progress").classList.add("indet");
+  $("job-bar").style.width = "0%";
+  $("job-warns").innerHTML = "";
+  $("job-result").classList.remove("show");
+  document.querySelectorAll(".btn.filled").forEach(b => b.disabled = true);
+  $("job").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function setStage(text, frac) {
+  $("job-stage").textContent = text;
+  if (typeof frac === "number") {
+    $("job-progress").classList.remove("indet");
+    $("job-bar").style.width = Math.round(frac * 100) + "%";
+    $("job-pct").textContent = Math.round(frac * 100) + "%";
+  } else {
+    $("job-progress").classList.add("indet");
+    $("job-pct").textContent = "";
+  }
+}
+function pushWarn(text) {
+  const div = document.createElement("div");
+  div.className = "warn-item";
+  div.innerHTML = '<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg><span></span>';
+  div.querySelector("span").textContent = text;
+  $("job-warns").appendChild(div);
+}
+function onPyProgress(kind, payloadJson) {
+  const p = JSON.parse(payloadJson);
+  if (kind === "warn") return pushWarn(p);
+  setStage(t("stage_" + p.key, { name: p.name || "", n: p.copied || 0 }),
+           typeof p.frac === "number" ? p.frac : null);
+}
+function endJob(ok, res, errText) {
+  $("job-spin").style.display = "none";
+  $("job-progress").classList.remove("indet");
+  $("job-bar").style.width = "100%";
+  $("job-pct").textContent = "";
+  document.querySelectorAll(".btn.filled").forEach(b => b.disabled = false);
+  renderExports();
+  if (!state.compact) $("compact-btn").disabled = true;
+  if (!state.enhance) $("enhance-btn").disabled = true;
+  const icon = $("job-ricon");
+  $("job-result").classList.add("show");
+  if (ok) {
+    $("job-stage").textContent = t("job_done");
+    icon.className = "ricon ok";
+    icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+    $("job-rtitle").textContent =
+      t("res_summary", { msgs: res.messages, pages: res.pages.length });
+    $("job-rsub").textContent = t("res_written");
+  } else {
+    $("job-stage").textContent = t("job_error");
+    icon.className = "ricon err";
+    icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+    $("job-rtitle").textContent = t("job_failed");
+    $("job-rsub").textContent = errText || "";
+  }
+}
+
+/* ================= fuse ================= */
+function kindLabel(e) {
+  return e.kind === "group"
+    ? t("kind_group", { n: e.senders.length }) : t("kind_private");
+}
+function itemSub(e) {
+  return kindLabel(e) + " · "
+    + t("item_sub", { msgs: e.messages, pages: e.pages.length })
+    + (e.first ? " · " + e.first + " → " + e.last : "");
+}
+function renderExports() {
+  const list = $("export-list");
+  if (!list) return;
+  list.innerHTML = "";
+  state.exports.forEach((e, i) => {
+    const div = document.createElement("div");
+    div.className = "export-item";
+    div.innerHTML = '<div class="ficon"><svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>'
+      + '<div class="info"><b></b><span></span></div>'
+      + '<button class="iconbtn"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
+    div.querySelector("b").textContent =
+      e.handle.name + (e.title ? " — " + e.title : "");
+    div.querySelector("span").textContent = itemSub(e);
+    div.querySelector(".iconbtn").onclick = () => {
+      state.exports.splice(i, 1);
+      renderExports();
+    };
+    list.appendChild(div);
+  });
+  const n = state.exports.length;
+  $("export-empty").classList.toggle("mini", n > 0);
+  $("export-empty-text").textContent = t(n ? "fuse_add_more" : "fuse_empty");
+  $("fuse-btn").disabled = n < 2 || !glue;
+  $("fuse-btn-label").textContent = n < 2 ? t("fuse_btn") : t("fuse_btn_n", { n });
+}
+
+async function inspectHandle(handle, target) {
+  await loadHtmlsToFS(handle, target);
+  const info = JSON.parse(glue.inspect(target));
+  info.handle = handle;
+  info.target = target;
+  return info;
+}
+
+async function addExportHandle(handle) {
+  for (const e of state.exports) {
+    if (await handle.isSameEntry(e.handle)) return snack(t("snack_dup"));
+  }
+  const info = await inspectHandle(handle, "/work/ex" + state.exports.length);
+  if (state.exports.length) {
+    const first = state.exports[0];
+    if (first.title && info.title && first.title !== info.title) {
+      if (!confirm(t("confirm_mix", { a: info.title, b: first.title }))) return;
+      state.forceMix = true;
+    } else if (first.kind !== info.kind) {
+      if (!confirm(t("confirm_kind"))) return;
+      state.forceMix = true;
+    }
+  }
+  state.exports.push(info);
+  renderExports();
+}
+async function addExport() {
+  if (!glue) return;
+  try {
+    const h = await showDirectoryPicker({ id: "tgx-in" });
+    await addExportHandle(h);
+  } catch (e) { if (e.name !== "AbortError") snack(pyError(e)); }
+}
+
+async function runFuse() {
+  let out;
+  try {
+    out = await showDirectoryPicker({ id: "tgx-out", mode: "readwrite" });
+  } catch (e) { return; }
+  for (const e of state.exports) {
+    if (await out.isSameEntry(e.handle)) return snack("⚠ output = input");
+  }
+  showJob(t("job_fusing"));
+  try {
+    mediaDone = 0;
+    const maps = {};
+    const written = new Map();
+    for (let i = 0; i < state.exports.length; i++) {
+      maps["/work/ex" + i] = await copyMediaTree(
+        state.exports[i].handle, out, written, i === 0);
+    }
+    setStage(t("stage_reading"), null);
+    for (let i = 0; i < state.exports.length; i++) {
+      await loadHtmlsToFS(state.exports[i].handle, "/work/ex" + i);
+    }
+    try { pyodide.FS.mkdirTree("/out"); } catch (_) {}
+    const paths = state.exports.map((_, i) => "/work/ex" + i);
+    const res = JSON.parse(glue.run_fuse(
+      JSON.stringify(paths), "/out",
+      chipValue("fuse-chips", "fuse-custom-n", "fuse-custom-u"),
+      state.forceMix, JSON.stringify(maps)));
+    setStage(t("stage_saving"), null);
+    await writeBackPages("/out", out, res.pages);
+    endJob(true, res);
+  } catch (e) {
+    endJob(false, null, pyError(e));
+  }
+}
+
+/* ================= compact ================= */
+async function setCompactHandle(handle) {
+  const info = await inspectHandle(handle, "/work/c");
+  state.compact = info;
+  $("ci-name").textContent = handle.name + (info.title ? " — " + info.title : "");
+  $("ci-sub").textContent = itemSub(info);
+  $("compact-sel").style.display = "none";
+  $("compact-info").style.display = "";
+  $("compact-btn").disabled = false;
+}
+async function pickCompact() {
+  if (!glue) return;
+  try {
+    const h = await showDirectoryPicker({ id: "tgx-in", mode: "readwrite" });
+    await setCompactHandle(h);
+  } catch (e) { if (e.name !== "AbortError") snack(pyError(e)); }
+}
+function clearCompact() {
+  state.compact = null;
+  $("compact-sel").style.display = "";
+  $("compact-info").style.display = "none";
+  $("compact-btn").disabled = true;
+}
+async function runCompact() {
+  if (!state.compact) return;
+  showJob(t("job_compacting"));
+  try {
+    await loadHtmlsToFS(state.compact.handle, "/work/c");
+    const mode = document.querySelector("#compact-mode button.active").dataset.mode;
+    const res = JSON.parse(mode === "files"
+      ? glue.run_compact("/work/c", $("files-n").value || "1", null)
+      : glue.run_compact("/work/c", null,
+          chipValue("compact-chips", "compact-custom-n", "compact-custom-u")));
+    setStage(t("stage_saving"), null);
+    await writeBackPages("/work/c", state.compact.handle, res.pages);
+    endJob(true, res);
+  } catch (e) { endJob(false, null, pyError(e)); }
+}
+
+/* ================= enhance / restore ================= */
+function renderMeOptions() {
+  const sel = $("me-select");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = "";
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = t("me_none");
+  sel.appendChild(none);
+  (state.enhance ? state.enhance.senders : []).forEach(s => {
+    const o = document.createElement("option");
+    o.value = s.name;
+    o.textContent = s.name + " (" + s.count + ")";
+    sel.appendChild(o);
+  });
+  if ([...sel.options].some(o => o.value === current)) sel.value = current;
+}
+async function setEnhanceHandle(handle) {
+  const info = await inspectHandle(handle, "/work/e");
+  state.enhance = info;
+  $("ei-name").textContent = handle.name + (info.title ? " — " + info.title : "");
+  $("ei-sub").textContent = itemSub(info);
+  renderMeOptions();
+  if (info.enhanced) snack(t("already_enhanced"));
+  $("enhance-sel").style.display = "none";
+  $("enhance-info").style.display = "";
+  $("enhance-btn").disabled = false;
+  $("restore-btn").style.display = info.enhanced ? "" : "none";
+}
+async function pickEnhance() {
+  if (!glue) return;
+  try {
+    const h = await showDirectoryPicker({ id: "tgx-in", mode: "readwrite" });
+    await setEnhanceHandle(h);
+  } catch (e) { if (e.name !== "AbortError") snack(pyError(e)); }
+}
+function clearEnhance() {
+  state.enhance = null;
+  $("enhance-sel").style.display = "";
+  $("enhance-info").style.display = "none";
+  $("enhance-btn").disabled = true;
+  $("restore-btn").style.display = "none";
+}
+async function writeAsset(handle, dir, name, fsPath) {
+  const dh = await handle.getDirectoryHandle(dir, { create: true });
+  const fh = await dh.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(pyodide.FS.readFile(fsPath));
+  await w.close();
+}
+async function removeAsset(handle, dir, name) {
+  try {
+    const dh = await handle.getDirectoryHandle(dir);
+    await dh.removeEntry(name);
+  } catch (_) {}
+}
+async function runEnhance() {
+  if (!state.enhance) return;
+  const f = {
+    bubbles: $("opt-bubbles").checked, quotes: $("opt-quotes").checked,
+    theme: $("opt-theme").checked, media: $("opt-media").checked,
+    note: $("opt-note").checked
+  };
+  const layout = $("layout-chips").querySelector(".chip.sel").dataset.layout;
+  const me = $("me-select").value;
+  if (f.bubbles && !me && layout !== "original") return snack(t("need_me"));
+  showJob(t("job_enhancing"));
+  try {
+    await loadHtmlsToFS(state.enhance.handle, "/work/e");
+    const res = JSON.parse(glue.run_enhance(
+      "/work/e", me, layout, JSON.stringify(f), $("opt-fullwidth").checked));
+    setStage(t("stage_saving"), null);
+    await writeBackPages("/work/e", state.enhance.handle, res.pages);
+    await writeAsset(state.enhance.handle, "css", "enhanced.css", "/work/e/css/enhanced.css");
+    await writeAsset(state.enhance.handle, "js", "enhanced.js", "/work/e/js/enhanced.js");
+    endJob(true, res);
+    await setEnhanceHandle(state.enhance.handle);
+  } catch (e) { endJob(false, null, pyError(e)); }
+}
+async function runRestore() {
+  if (!state.enhance) return;
+  showJob(t("job_restoring"));
+  try {
+    await loadHtmlsToFS(state.enhance.handle, "/work/e");
+    const res = JSON.parse(glue.run_restore("/work/e"));
+    setStage(t("stage_saving"), null);
+    await writeBackPages("/work/e", state.enhance.handle, res.pages);
+    await removeAsset(state.enhance.handle, "css", "enhanced.css");
+    await removeAsset(state.enhance.handle, "js", "enhanced.js");
+    endJob(true, res);
+    await setEnhanceHandle(state.enhance.handle);
+  } catch (e) { endJob(false, null, pyError(e)); }
+}
+
+/* ================= init ================= */
+$("download-link").href = REPO_URL + "/releases";
+wireDrop($("fuse-card"), addExportHandle);
+wireDrop($("compact-card"), setCompactHandle);
+wireDrop($("enhance-card"), setEnhanceHandle);
+applyLang();
+window.addEventListener("load", movePill);
+
+if (!window.showDirectoryPicker || !window.WebAssembly) {
+  $("unsupported").style.display = "";
+  $("loader").style.display = "none";
+} else {
+  boot();  // carga automática, sin preguntar
+}
+</script>
+</body>
+</html>

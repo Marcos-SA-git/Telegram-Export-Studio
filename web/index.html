@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telegram Export Studio — fusiona, compacta y mejora tus exports, 100% en local</title>
+<meta name="description" content="Fusiona, compacta y mejora exportaciones de chats de Telegram directamente en tu navegador. Código abierto, sin servidores: tus chats nunca salen de tu equipo.">
+<link rel="prefetch" href="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js">
+<style>
+:root {
+  --bg: #f6f8fb; --surface: #fff; --surface-2: #eef3f9; --outline: #e2e8f0;
+  --on: #1a1f24; --muted: #62707d;
+  --primary: #2296d4; --primary-strong: #1181bd; --primary-soft: #e5f3fb;
+  --ok: #1e8e3e;
+  --shadow: 0 1px 2px rgba(20,40,60,.06), 0 4px 16px rgba(20,40,60,.07);
+  --radius: 20px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1418; --surface: #1a2128; --surface-2: #232c35; --outline: #2d3944;
+    --on: #e8edf2; --muted: #94a3b1;
+    --primary: #4db8ec; --primary-strong: #6ec6f1; --primary-soft: #173341;
+    --ok: #6dd58c;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+* { box-sizing: border-box; margin: 0; }
+html { color-scheme: light dark; scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--on);
+  font: 15px/1.5 "Segoe UI Variable Text", "Segoe UI", -apple-system,
+        "SF Pro Text", Roboto, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 820px; margin: 0 auto; padding: 0 20px; }
+.topbar { display: flex; justify-content: flex-end; padding: 14px 20px 0; }
+select.lang { appearance: none; font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--muted); background: var(--surface-2); border: 0;
+  border-radius: 999px; padding: 8px 14px; cursor: pointer; outline: none; }
+
+/* hero */
+.hero { text-align: center; padding: 56px 20px 36px; }
+.hero .logo {
+  width: 86px; height: 86px; border-radius: 25px; margin: 0 auto 22px;
+  background: linear-gradient(135deg, #2aabee, #1683c9);
+  display: grid; place-items: center;
+  box-shadow: 0 12px 34px rgba(34,150,212,.42);
+}
+.hero .logo svg { width: 46px; height: 46px; fill: #fff; transform: translateX(-3px); }
+.hero h1 {
+  font-size: 38px; font-weight: 700; letter-spacing: -.6px;
+  font-family: "Segoe UI Variable Display", "Segoe UI", -apple-system,
+               "SF Pro Display", Roboto, sans-serif;
+}
+.hero .tagline { color: var(--muted); font-size: 17.5px; margin: 12px auto 0; max-width: 580px; }
+.badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+.badge2 { font-size: 12.5px; font-weight: 700; padding: 6px 14px; border-radius: 999px;
+  background: var(--primary-soft); color: var(--primary-strong); }
+.badge2.green { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+
+/* CTA principal, bien evidente */
+.cta-main {
+  display: inline-flex; align-items: center; gap: 12px;
+  margin-top: 34px; padding: 20px 52px;
+  font-size: 19px; font-weight: 700; color: #fff; text-decoration: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2aabee, #1a8fd1);
+  box-shadow: 0 10px 34px rgba(34,150,212,.45);
+  transition: all .2s; position: relative;
+}
+.cta-main:hover { transform: translateY(-2px); box-shadow: 0 14px 42px rgba(34,150,212,.55);
+  filter: brightness(1.05); }
+.cta-main:active { transform: scale(.98); }
+.cta-main svg { width: 24px; height: 24px; fill: currentColor; }
+.cta-main::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 999px;
+  border: 2px solid rgba(42,171,238,.4); animation: pulse 2.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes pulse {
+  0% { transform: scale(.98); opacity: 1; }
+  70%, 100% { transform: scale(1.12); opacity: 0; }
+}
+.cta-sub { display: block; margin-top: 14px; font-size: 12.5px; color: var(--muted); }
+.cta-secondary { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
+.btn { appearance: none; border: 0; cursor: pointer; font: inherit; font-weight: 600;
+  border-radius: 999px; transition: all .2s; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+.btn.tonal { background: var(--primary-soft); color: var(--primary-strong);
+  padding: 12px 24px; font-size: 14.5px; }
+.btn.tonal:hover { filter: brightness(.96); }
+.btn.text { background: none; color: var(--primary-strong); padding: 10px 16px; font-size: 14px; }
+.btn.text:hover { background: var(--primary-soft); }
+.btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+/* privacy cards */
+.card { background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 24px; animation: rise .35s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+.trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px; margin: 20px 0 30px; }
+.trio h3 { font-size: 15px; margin-bottom: 6px; }
+.trio p { font-size: 13.5px; color: var(--muted); }
+.trio .emoji { font-size: 28px; display: block; margin-bottom: 10px; }
+
+/* steps */
+.steps { margin: 10px 0 40px; }
+.steps .card { display: flex; gap: 18px; align-items: flex-start; margin-bottom: 12px; }
+.steps .num { width: 34px; height: 34px; border-radius: 50%; flex: none;
+  background: var(--primary-soft); color: var(--primary-strong);
+  display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+.steps b { display: block; font-size: 14.5px; margin-bottom: 2px; }
+.steps p { font-size: 13.5px; color: var(--muted); }
+.section-h { text-align: center; font-size: 13px; font-weight: 650; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); margin: 36px 0 16px; }
+
+footer { text-align: center; color: var(--muted); font-size: 12.5px; padding: 30px 20px 50px; }
+footer a { color: var(--primary-strong); }
+</style>
+</head>
+<body>
+
+<div class="topbar"><select class="lang" id="lang">
+  <option value="es">🌐 ES</option><option value="en">🌐 EN</option>
+  <option value="fr">🌐 FR</option><option value="de">🌐 DE</option>
+  <option value="pt">🌐 PT</option><option value="it">🌐 IT</option>
+  <option value="ru">🌐 RU</option><option value="zh">🌐 中文</option>
+  <option value="ja">🌐 日本語</option><option value="hi">🌐 हिन्दी</option>
+  <option value="ar">🌐 العربية</option>
+</select></div>
+
+<header class="hero">
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M21.4 3.1 2.2 10.5c-1 .4-1 1.8.1 2.1l4.9 1.5 1.9 5.9c.3.9 1.4 1.1 2 .4l2.7-2.8 4.9 3.6c.8.6 2 .2 2.2-.9l3-15.3c.2-1.2-.9-2.1-2-1.7l-.5-.2zM8.5 13.8l9.5-6-7.3 7.1-.3 3.2-1.9-4.3z"/></svg></div>
+  <h1>Telegram Export Studio</h1>
+  <p class="tagline" data-i18n="tagline"></p>
+  <div class="badges">
+    <span class="badge2 green" data-i18n="badge_local"></span>
+    <span class="badge2" data-i18n="badge_oss"></span>
+    <span class="badge2" data-i18n="badge_free"></span>
+  </div>
+  <div>
+    <a class="cta-main" href="app.html">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <span data-i18n="cta_use"></span>
+    </a>
+    <span class="cta-sub" data-i18n="cta_sub"></span>
+  </div>
+  <div class="cta-secondary">
+    <a class="btn tonal" id="source-link" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0C17 4.6 18 4.9 18 4.9c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6A11.5 11.5 0 0 0 23.5 12C23.5 5.7 18.3.5 12 .5z"/></svg>
+      <span data-i18n="cta_source"></span>
+    </a>
+    <a class="btn text" id="download-link" target="_blank" rel="noopener" data-i18n="cta_download"></a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="trio">
+    <div class="card"><span class="emoji">🔒</span><h3 data-i18n="p1_t"></h3><p data-i18n="p1_d"></p></div>
+    <div class="card"><span class="emoji">🧠</span><h3 data-i18n="p2_t"></h3><p data-i18n="p2_d"></p></div>
+    <div class="card"><span class="emoji">📂</span><h3 data-i18n="p3_t"></h3><p data-i18n="p3_d"></p></div>
+  </div>
+
+  <div class="section-h" data-i18n="how_h"></div>
+  <div class="steps">
+    <div class="card"><div class="num">1</div><div><b data-i18n="s1_t"></b><p data-i18n="s1_d"></p></div></div>
+    <div class="card"><div class="num">2</div><div><b data-i18n="s2_t"></b><p data-i18n="s2_d"></p></div></div>
+    <div class="card"><div class="num">3</div><div><b data-i18n="s3_t"></b><p data-i18n="s3_d"></p></div></div>
+  </div>
+</div>
+
+<footer>
+  <span data-i18n="footer_1"></span>
+  <a id="source-link2" target="_blank" rel="noopener" data-i18n="footer_src"></a>
+</footer>
+
+<script>
+"use strict";
+/* ====== EDITA ESTO: URL de tu repositorio en GitHub ====== */
+const REPO_URL = "https://github.com/Marcos-SA-git/Telegram-Export-Studio";
+
+const I18N = {
+es: {
+  tagline: "Fusiona varias exportaciones de un chat de Telegram en una sola, compacta sus páginas y dale la apariencia de un chat de verdad. Directamente en tu navegador.",
+  badge_local: "✓ 100% local — nada sale de tu equipo",
+  badge_oss: "Código abierto", badge_free: "Gratis, sin cuentas",
+  cta_use: "Usar la app",
+  cta_sub: "Se abre al instante · sin instalar nada · sin registro",
+  cta_source: "Ver código fuente", cta_download: "Versión de escritorio",
+  p1_t: "Tus chats no salen de tu equipo",
+  p1_d: "No hay servidor: el procesado corre dentro de tu navegador con Python compilado a WebAssembly (Pyodide). Puedes comprobarlo: funciona incluso sin conexión una vez cargada.",
+  p2_t: "El mismo motor, auditable",
+  p2_d: "La web ejecuta exactamente los mismos scripts de Python que la versión de escritorio. Todo el código es abierto y puede revisarse línea a línea.",
+  p3_t: "Acceso directo a tus carpetas",
+  p3_d: "Eliges qué carpetas puede leer y escribir mediante el diálogo estándar del navegador (File System Access API). Nada se sube a ningún sitio.",
+  how_h: "Cómo funciona",
+  s1_t: "Exporta tus chats desde Telegram Desktop",
+  s1_d: "Ajustes → Avanzado → Exportar datos de Telegram, en formato HTML. Hazlo tantas veces como quieras a lo largo del tiempo.",
+  s2_t: "Abre la app y elige tus carpetas",
+  s2_d: "Fusiona varios exports del mismo chat sin duplicados, compacta las páginas o mejora la visualización (burbujas, citas, modo oscuro, vídeo y audio en línea). Todo reversible.",
+  s3_t: "El resultado se guarda directamente en tu disco",
+  s3_d: "Sin subir nada y sin descargas intermedias: la app escribe en la carpeta que tú elijas, con tu permiso explícito.",
+  footer_1: "Telegram Export Studio · sin servidores, sin cuentas, sin telemetría · ",
+  footer_src: "código fuente"
+},
+en: {
+  tagline: "Merge several exports of a Telegram chat into one, compact its pages and make it look like a real chat. Right in your browser.",
+  badge_local: "✓ 100% local — nothing leaves your device",
+  badge_oss: "Open source", badge_free: "Free, no accounts",
+  cta_use: "Use the app",
+  cta_sub: "Opens instantly · nothing to install · no sign-up",
+  cta_source: "View source code", cta_download: "Desktop version",
+  p1_t: "Your chats never leave your device",
+  p1_d: "There is no server: processing runs inside your browser with Python compiled to WebAssembly (Pyodide). You can verify it — it even works offline once loaded.",
+  p2_t: "The same engine, auditable",
+  p2_d: "The web app runs exactly the same Python scripts as the desktop version. All code is open and can be reviewed line by line.",
+  p3_t: "Direct access to your folders",
+  p3_d: "You choose which folders it may read and write via the browser's standard dialog (File System Access API). Nothing is uploaded anywhere.",
+  how_h: "How it works",
+  s1_t: "Export your chats from Telegram Desktop",
+  s1_d: "Settings → Advanced → Export Telegram data, in HTML format. Do it as many times as you want over time.",
+  s2_t: "Open the app and pick your folders",
+  s2_d: "Merge several exports of the same chat without duplicates, compact the pages or enhance the viewing experience (bubbles, quotes, dark mode, inline video and audio). All reversible.",
+  s3_t: "The result is saved straight to your disk",
+  s3_d: "No uploads and no intermediate downloads: the app writes into the folder you choose, with your explicit permission.",
+  footer_1: "Telegram Export Studio · no servers, no accounts, no telemetry · ",
+  footer_src: "source code"
+},
+fr: {
+  tagline: "Fusionnez plusieurs exports d'un chat Telegram en un seul, compactez ses pages et donnez-lui l'apparence d'un vrai chat. Directement dans votre navigateur.",
+  badge_local: "✓ 100 % local — rien ne quitte votre appareil",
+  badge_oss: "Open source", badge_free: "Gratuit, sans compte",
+  cta_use: "Utiliser l'app",
+  cta_sub: "S'ouvre instantanément · rien à installer · sans inscription",
+  cta_source: "Voir le code source", cta_download: "Version de bureau",
+  p1_t: "Vos chats ne quittent jamais votre appareil",
+  p1_d: "Il n'y a pas de serveur : le traitement s'exécute dans votre navigateur avec Python compilé en WebAssembly (Pyodide). Vous pouvez le vérifier — cela fonctionne même hors ligne une fois chargé.",
+  p2_t: "Le même moteur, auditable",
+  p2_d: "L'app web exécute exactement les mêmes scripts Python que la version de bureau. Tout le code est ouvert et peut être relu ligne par ligne.",
+  p3_t: "Accès direct à vos dossiers",
+  p3_d: "Vous choisissez quels dossiers elle peut lire et écrire via le dialogue standard du navigateur (File System Access API). Rien n'est téléversé nulle part.",
+  how_h: "Comment ça marche",
+  s1_t: "Exportez vos chats depuis Telegram Desktop",
+  s1_d: "Paramètres → Avancé → Exporter les données Telegram, au format HTML. Faites-le autant de fois que vous voulez au fil du temps.",
+  s2_t: "Ouvrez l'app et choisissez vos dossiers",
+  s2_d: "Fusionnez plusieurs exports du même chat sans doublons, compactez les pages ou améliorez l'affichage (bulles, citations, mode sombre, vidéo et audio intégrés). Tout est réversible.",
+  s3_t: "Le résultat est enregistré directement sur votre disque",
+  s3_d: "Aucun envoi ni téléchargement intermédiaire : l'app écrit dans le dossier que vous choisissez, avec votre permission explicite.",
+  footer_1: "Telegram Export Studio · sans serveurs, sans comptes, sans télémétrie · ",
+  footer_src: "code source"
+},
+de: {
+  tagline: "Führe mehrere Exporte eines Telegram-Chats zu einem zusammen, verdichte die Seiten und lass ihn wie einen echten Chat aussehen. Direkt in deinem Browser.",
+  badge_local: "✓ 100 % lokal — nichts verlässt dein Gerät",
+  badge_oss: "Open Source", badge_free: "Kostenlos, ohne Konto",
+  cta_use: "App verwenden",
+  cta_sub: "Öffnet sofort · nichts zu installieren · keine Anmeldung",
+  cta_source: "Quellcode ansehen", cta_download: "Desktop-Version",
+  p1_t: "Deine Chats verlassen nie dein Gerät",
+  p1_d: "Es gibt keinen Server: Die Verarbeitung läuft in deinem Browser mit zu WebAssembly kompiliertem Python (Pyodide). Du kannst es prüfen — einmal geladen funktioniert es sogar offline.",
+  p2_t: "Dieselbe Engine, auditierbar",
+  p2_d: "Die Web-App führt exakt dieselben Python-Skripte aus wie die Desktop-Version. Der gesamte Code ist offen und kann Zeile für Zeile geprüft werden.",
+  p3_t: "Direkter Zugriff auf deine Ordner",
+  p3_d: "Du wählst über den Standard-Dialog des Browsers (File System Access API), welche Ordner sie lesen und schreiben darf. Nichts wird irgendwohin hochgeladen.",
+  how_h: "So funktioniert es",
+  s1_t: "Exportiere deine Chats aus Telegram Desktop",
+  s1_d: "Einstellungen → Erweitert → Telegram-Daten exportieren, im HTML-Format. Mach das so oft du willst im Laufe der Zeit.",
+  s2_t: "Öffne die App und wähle deine Ordner",
+  s2_d: "Führe mehrere Exporte desselben Chats ohne Duplikate zusammen, verdichte die Seiten oder verbessere die Ansicht (Blasen, Zitate, Dunkelmodus, Video und Audio inline). Alles umkehrbar.",
+  s3_t: "Das Ergebnis wird direkt auf deiner Festplatte gespeichert",
+  s3_d: "Keine Uploads, keine Zwischendownloads: Die App schreibt in den Ordner deiner Wahl, mit deiner ausdrücklichen Erlaubnis.",
+  footer_1: "Telegram Export Studio · keine Server, keine Konten, keine Telemetrie · ",
+  footer_src: "Quellcode"
+},
+pt: {
+  tagline: "Mescle várias exportações de um chat do Telegram em uma só, compacte suas páginas e dê a ele a aparência de um chat de verdade. Direto no seu navegador.",
+  badge_local: "✓ 100% local — nada sai do seu dispositivo",
+  badge_oss: "Código aberto", badge_free: "Grátis, sem contas",
+  cta_use: "Usar o app",
+  cta_sub: "Abre na hora · nada para instalar · sem cadastro",
+  cta_source: "Ver código-fonte", cta_download: "Versão para computador",
+  p1_t: "Seus chats nunca saem do seu dispositivo",
+  p1_d: "Não há servidor: o processamento roda dentro do seu navegador com Python compilado para WebAssembly (Pyodide). Você pode verificar — funciona até offline depois de carregado.",
+  p2_t: "O mesmo motor, auditável",
+  p2_d: "O app web executa exatamente os mesmos scripts Python da versão para computador. Todo o código é aberto e pode ser revisado linha a linha.",
+  p3_t: "Acesso direto às suas pastas",
+  p3_d: "Você escolhe quais pastas ele pode ler e gravar pelo diálogo padrão do navegador (File System Access API). Nada é enviado a lugar nenhum.",
+  how_h: "Como funciona",
+  s1_t: "Exporte seus chats do Telegram Desktop",
+  s1_d: "Configurações → Avançado → Exportar dados do Telegram, em formato HTML. Faça isso quantas vezes quiser ao longo do tempo.",
+  s2_t: "Abra o app e escolha suas pastas",
+  s2_d: "Mescle várias exportações do mesmo chat sem duplicados, compacte as páginas ou melhore a visualização (balões, citações, modo escuro, vídeo e áudio embutidos). Tudo reversível.",
+  s3_t: "O resultado é salvo direto no seu disco",
+  s3_d: "Sem uploads e sem downloads intermediários: o app grava na pasta que você escolher, com sua permissão explícita.",
+  footer_1: "Telegram Export Studio · sem servidores, sem contas, sem telemetria · ",
+  footer_src: "código-fonte"
+},
+it: {
+  tagline: "Unisci più export di una chat di Telegram in uno solo, compatta le pagine e dagli l'aspetto di una chat vera. Direttamente nel tuo browser.",
+  badge_local: "✓ 100% locale — nulla lascia il tuo dispositivo",
+  badge_oss: "Open source", badge_free: "Gratis, senza account",
+  cta_use: "Usa l'app",
+  cta_sub: "Si apre all'istante · niente da installare · nessuna registrazione",
+  cta_source: "Vedi il codice sorgente", cta_download: "Versione desktop",
+  p1_t: "Le tue chat non lasciano mai il tuo dispositivo",
+  p1_d: "Non c'è alcun server: l'elaborazione gira nel tuo browser con Python compilato in WebAssembly (Pyodide). Puoi verificarlo — funziona anche offline una volta caricata.",
+  p2_t: "Lo stesso motore, verificabile",
+  p2_d: "L'app web esegue esattamente gli stessi script Python della versione desktop. Tutto il codice è aperto e può essere esaminato riga per riga.",
+  p3_t: "Accesso diretto alle tue cartelle",
+  p3_d: "Scegli tu quali cartelle può leggere e scrivere tramite il dialogo standard del browser (File System Access API). Nulla viene caricato da nessuna parte.",
+  how_h: "Come funziona",
+  s1_t: "Esporta le tue chat da Telegram Desktop",
+  s1_d: "Impostazioni → Avanzate → Esporta i dati di Telegram, in formato HTML. Fallo tutte le volte che vuoi nel tempo.",
+  s2_t: "Apri l'app e scegli le tue cartelle",
+  s2_d: "Unisci più export della stessa chat senza duplicati, compatta le pagine o migliora la visualizzazione (bolle, citazioni, modalità scura, video e audio integrati). Tutto reversibile.",
+  s3_t: "Il risultato viene salvato direttamente sul tuo disco",
+  s3_d: "Nessun upload e nessun download intermedio: l'app scrive nella cartella che scegli, con il tuo permesso esplicito.",
+  footer_1: "Telegram Export Studio · niente server, niente account, niente telemetria · ",
+  footer_src: "codice sorgente"
+},
+ru: {
+  tagline: "Объединяйте несколько экспортов одного чата Telegram в один, сжимайте страницы и придавайте ему вид настоящего чата. Прямо в браузере.",
+  badge_local: "✓ 100% локально — ничего не покидает ваше устройство",
+  badge_oss: "Открытый код", badge_free: "Бесплатно, без аккаунтов",
+  cta_use: "Открыть приложение",
+  cta_sub: "Открывается мгновенно · без установки · без регистрации",
+  cta_source: "Посмотреть исходный код", cta_download: "Настольная версия",
+  p1_t: "Ваши чаты не покидают ваше устройство",
+  p1_d: "Сервера нет: обработка выполняется в вашем браузере с помощью Python, скомпилированного в WebAssembly (Pyodide). Это можно проверить — после загрузки всё работает даже офлайн.",
+  p2_t: "Тот же движок, проверяемый",
+  p2_d: "Веб-приложение выполняет ровно те же Python-скрипты, что и настольная версия. Весь код открыт и может быть проверен построчно.",
+  p3_t: "Прямой доступ к вашим папкам",
+  p3_d: "Вы сами выбираете, какие папки оно может читать и записывать, через стандартный диалог браузера (File System Access API). Ничего никуда не загружается.",
+  how_h: "Как это работает",
+  s1_t: "Экспортируйте чаты из Telegram Desktop",
+  s1_d: "Настройки → Продвинутые настройки → Экспорт данных Telegram, в формате HTML. Делайте это сколько угодно раз.",
+  s2_t: "Откройте приложение и выберите папки",
+  s2_d: "Объединяйте несколько экспортов одного чата без дубликатов, сжимайте страницы или улучшайте отображение (пузыри, цитаты, тёмная тема, встроенные видео и аудио). Всё обратимо.",
+  s3_t: "Результат сохраняется прямо на ваш диск",
+  s3_d: "Без загрузок на сервер и промежуточных скачиваний: приложение пишет в выбранную вами папку с вашего явного разрешения.",
+  footer_1: "Telegram Export Studio · без серверов, без аккаунтов, без телеметрии · ",
+  footer_src: "исходный код"
+},
+zh: {
+  tagline: "把同一个 Telegram 聊天的多次导出合并为一个，压缩页面，并让它看起来像真正的聊天界面。直接在浏览器中完成。",
+  badge_local: "✓ 100% 本地 — 数据不会离开你的设备",
+  badge_oss: "开源", badge_free: "免费，无需账号",
+  cta_use: "使用应用",
+  cta_sub: "即刻打开 · 无需安装 · 无需注册",
+  cta_source: "查看源代码", cta_download: "桌面版",
+  p1_t: "你的聊天永远不会离开你的设备",
+  p1_d: "没有服务器：处理在你的浏览器内运行，使用编译为 WebAssembly 的 Python（Pyodide）。你可以验证 — 加载后甚至可以离线使用。",
+  p2_t: "同一个引擎，可审计",
+  p2_d: "网页版运行的 Python 脚本与桌面版完全相同。所有代码开源，可逐行审查。",
+  p3_t: "直接访问你的文件夹",
+  p3_d: "你通过浏览器的标准对话框（File System Access API）决定它能读写哪些文件夹。任何内容都不会被上传。",
+  how_h: "工作原理",
+  s1_t: "从 Telegram Desktop 导出聊天",
+  s1_d: "设置 → 高级 → 导出 Telegram 数据，选择 HTML 格式。可以随时多次导出。",
+  s2_t: "打开应用并选择文件夹",
+  s2_d: "合并同一聊天的多次导出且不产生重复，压缩页面，或美化显示（气泡、引用、暗黑模式、内嵌视频和音频）。全部可逆。",
+  s3_t: "结果直接保存到你的磁盘",
+  s3_d: "无上传、无中间下载：应用在你明确授权后写入你选择的文件夹。",
+  footer_1: "Telegram Export Studio · 无服务器、无账号、无遥测 · ",
+  footer_src: "源代码"
+},
+ja: {
+  tagline: "Telegram チャットの複数のエクスポートを 1 つに結合し、ページを圧縮して、本物のチャットのような見た目に。ブラウザ内で直接。",
+  badge_local: "✓ 100% ローカル — データは端末から出ません",
+  badge_oss: "オープンソース", badge_free: "無料・アカウント不要",
+  cta_use: "アプリを使う",
+  cta_sub: "すぐ開く · インストール不要 · 登録不要",
+  cta_source: "ソースコードを見る", cta_download: "デスクトップ版",
+  p1_t: "チャットは端末から出ません",
+  p1_d: "サーバーは存在しません。処理は WebAssembly にコンパイルされた Python（Pyodide）でブラウザ内で実行されます。確認も可能 — 読み込み後はオフラインでも動きます。",
+  p2_t: "同じエンジン、監査可能",
+  p2_d: "Web アプリはデスクトップ版とまったく同じ Python スクリプトを実行します。すべてのコードは公開されており、1 行ずつ確認できます。",
+  p3_t: "フォルダへの直接アクセス",
+  p3_d: "ブラウザの標準ダイアログ（File System Access API)で、読み書きできるフォルダをあなたが選びます。何もアップロードされません。",
+  how_h: "使い方",
+  s1_t: "Telegram Desktop からチャットをエクスポート",
+  s1_d: "設定 → 高度な設定 → Telegram データのエクスポート、HTML 形式で。時間をおいて何度でもエクスポートできます。",
+  s2_t: "アプリを開いてフォルダを選択",
+  s2_d: "同じチャットの複数のエクスポートを重複なしで結合、ページを圧縮、または表示を強化(吹き出し、引用、ダークモード、動画・音声のインライン再生)。すべて元に戻せます。",
+  s3_t: "結果はディスクに直接保存",
+  s3_d: "アップロードも中間ダウンロードもなし:あなたの明示的な許可のもと、選んだフォルダに書き込みます。",
+  footer_1: "Telegram Export Studio · サーバーなし・アカウントなし・テレメトリーなし · ",
+  footer_src: "ソースコード"
+},
+hi: {
+  tagline: "एक Telegram चैट के कई एक्सपोर्ट को एक में मिलाएँ, पेज संक्षिप्त करें और उसे असली चैट जैसा रूप दें। सीधे आपके ब्राउज़र में।",
+  badge_local: "✓ 100% लोकल — कुछ भी आपके डिवाइस से बाहर नहीं जाता",
+  badge_oss: "ओपन सोर्स", badge_free: "मुफ़्त, बिना खाते के",
+  cta_use: "ऐप इस्तेमाल करें",
+  cta_sub: "तुरंत खुलता है · कुछ इंस्टॉल नहीं · कोई पंजीकरण नहीं",
+  cta_source: "सोर्स कोड देखें", cta_download: "डेस्कटॉप संस्करण",
+  p1_t: "आपकी चैट कभी आपके डिवाइस से बाहर नहीं जातीं",
+  p1_d: "कोई सर्वर नहीं है: प्रोसेसिंग आपके ब्राउज़र के अंदर WebAssembly में कंपाइल किए गए Python (Pyodide) से चलती है। आप जाँच सकते हैं — लोड होने के बाद यह ऑफ़लाइन भी काम करता है।",
+  p2_t: "वही इंजन, जाँचने योग्य",
+  p2_d: "वेब ऐप ठीक वही Python स्क्रिप्ट चलाता है जो डेस्कटॉप संस्करण चलाता है। सारा कोड खुला है और लाइन दर लाइन जाँचा जा सकता है।",
+  p3_t: "आपके फ़ोल्डरों तक सीधी पहुँच",
+  p3_d: "ब्राउज़र के मानक डायलॉग (File System Access API) से आप तय करते हैं कि यह कौन से फ़ोल्डर पढ़-लिख सकता है। कुछ भी कहीं अपलोड नहीं होता।",
+  how_h: "यह कैसे काम करता है",
+  s1_t: "Telegram Desktop से अपनी चैट एक्सपोर्ट करें",
+  s1_d: "सेटिंग्स → उन्नत → Telegram डेटा एक्सपोर्ट करें, HTML प्रारूप में। समय के साथ जितनी बार चाहें करें।",
+  s2_t: "ऐप खोलें और अपने फ़ोल्डर चुनें",
+  s2_d: "एक ही चैट के कई एक्सपोर्ट बिना दोहराव मिलाएँ, पेज संक्षिप्त करें या दिखावट बेहतर बनाएँ (बबल, उद्धरण, डार्क मोड, इनलाइन वीडियो-ऑडियो)। सब कुछ उलटा किया जा सकता है।",
+  s3_t: "नतीजा सीधे आपकी डिस्क पर सहेजा जाता है",
+  s3_d: "कोई अपलोड नहीं, कोई बीच का डाउनलोड नहीं: ऐप आपकी स्पष्ट अनुमति से आपके चुने फ़ोल्डर में लिखता है।",
+  footer_1: "Telegram Export Studio · न सर्वर, न खाते, न टेलीमेट्री · ",
+  footer_src: "सोर्स कोड"
+},
+ar: {
+  tagline: "ادمج عدة تصديرات لمحادثة تيليجرام في تصدير واحد، وضغّط صفحاتها وأعطها مظهر محادثة حقيقية. مباشرة في متصفحك.",
+  badge_local: "✓ 100% محلي — لا شيء يغادر جهازك",
+  badge_oss: "مفتوح المصدر", badge_free: "مجاني، بدون حسابات",
+  cta_use: "استخدم التطبيق",
+  cta_sub: "يفتح فورًا · لا شيء للتثبيت · بدون تسجيل",
+  cta_source: "عرض الشيفرة المصدرية", cta_download: "نسخة سطح المكتب",
+  p1_t: "محادثاتك لا تغادر جهازك أبدًا",
+  p1_d: "لا يوجد خادم: تتم المعالجة داخل متصفحك بلغة Python المترجمة إلى WebAssembly ‏(Pyodide). يمكنك التحقق — يعمل حتى بدون اتصال بعد التحميل.",
+  p2_t: "المحرك نفسه، قابل للتدقيق",
+  p2_d: "يشغّل تطبيق الويب نفس سكربتات Python التي تشغّلها نسخة سطح المكتب تمامًا. كل الشيفرة مفتوحة ويمكن مراجعتها سطرًا بسطر.",
+  p3_t: "وصول مباشر إلى مجلداتك",
+  p3_d: "أنت تختار المجلدات التي يمكنه قراءتها والكتابة فيها عبر حوار المتصفح القياسي (File System Access API). لا يُرفع أي شيء إلى أي مكان.",
+  how_h: "كيف يعمل",
+  s1_t: "صدّر محادثاتك من Telegram Desktop",
+  s1_d: "الإعدادات → متقدم → تصدير بيانات تيليجرام، بصيغة HTML. افعل ذلك كلما شئت مع مرور الوقت.",
+  s2_t: "افتح التطبيق واختر مجلداتك",
+  s2_d: "ادمج عدة تصديرات للمحادثة نفسها دون تكرار، وضغّط الصفحات أو حسّن العرض (فقاعات، اقتباسات، وضع داكن، فيديو وصوت مدمجان). كل شيء قابل للتراجع.",
+  s3_t: "تُحفظ النتيجة مباشرة على قرصك",
+  s3_d: "بدون رفع ولا تنزيلات وسيطة: يكتب التطبيق في المجلد الذي تختاره، بإذنك الصريح.",
+  footer_1: "Telegram Export Studio · بلا خوادم، بلا حسابات، بلا قياس عن بُعد · ",
+  footer_src: "الشيفرة المصدرية"
+}
+};
+let LANG = localStorage.getItem("tgxweb-lang");
+if (!I18N[LANG]) {
+  const nav = (navigator.language || "en").slice(0, 2).toLowerCase();
+  LANG = I18N[nav] ? nav : "en";
+}
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key; }
+function applyLang() {
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === "ar" ? "rtl" : "ltr";
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.getElementById("lang").value = LANG;
+}
+document.getElementById("lang").onchange = e => {
+  LANG = e.target.value;
+  localStorage.setItem("tgxweb-lang", LANG);
+  applyLang();
+};
+document.getElementById("source-link").href = REPO_URL;
+document.getElementById("source-link2").href = REPO_URL;
+document.getElementById("download-link").href = REPO_URL + "/releases";
+applyLang();
+</script>
+</body>
+</html>
