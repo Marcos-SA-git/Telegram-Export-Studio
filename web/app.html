@@ -128,6 +128,14 @@ select.lang { appearance: none; font: inherit; font-size: 13px; font-weight: 600
 .label { font-size: 13.5px; font-weight: 600; margin: 18px 0 10px; }
 .label:first-of-type { margin-top: 0; }
 .hint { font-size: 12.5px; color: var(--muted); margin-top: 12px; }
+#android-warn { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--warn-soft); color: var(--warn); border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 16px; font-size: 13px; }
+#android-warn-text { flex: 1 1 240px; }
+#android-warn-link { color: inherit; text-decoration: underline; flex: none; }
+#android-warn-close { appearance: none; border: 0; background: none; color: inherit;
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px; flex: none; opacity: .7; }
+#android-warn-close:hover { opacity: 1; }
 .field { display: flex; gap: 10px; align-items: center; }
 .field input, .field select { flex: 1; font: inherit; color: var(--on);
   background: var(--surface-2); border: 1.5px solid transparent; border-radius: 12px;
@@ -242,6 +250,11 @@ select.unit { flex: none; width: 84px; }
   </div>
 
   <div id="studio" style="display:none">
+    <div id="android-warn" style="display:none">
+      <span id="android-warn-text"></span>
+      <a id="android-warn-link" href="https://github.com/Marcos-SA-git/Telegram-Export-Studio/blob/main/README.md#móviles" target="_blank" rel="noopener"></a>
+      <button id="android-warn-close" aria-label="close" onclick="dismissAndroidWarn()">×</button>
+    </div>
     <div class="tabs" id="tabs">
       <div class="pill" id="pill"></div>
       <button data-view="fuse" class="active" data-i18n="tab_fuse"></button>
@@ -417,6 +430,8 @@ let pyodide = null, glue = null, mediaDone = 0;
 const I18N = {
 es: {
   cta_download: "Versión de escritorio",
+  android_warn: "Estás en Android: este proceso es notablemente lento por limitaciones del propio sistema operativo, no de la app. Para exports con varios archivos, se recomienda usar un ordenador incluso si el chat es pequeño.",
+  android_warn_link: "Más detalles",
   unsup_h: "Navegador no compatible",
   unsup_p: "Esta app necesita la File System Access API (Chrome, Edge u Opera en escritorio). En Firefox o Safari usa la versión de escritorio: es igual de local.",
   loader_h: "Preparando la aplicación…",
@@ -475,6 +490,8 @@ es: {
 },
 en: {
   cta_download: "Desktop version",
+  android_warn: "You're on Android: this process is noticeably slow due to limitations in the operating system itself, not the app. For exports with several files, using a computer is recommended even for small chats.",
+  android_warn_link: "More details",
   unsup_h: "Unsupported browser",
   unsup_p: "This app needs the File System Access API (Chrome, Edge or Opera on desktop). On Firefox or Safari use the desktop version — it is just as local.",
   loader_h: "Preparing the app…",
@@ -1078,6 +1095,23 @@ function applyLang() {
   renderExports();
   renderMeOptions();
   requestAnimationFrame(movePill);
+  applyAndroidWarn();
+}
+
+/* ================= aviso Android ================= */
+// Known OS-level limitation (see README "Móviles"/"Mobile"): the FSA copy
+// is slow on Android regardless of what this app does. Dismissible and
+// remembered per browser so it doesn't nag on every visit.
+const isAndroid = /Android/i.test(navigator.userAgent);
+function applyAndroidWarn() {
+  if (!isAndroid || localStorage.getItem("tgxweb-android-warn-dismissed") === "1") return;
+  $("android-warn-text").textContent = t("android_warn");
+  $("android-warn-link").textContent = t("android_warn_link");
+  $("android-warn").style.display = "";
+}
+function dismissAndroidWarn() {
+  localStorage.setItem("tgxweb-android-warn-dismissed", "1");
+  $("android-warn").style.display = "none";
 }
 $("lang").onchange = () => {
   LANG = $("lang").value;
@@ -1157,6 +1191,73 @@ $("opt-bubbles").onchange = () => {
   $("bubbles-sub").classList.toggle("off", !$("opt-bubbles").checked);
 };
 
+/* ================= debug oculto (?debug=1) ================= */
+// Off by default, invisible in the UI, and safe to leave in the code that
+// ships to GitHub Pages: nobody sees it without deliberately adding the
+// query param. Turns on a small on-page log panel (useful on a phone with
+// no attached devtools) plus console logging for deeper inspection via
+// chrome://inspect over USB.
+const DEBUG = new URLSearchParams(location.search).has("debug");
+let dbgPanel = null, dbgLog = null, dbgCopyBtn = null;
+let dbgStick = true; // auto-scroll to bottom only while the user hasn't scrolled up to read
+
+function ensureDbgPanel() {
+  if (dbgPanel) return;
+  dbgPanel = document.createElement("div");
+  dbgPanel.id = "dbg-panel";
+  dbgPanel.style.cssText = "position:fixed;left:0;right:0;bottom:0;max-height:40vh;" +
+    "display:flex;flex-direction:column;background:#000c;color:#0f0;" +
+    "font:11px/1.4 monospace;z-index:99999;";
+
+  const bar = document.createElement("div");
+  bar.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 8px;" +
+    "border-bottom:1px solid #0f04;flex:none;";
+  const label = document.createElement("span");
+  label.textContent = "debug";
+  label.style.cssText = "flex:1;opacity:.7;";
+  dbgCopyBtn = document.createElement("button");
+  dbgCopyBtn.textContent = "Copiar";
+  dbgCopyBtn.style.cssText = "background:#0f02;color:#0f0;border:1px solid #0f05;" +
+    "border-radius:4px;padding:2px 10px;font:11px monospace;cursor:pointer;";
+  dbgCopyBtn.onclick = async () => {
+    const text = Array.from(dbgLog.children).map(d => d.textContent).join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      dbgCopyBtn.textContent = "✓ copiado";
+    } catch (_) {
+      dbgCopyBtn.textContent = "✗ error";
+    }
+    setTimeout(() => { dbgCopyBtn.textContent = "Copiar"; }, 1500);
+  };
+  bar.appendChild(label);
+  bar.appendChild(dbgCopyBtn);
+
+  dbgLog = document.createElement("div");
+  dbgLog.style.cssText = "overflow-y:auto;padding:6px 8px;flex:1;" +
+    "white-space:pre-wrap;word-break:break-all;";
+  // If the user scrolls up to read past entries, stop yanking them back
+  // down on every new line; resume auto-scroll once they're back near
+  // the bottom.
+  dbgLog.addEventListener("scroll", () => {
+    dbgStick = dbgLog.scrollHeight - dbgLog.scrollTop - dbgLog.clientHeight < 24;
+  });
+
+  dbgPanel.appendChild(bar);
+  dbgPanel.appendChild(dbgLog);
+  document.body.appendChild(dbgPanel);
+}
+
+function dbg(msg) {
+  if (!DEBUG) return;
+  const line = `[${(performance.now() / 1000).toFixed(2)}s] ${msg}`;
+  console.log(line);
+  ensureDbgPanel();
+  const p = document.createElement("div");
+  p.textContent = line;
+  dbgLog.appendChild(p);
+  if (dbgStick) dbgLog.scrollTop = dbgLog.scrollHeight;
+}
+
 /* ================= boot (automático) ================= */
 const ENGINE = ["telegram_export_fuser.py", "telegram_export_compactor.py",
                 "telegram_export_enhancer.py"];
@@ -1233,6 +1334,10 @@ def run_restore(path):
 `;
 
 async function boot() {
+  if (DEBUG) {
+    dbg(`debug activo — UA: ${navigator.userAgent}`);
+    dbg(`secureContext=${window.isSecureContext}, showDirectoryPicker=${!!window.showDirectoryPicker}`);
+  }
   $("boot-status").textContent = t("boot_loading");
   try {
     pyodide = await loadPyodide();
@@ -1317,23 +1422,138 @@ async function writeBackPages(target, handle, pageNames) {
   for (const name of stale) await handle.removeEntry(name);
 }
 
-async function copyMediaTree(srcHandle, outHandle, written, includeAssets) {
-  const renames = {};
-  async function walk(src, dst, rel) {
-    for await (const [name, h] of src.entries()) {
-      if (h.kind === "directory") {
-        const isAsset = rel === "" && ASSETS.includes(name);
-        if (isAsset && !includeAssets) continue;
-        await walk(h, await dst.getDirectoryHandle(name, { create: true }),
-                   rel + name + "/");
-        continue;
+let cachedConcurrency = null;
+
+// The per-call FSA round-trip latency (and how much parallel I/O the device
+// tolerates before things start queueing up instead of overlapping) varies
+// wildly — a phone over Android's Storage Access Framework, an old laptop
+// with a spinning disk, a desktop with NVMe. Rather than guess, time a few
+// short trials against the real output directory and keep climbing the
+// concurrency ladder only while it still pays off.
+async function benchmarkConcurrency(outHandle) {
+  if (cachedConcurrency) return cachedConcurrency;
+
+  const BENCH_DIR = "_tgx_bench";
+  const payload = new Uint8Array(4096);
+  let dir;
+  try {
+    dir = await outHandle.getDirectoryHandle(BENCH_DIR, { create: true });
+
+    async function writeOne(n) {
+      const t0 = performance.now();
+      const fh = await dir.getFileHandle("f" + n, { create: true });
+      const w = await fh.createWritable();
+      await w.write(payload);
+      await w.close();
+      return performance.now() - t0;
+    }
+
+    // The very first FSA call pays a one-off cold-start cost (directory
+    // handle setup, first SAF round trip) that has nothing to do with
+    // steady-state throughput. Discard it so it doesn't bias level 2.
+    const warmupMs = await writeOne("warmup");
+    dbg(`benchmark: warm-up write = ${warmupMs.toFixed(0)}ms (descartado)`);
+
+    // Two full batches per run so the concurrency level under test is
+    // actually saturated at least once, even at the higher rungs.
+    async function runBatches(concurrency) {
+      const files = concurrency * 2;
+      const t0 = performance.now();
+      for (let batch = 0; batch < 2; batch++) {
+        const jobs = [];
+        for (let i = 0; i < concurrency; i++) jobs.push(writeOne(batch * concurrency + i));
+        await Promise.all(jobs);
       }
-      if (rel === "") continue;
-      const isAsset = ASSETS.includes(rel.split("/")[0]);
-      const f = await h.getFile();
-      let target = rel + name;
-      if (written.has(target)) {
-        if (isAsset || written.get(target) === f.size) continue;
+      return files / ((performance.now() - t0) / 1000);
+    }
+
+    // Best-of-2: a single run can be skewed by one unlucky slow SAF call.
+    // Take the faster of two runs as this level's real-world rate.
+    async function trial(concurrency) {
+      const a = await runBatches(concurrency);
+      const b = await runBatches(concurrency);
+      const rate = Math.max(a, b);
+      dbg(`benchmark: nivel ${concurrency} — intento1=${a.toFixed(1)} archivos/s, ` +
+          `intento2=${b.toFixed(1)} archivos/s, mejor=${rate.toFixed(1)} archivos/s`);
+      return rate;
+    }
+
+    let best = 2, bestRate = await trial(2);
+    let misses = 0;
+    for (const c of [4, 8, 16, 32, 64]) {
+      const rate = await trial(c);
+      if (rate > bestRate * 1.15) {
+        const gain = (rate / bestRate - 1) * 100;
+        best = c; bestRate = rate; misses = 0;
+        dbg(`benchmark: nivel ${c} gana (+${gain.toFixed(0)}%) → nuevo mejor`);
+      } else if (++misses > 1) {
+        dbg(`benchmark: nivel ${c} sin mejora relevante, 2º fallo seguido → paro aquí`);
+        break; // two levels in a row without real gains: genuinely plateaued
+      } else {
+        dbg(`benchmark: nivel ${c} sin mejora relevante (tolerancia, sigo probando)`);
+      }
+    }
+    cachedConcurrency = best;
+    dbg(`benchmark: elegido concurrency=${best} (${bestRate.toFixed(1)} archivos/s)`);
+  } catch (e) {
+    cachedConcurrency = 4; // benchmark itself failed: fall back conservatively
+    dbg(`benchmark: FALLÓ (${e && e.message}) → fallback concurrency=4`);
+  } finally {
+    if (dir) {
+      try {
+        for await (const [name] of dir.entries()) await dir.removeEntry(name);
+      } catch (_) {}
+      try { await outHandle.removeEntry(BENCH_DIR, { recursive: true }); } catch (_) {}
+    }
+  }
+  return cachedConcurrency;
+}
+
+async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency) {
+  const renames = {};
+
+  // File I/O round-trips (getFile/getFileHandle/createWritable) are cheap on
+  // desktop but on Android each one is a slow IPC hop through the Storage
+  // Access Framework. Running several file copies concurrently hides that
+  // per-call latency behind overlap instead of paying it once per file.
+  const CONCURRENCY = concurrency || 8;
+  dbg(`copyMediaTree: arrancando con concurrency=${CONCURRENCY} (includeAssets=${includeAssets})`);
+  const t0 = performance.now();
+  let filesCopied = 0;
+  let active = 0;
+  const queue = [];
+  function schedule(fn) {
+    return new Promise((resolve, reject) => {
+      queue.push({ fn, resolve, reject });
+      pump();
+    });
+  }
+  function pump() {
+    while (active < CONCURRENCY && queue.length) {
+      const job = queue.shift();
+      active++;
+      job.fn().then(job.resolve, job.reject).finally(() => { active--; pump(); });
+    }
+  }
+
+  // written.has/get/set decide target filenames (dedup + renaming on
+  // collision); that bookkeeping must stay serialized even though the
+  // actual file copies below run concurrently, or two files could race
+  // onto the same target name.
+  let lock = Promise.resolve();
+  function withLock(fn) {
+    const p = lock.then(fn, fn);
+    lock = p.catch(() => {});
+    return p;
+  }
+
+  async function copyOneFile(h, dst, rel, name) {
+    const isAsset = ASSETS.includes(rel.split("/")[0]);
+    const f = await h.getFile();
+    const target = await withLock(() => {
+      let tgt = rel + name;
+      if (written.has(tgt)) {
+        if (isAsset || written.get(tgt) === f.size) return null;
         let n = 2;
         const dot = name.indexOf(".");
         const stem = dot < 0 ? name : name.slice(0, dot);
@@ -1341,19 +1561,47 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets) {
         let cand;
         do { cand = rel + stem + "__" + n + ext; n++; }
         while (written.has(cand) && written.get(cand) !== f.size);
-        renames[target] = cand;
-        if (written.has(cand)) continue;
-        target = cand;
+        renames[tgt] = cand;
+        if (written.has(cand)) return null;
+        tgt = cand;
       }
-      const tName = target.slice(target.lastIndexOf("/") + 1);
-      const fh = await dst.getFileHandle(tName, { create: true });
-      await f.stream().pipeTo(await fh.createWritable());
-      written.set(target, f.size);
-      mediaDone++;
-      setStage(t("stage_media", { n: mediaDone }), null);
+      written.set(tgt, f.size);
+      return tgt;
+    });
+    if (target === null) return;
+    const tName = target.slice(target.lastIndexOf("/") + 1);
+    const tf0 = performance.now();
+    const fh = await dst.getFileHandle(tName, { create: true });
+    await f.stream().pipeTo(await fh.createWritable());
+    if (DEBUG) {
+      const ms = performance.now() - tf0;
+      if (ms > 500) dbg(`copyMediaTree: archivo lento — ${target} (${f.size}B) = ${ms.toFixed(0)}ms`);
     }
+    mediaDone++;
+    filesCopied++;
+    setStage(t("stage_media", { n: mediaDone }), null);
   }
+
+  async function walk(src, dst, rel) {
+    const jobs = [];
+    for await (const [name, h] of src.entries()) {
+      if (h.kind === "directory") {
+        const isAsset = rel === "" && ASSETS.includes(name);
+        if (isAsset && !includeAssets) continue;
+        jobs.push(walk(h, await dst.getDirectoryHandle(name, { create: true }),
+                       rel + name + "/"));
+        continue;
+      }
+      if (rel === "") continue;
+      jobs.push(schedule(() => copyOneFile(h, dst, rel, name)));
+    }
+    await Promise.all(jobs);
+  }
+
   await walk(srcHandle, outHandle, "");
+  const elapsed = (performance.now() - t0) / 1000;
+  dbg(`copyMediaTree: terminado — ${filesCopied} archivos en ${elapsed.toFixed(1)}s ` +
+      `(${(filesCopied / elapsed || 0).toFixed(1)} archivos/s, concurrency=${CONCURRENCY})`);
   return renames;
 }
 
@@ -1504,9 +1752,10 @@ async function runFuse() {
     mediaDone = 0;
     const maps = {};
     const written = new Map();
+    const concurrency = await benchmarkConcurrency(out);
     for (let i = 0; i < state.exports.length; i++) {
       maps["/work/ex" + i] = await copyMediaTree(
-        state.exports[i].handle, out, written, i === 0);
+        state.exports[i].handle, out, written, i === 0, concurrency);
     }
     setStage(t("stage_reading"), null);
     for (let i = 0; i < state.exports.length; i++) {

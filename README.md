@@ -99,6 +99,12 @@ python telegram_export_studio_aio.py enhance carpeta [--me "Tu Nombre"] [--layou
 - Las notas de voz `.ogg` no se reproducen en Safari (por el códec Opus); en Chrome, Firefox y Edge sí.
 - La app web necesita un navegador basado en Chromium; la de escritorio funciona con cualquier navegador moderno.
 
+### Móviles
+
+- **Android**: la versión web funciona en Chrome para Android (probado en Android 14) gracias a su soporte de la File System Access API. Sin embargo, **el proceso es notablemente lento — varios segundos por archivo, incluso con los pocos assets fijos del propio export (CSS, iconos), no solo con fotos o vídeos**. No es un problema de la app: el proveedor de almacenamiento de Android (Storage Access Framework) sirve las operaciones de archivo prácticamente en serie, con un coste fijo por operación que ni el navegador ni esta herramienta pueden evitar. Para exports de más de un puñado de archivos, **se recomienda usar un ordenador** incluso si el chat es pequeño.
+- **iOS / iPadOS**: no probado. Según la documentación de WebKit, Safari (y por tanto cualquier navegador en iOS, todos basados en WebKit) no implementa los métodos de selección de carpetas de la File System Access API (`showDirectoryPicker`) — solo el *Origin Private File System*, que no sirve para este caso de uso. Apple no ha anunciado planes de añadir este soporte. Es previsible que la versión web **no cargue en absoluto** en iOS, no que vaya simplemente lenta.
+- Está en el roadmap una futura app nativa para Android que pueda acceder al sistema de archivos de forma más directa y paralela, evitando esta limitación — ver el [issue de seguimiento](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/4).
+
 ## Para desarrolladores
 
 El proyecto está escrito como cuatro módulos de Python independientes, cada uno con una sola responsabilidad y usable por su cuenta desde la línea de comandos:
@@ -117,6 +123,13 @@ python build_aio.py
 ```
 
 La versión web tiene su propio generador, `build_pages.py`, que reutiliza los mismos tres módulos (sin `telegram_export_studio.py`, ya que no hay servidor en el navegador). Un workflow de GitHub Actions (`.github/workflows/deploy-pages.yml`) lo ejecuta automáticamente en cada push que toque un módulo o la carpeta `web/`, y publica el resultado en GitHub Pages — no hace falta ningún paso manual.
+
+### Modo debug
+
+Ambas interfaces tienen un modo de diagnóstico oculto, pensado para investigar problemas de rendimiento (por ejemplo, en móviles) sin tener que instrumentar el código a mano:
+
+- **Web** (`web/app.html`): añade `?debug=1` a la URL. Abre un panel de log en la parte inferior de la pantalla (útil en el móvil, donde no siempre hay DevTools remoto a mano) con el detalle de cada intento del benchmark de concurrencia de copia de media, los archivos cuya copia individual tarde más de 500ms, y el resumen final (archivos copiados, tiempo total, archivos/s). El panel solo sigue el scroll automáticamente mientras estés al final del log; si subes a leer una línea antigua, deja de arrastrarte hacia abajo. Tiene un botón "Copiar" para volcar todo el log al portapapeles. El flag está apagado por defecto y no afecta en nada a quien no lo use — es seguro que quede en el código que se publica a GitHub Pages.
+- **Escritorio / AIO** (`telegram_export_studio.py`): botón de icono junto al de apagar el servidor (arriba a la derecha). Al activarlo, el trabajo en curso imprime en el log del job (el desplegable "Ver registro completo" que ya existe en la interfaz) el timing de cada etapa: cuándo empieza, cuánto tarda, y mientras haya progreso medible, un aviso periódico con % completado y ETA. El estado se recuerda entre sesiones (`localStorage`).
 
 ## Licencia
 

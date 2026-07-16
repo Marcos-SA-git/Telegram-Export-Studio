@@ -99,6 +99,12 @@ python telegram_export_studio_aio.py enhance folder [--me "Your Name"] [--layout
 - `.ogg` voice notes don't play in Safari (due to the Opus codec); they play fine in Chrome, Firefox, and Edge.
 - The web app requires a Chromium-based browser; the desktop app works with any modern browser.
 
+### Mobile
+
+- **Android**: the web version works in Chrome for Android (tested on Android 14) thanks to its File System Access API support. However, **the process is noticeably slow — several seconds per file, even for the handful of fixed assets bundled with every export (CSS, icons), not just photos or videos**. This isn't a bug in the app: Android's storage provider (the Storage Access Framework) serves file operations essentially serially, with a fixed per-operation cost that neither the browser nor this tool can work around. For exports with more than a handful of files, **using a computer is recommended** even for small chats.
+- **iOS / iPadOS**: not tested. Per WebKit's own documentation, Safari (and therefore every browser on iOS, all of which are WebKit-based) doesn't implement the File System Access API's directory-picker methods (`showDirectoryPicker`) — only the *Origin Private File System*, which doesn't fit this use case. Apple hasn't announced plans to add this support. The web version will most likely **not load at all** on iOS, rather than simply being slow.
+- A native Android app that can access the filesystem more directly and in parallel, sidestepping this limitation, is on the roadmap — see the [tracking issue](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/4).
+
 ## For developers
 
 The project is written as four independent Python modules, each with a single responsibility and usable on its own from the command line:
@@ -117,6 +123,13 @@ python build_aio.py
 ```
 
 The web version has its own generator, `build_pages.py`, which reuses the same three modules (without `telegram_export_studio.py`, since there's no server in the browser). A GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) runs it automatically on every push that touches a module or the `web/` folder, and publishes the result to GitHub Pages — no manual "publish" step needed.
+
+### Debug mode
+
+Both interfaces have a hidden diagnostic mode, meant for investigating performance issues (e.g. on mobile) without having to instrument the code by hand:
+
+- **Web** (`web/app.html`): add `?debug=1` to the URL. Opens a log panel at the bottom of the screen (useful on a phone, where remote DevTools isn't always handy) showing the detail of every media-copy concurrency benchmark attempt, any individual file copy that takes longer than 500ms, and a final summary (files copied, total time, files/s). The panel only auto-scrolls while you're at the bottom of the log; scroll up to read an older line and it stops following. It has a "Copy" button to dump the whole log to the clipboard. The flag is off by default and has zero effect on anyone not using it — it's safe to leave in the code published to GitHub Pages.
+- **Desktop / AIO** (`telegram_export_studio.py`): an icon button next to the shutdown button (top right). Turning it on makes the running job print stage timing to the job log (the existing "Show full log" disclosure in the interface) — when each stage starts, how long it takes, and, while there's measurable progress, a periodic update with % complete and ETA. The setting is remembered across sessions (`localStorage`).
 
 ## License
 

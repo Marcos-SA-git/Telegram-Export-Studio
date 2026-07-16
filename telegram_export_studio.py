@@ -53,6 +53,13 @@ JOB = {"state": "idle", "buf": None, "result": None, "error": None,
        "stage": None, "warnings": []}
 JOB_LOCK = threading.Lock()
 
+# Modo verbose: solo afecta a esta app de escritorio (y a los AIO, que la
+# incluyen tal cual) — imprime timing por etapa en el log del trabajo, que
+# ya se captura y se muestra en el <details> "job-log" del frontend. La
+# versión web (GitHub Pages) no tiene este backend, así que no aplica ahí.
+VERBOSE = {"on": False}
+_stage_timing = {"key": None, "t0": 0.0, "last_log": 0.0}
+
 
 def _progress(kind, payload):
     with JOB_LOCK:
@@ -60,6 +67,30 @@ def _progress(kind, payload):
             JOB["stage"] = payload
         else:
             JOB["warnings"].append(payload)
+    if VERBOSE["on"] and kind == "stage":
+        _log_verbose_stage(payload)
+
+
+def _log_verbose_stage(payload):
+    now = time.perf_counter()
+    key = payload.get("key")
+    frac = payload.get("frac")
+    if key != _stage_timing["key"]:
+        if _stage_timing["key"] is not None:
+            elapsed = now - _stage_timing["t0"]
+            print(f"[verbose] etapa '{_stage_timing['key']}' terminada "
+                  f"en {elapsed:.2f}s")
+        _stage_timing.update(key=key, t0=now, last_log=now)
+        print(f"[verbose] etapa '{key}' iniciada"
+              + (f" ({payload['name']})" if payload.get("name") else ""))
+        return
+    if frac is not None and now - _stage_timing["last_log"] >= 0.5:
+        elapsed = now - _stage_timing["t0"]
+        rate = frac / elapsed if elapsed > 0 else 0
+        eta = (1 - frac) / rate if rate > 0 else float("inf")
+        print(f"[verbose] {key}: {frac * 100:.0f}% — {elapsed:.1f}s "
+              f"transcurridos, ETA ~{eta:.1f}s")
+        _stage_timing["last_log"] = now
 
 
 tef.progress_hook = _progress
@@ -538,6 +569,9 @@ select.lang {
 .iconbtn:hover svg { fill: var(--err); }
 #shutdown-btn.closed { pointer-events: none; }
 #shutdown-btn.closed svg { fill: var(--ok); }
+#verbose-btn:hover svg { fill: var(--primary); }
+#verbose-btn.active { background: var(--primary-soft); }
+#verbose-btn.active svg { fill: var(--primary); }
 
 .empty {
   border: 1.5px dashed var(--outline); border-radius: 14px;
@@ -825,6 +859,9 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
     <option value="hi">🌐 हिन्दी</option>
     <option value="ar">🌐 العربية</option>
   </select>
+  <button class="iconbtn" id="verbose-btn" title="Detalles técnicos (log verbose)" onclick="toggleVerbose()">
+    <svg viewBox="0 0 24 24"><path d="M20 8h-2.81a5.985 5.985 0 0 0-1.82-1.96L17 4.41 15.59 3l-2.17 2.17a6.002 6.002 0 0 0-2.83 0L8.41 3 7 4.41l1.62 1.63A5.985 5.985 0 0 0 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/></svg>
+  </button>
   <button class="iconbtn" id="shutdown-btn" title="" onclick="confirmShutdown()">
     <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17-1.42 1.42A6.92 6.92 0 0 1 19 12a7 7 0 1 1-11.83-5.03L5.76 5.56A9 9 0 1 0 21 12a8.94 8.94 0 0 0-3.17-6.83z"/></svg>
   </button>
@@ -2141,6 +2178,20 @@ async function confirmShutdown() {
   $("shutdown-screen").classList.add("show");
 }
 
+/* =============== verbose (solo escritorio/AIO) =============== */
+let VERBOSE = localStorage.getItem("tgstudio-verbose") === "1";
+function applyVerboseBtn() {
+  $("verbose-btn").classList.toggle("active", VERBOSE);
+}
+async function toggleVerbose() {
+  VERBOSE = !VERBOSE;
+  localStorage.setItem("tgstudio-verbose", VERBOSE ? "1" : "0");
+  applyVerboseBtn();
+  try { await api("/api/verbose", { on: VERBOSE }); } catch (e) { /* no crítico */ }
+  snack(VERBOSE ? "Verbose activado: detalles técnicos en el log del trabajo"
+                : "Verbose desactivado");
+}
+
 /* =============== tabs =============== */
 function movePill() {
   const btn = document.querySelector("#tabs button.active");
@@ -2597,6 +2648,8 @@ wireDrop($("compact-card"), loadCompactPath);
 wireDrop($("enhance-card"), loadEnhancePath);
 
 applyLang();
+applyVerboseBtn();
+if (VERBOSE) api("/api/verbose", { on: true }).catch(() => {});
 window.addEventListener("load", movePill);
 </script>
 </body>
@@ -2669,6 +2722,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True})
             elif self.path == "/api/restore":
                 start_job(lambda: restore(Path(body["export"]).resolve()))
+                self._json({"ok": True})
+            elif self.path == "/api/verbose":
+                VERBOSE["on"] = bool(body.get("on"))
                 self._json({"ok": True})
             elif self.path == "/api/open":
                 target = Path(body["path"])
