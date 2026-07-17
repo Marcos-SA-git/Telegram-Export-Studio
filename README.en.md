@@ -26,37 +26,39 @@ Requires a Chromium-based browser (Chrome, Edge, Opera) because of the File Syst
 
 The simplest option if you don't want anything programming-related. Download one of these files from the [releases page](https://github.com/Marcos-SA-git/Telegram-Export-Studio/releases/latest) and you're done:
 
-- **`TelegramExportStudio.exe`** (Windows, no Python required): double-click and go. The most convenient option if you don't want to install anything else.
+- **`TelegramExportStudio-vX.Y.Z.exe`** (Windows, no Python required): double-click and go. The most convenient option if you don't want to install anything else.
   > Being an unsigned `.exe`, your antivirus or Windows SmartScreen may flag it the first time you run it. This is a common false positive with this kind of executable; if you'd rather avoid it, use the `.pyw` option below.
-- **`Telegram Export Studio.pyw`** (Windows, requires Python 3.10+): double-click and the interface opens in your browser, with no terminal window. You need [Python](https://www.python.org/downloads/) installed, with the *"Add to PATH"* checkbox ticked during installation.
-- **`telegram_export_studio_aio.py`** (any operating system, requires Python 3.10+): the same app as a single `.py` file. Run it from a terminal:
+- **`Telegram Export Studio vX.Y.Z.pyw`** (Windows, requires Python 3.10+): double-click and the interface opens in your browser, with no terminal window. You need [Python](https://www.python.org/downloads/) installed, with the *"Add to PATH"* checkbox ticked during installation.
+- **`telegram_export_studio_aio_vX.Y.Z.py`** (any operating system, requires Python 3.10+): the same app as a single `.py` file. Run it from a terminal:
 
   ```bash
-  python telegram_export_studio_aio.py
+  python telegram_export_studio_aio_vX.Y.Z.py
   ```
 
-  This opens the graphical interface in your browser (on `localhost`, without leaving your machine). On Windows you can also use `py telegram_export_studio_aio.py`; on macOS/Linux, `python3 telegram_export_studio_aio.py`.
+  This opens the graphical interface in your browser (on `localhost`, without leaving your machine). On Windows you can also use `py telegram_export_studio_aio_vX.Y.Z.py`; on macOS/Linux, `python3 telegram_export_studio_aio_vX.Y.Z.py`.
+
+  > `X.Y.Z` is whatever version you download (it's in the filename itself, in the code's header, in the startup message, and in the interface's footer — see [VERSIONING.md](VERSIONING.md)). `--version` prints it on its own and exits.
 
   If you'd rather use the command line instead of the graphical interface, the same file accepts subcommands:
 
   ```bash
-  python telegram_export_studio_aio.py fuse export1 export2 -o merged
-  python telegram_export_studio_aio.py compact merged --files 1
-  python telegram_export_studio_aio.py enhance merged --me "Your Name"
-  python telegram_export_studio_aio.py enhance merged --restore
-  python telegram_export_studio_aio.py convert merged
+  python telegram_export_studio_aio_vX.Y.Z.py fuse export1 export2 -o merged
+  python telegram_export_studio_aio_vX.Y.Z.py compact merged --files 1
+  python telegram_export_studio_aio_vX.Y.Z.py enhance merged --me "Your Name"
+  python telegram_export_studio_aio_vX.Y.Z.py enhance merged --restore
+  python telegram_export_studio_aio_vX.Y.Z.py convert merged
   ```
 
 The interface is available in Spanish, English, French, German, Portuguese, Italian, Russian, Chinese, Japanese, Hindi, and Arabic (with right-to-left layout).
 
 ## CLI reference
 
-If you prefer the command line over the graphical interface, here are the four available commands (with `telegram_export_studio_aio.py <command> ...`, or the matching standalone module — see the table in the "For developers" section).
+If you prefer the command line over the graphical interface, here are the four available commands (with `telegram_export_studio_aio_vX.Y.Z.py <command> ...`, or the matching standalone module — see the table in the "For developers" section).
 
 ### `fuse` — merge several exports into one
 
 ```bash
-python telegram_export_studio_aio.py fuse export1 export2 [export3 …] -o output_folder [-s SIZE] [-f]
+python telegram_export_studio_aio_vX.Y.Z.py fuse export1 export2 [export3 …] -o output_folder [-s SIZE] [-f]
 ```
 
 - `export1 export2 …` (required): Telegram export folders to merge, each containing its `messages.html`. You can pass two or more.
@@ -67,7 +69,7 @@ python telegram_export_studio_aio.py fuse export1 export2 [export3 …] -o outpu
 ### `compact` — reduce the number of pages of an already-merged export
 
 ```bash
-python telegram_export_studio_aio.py compact folder [--files N | --size SIZE]
+python telegram_export_studio_aio_vX.Y.Z.py compact folder [--files N | --size SIZE]
 ```
 
 - `folder` (required): the export folder you want to re-paginate (contains the `messages*.html` files).
@@ -80,7 +82,7 @@ This operation rewrites the `messages*.html` files in place; it doesn't touch ph
 ### `enhance` — apply (or revert) the enhanced view
 
 ```bash
-python telegram_export_studio_aio.py enhance folder [--me "Your Name"] [--layout both|chat|original] [--no-bubbles] [--no-quotes] [--no-theme] [--no-media] [--no-note] [--no-fullwidth] [--restore]
+python telegram_export_studio_aio_vX.Y.Z.py enhance folder [--me "Your Name"] [--layout both|chat|original] [--no-bubbles] [--no-quotes] [--no-theme] [--no-media] [--no-note] [--no-fullwidth] [--restore]
 ```
 
 - `folder` (required): the export folder to enhance (contains the `messages*.html` files).
@@ -97,11 +99,11 @@ python telegram_export_studio_aio.py enhance folder [--me "Your Name"] [--layout
 ### `convert` — convert between HTML and JSON (the UI's "Converter")
 
 ```bash
-python telegram_export_studio_aio.py convert folder                 # auto-detects
-python telegram_export_studio_aio.py convert folder --to-json [--faithful] [-o output.json] [--indent N | --compact]
-python telegram_export_studio_aio.py convert folder --to-html [--page-size SIZE] [--force]
-python telegram_export_studio_aio.py convert folder --enrich [-o output.json]
-python telegram_export_studio_aio.py convert folder --downgrade [-o output.json]
+python telegram_export_studio_aio_vX.Y.Z.py convert folder                 # auto-detects
+python telegram_export_studio_aio_vX.Y.Z.py convert folder --to-json [--faithful] [-o output.json] [--indent N | --compact]
+python telegram_export_studio_aio_vX.Y.Z.py convert folder --to-html [--page-size SIZE] [--force]
+python telegram_export_studio_aio_vX.Y.Z.py convert folder --enrich [-o output.json]
+python telegram_export_studio_aio_vX.Y.Z.py convert folder --downgrade [-o output.json]
 ```
 
 - `folder` (required): the export folder. Without flags, what it contains is detected automatically: HTML → converted to JSON; JSON, or just a `result_enriched.json` → the HTML view is generated; **HTML + JSON at once → it stops with a warning** (the only useful operation in that case is `--enrich`).
@@ -146,7 +148,7 @@ The project is written as five independent Python modules, each with a single re
 | `telegram_export_converter.py` | Converts between HTML and JSON (both directions, auto-detected), enriches the official JSON with the HTML's data, and downgrades an enriched JSON back to the official format. `python telegram_export_converter.py folder [--to-json [--faithful] \| --to-html \| --enrich \| --downgrade]` |
 | `telegram_export_studio.py` | Local graphical interface on top of the modules above: starts a server on `127.0.0.1` and opens the browser. |
 
-The files in `releases/` (`telegram_export_studio_aio.py`, `.pyw`, `.exe`) are **generated artifacts**, not source code: they're produced by `build_aio.py`, which concatenates the five modules into a single self-contained file. They are never hand-edited — the file itself says so in its header. After changing anything in the modules, re-run:
+The files in `releases/` (`telegram_export_studio_aio_vX.Y.Z.py`, `.pyw`, `.exe`, versioned in the filename — see [VERSIONING.md](VERSIONING.md)) are **generated artifacts**, not source code: they're produced by `build_aio.py`, which concatenates the five modules into a single self-contained file. They are never hand-edited — the file itself says so in its header. After changing anything in the modules, re-run:
 
 ```bash
 python build_aio.py

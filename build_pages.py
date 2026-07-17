@@ -21,6 +21,8 @@ repositorio nunca necesita tener commiteadas copias generadas.
 import shutil
 from pathlib import Path
 
+from telegram_export_version import VERSION
+
 BASE = Path(__file__).parent
 SITE = BASE / "_site"
 ENGINE_MODULES = [
@@ -36,7 +38,9 @@ def build_pages():
     SITE.mkdir()
 
     for filename in ("index.html", "app.html"):
-        shutil.copy2(BASE / "web" / filename, SITE / filename)
+        html = (BASE / "web" / filename).read_text(encoding="utf-8")
+        html = html.replace("__APP_VERSION__", VERSION)
+        (SITE / filename).write_text(html, encoding="utf-8")
         print(f"OK _site/{filename}")
 
     for filename in ENGINE_MODULES:

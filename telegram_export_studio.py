@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Telegram Export Studio — GUI local para fusionar, compactar y mejorar
-exportaciones HTML de Telegram.
+exportaciones HTML de Telegram. Versión: ver telegram_export_version.py.
 
 Interfaz web local (Material Design) sobre telegram_export_fuser.py,
 telegram_export_compactor.py y telegram_export_enhancer.py. Sin
@@ -37,6 +37,7 @@ from telegram_export_enhancer import enhance, restore
 from telegram_export_converter import (
     detect_formats, downgrade_json, enrich_json, from_json, load_chat, to_json,
 )
+from telegram_export_version import VERSION
 
 # ---------------------------------------------------------------------------
 # Backend helpers
@@ -897,6 +898,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
   text-decoration: none; opacity: .75; transition: opacity .2s; }
 .srclink:hover { opacity: 1; text-decoration: underline; color: var(--accent); }
 .srclink svg { width: 14px; height: 14px; fill: currentColor; flex: none; }
+.app-version { display: block; font-size: 11px; opacity: .6; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -1195,6 +1197,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
 <footer>
   <div data-i18n="footer"></div>
   <a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a>
+  <span class="app-version" id="app-version"></span>
 </footer>
 </div>
 
@@ -1228,6 +1231,10 @@ const state = { exports: [], compact: null, enhance: null, view: "fuse",
 /* URL del proyecto (código fuente) */
 const REPO_URL = "https://github.com/Marcos-SA-git/Telegram-Export-Studio";
 document.querySelectorAll(".srclink").forEach(a => { a.href = REPO_URL; });
+
+/* versión de la app, inyectada por telegram_export_studio.py al servir la página */
+const APP_VERSION = "__APP_VERSION__";
+$("app-version").textContent = "v" + APP_VERSION;
 
 /* =============== i18n =============== */
 const I18N = {
@@ -3304,6 +3311,7 @@ window.addEventListener("load", movePill);
 </body>
 </html>
 """
+PAGE = PAGE.replace("__APP_VERSION__", VERSION)
 
 
 # ---------------------------------------------------------------------------
@@ -3413,7 +3421,7 @@ def main():
 
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     url = f"http://localhost:{port}"
-    print(f"Telegram Export Studio -> {url}")
+    print(f"Telegram Export Studio v{VERSION} -> {url}")
     print("Ctrl+C para salir")
     threading.Timer(0.4, webbrowser.open, [url]).start()
     try:

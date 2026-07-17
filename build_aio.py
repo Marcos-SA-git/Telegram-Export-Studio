@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Genera releases/telegram_export_studio_aio.py — versión All-In-One:
-los cinco scripts (fuser, compactor, enhancer, converter y la interfaz
-gráfica) en un único archivo autocontenido. Sin argumentos lanza la
-interfaz; con subcomandos actúa como CLI:
-    python telegram_export_studio_aio.py            -> GUI
-    python telegram_export_studio_aio.py fuse ...
-    python telegram_export_studio_aio.py compact ...
-    python telegram_export_studio_aio.py enhance ...
-    python telegram_export_studio_aio.py convert ...
+"""Genera releases/telegram_export_studio_aio_vX.Y.Z.py — versión
+All-In-One: los cinco scripts (fuser, compactor, enhancer, converter y
+la interfaz gráfica) en un único archivo autocontenido, con la versión
+de telegram_export_version.py incluida en el nombre. Sin argumentos
+lanza la interfaz; con subcomandos actúa como CLI:
+    python telegram_export_studio_aio_vX.Y.Z.py            -> GUI
+    python telegram_export_studio_aio_vX.Y.Z.py fuse ...
+    python telegram_export_studio_aio_vX.Y.Z.py compact ...
+    python telegram_export_studio_aio_vX.Y.Z.py enhance ...
+    python telegram_export_studio_aio_vX.Y.Z.py convert ...
+    python telegram_export_studio_aio_vX.Y.Z.py --version   -> imprime la versión
 
 También genera la copia `.pyw` (doble click sin consola) y, si
-`pyinstaller` está instalado, el `.exe` autocontenido.
+`pyinstaller` está instalado, el `.exe` autocontenido — ambos con la
+versión en el nombre. Ver VERSIONING.md para qué significa cada número.
 
 Pensado para que lo ejecute cualquiera que quiera su propia versión de
 escritorio, incluidos usuarios finales que solo clonan el repo.
@@ -29,6 +32,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from telegram_export_version import VERSION
+
 BASE = Path(__file__).parent
 MODULES = [
     ("telegram_export_fuser.py", "_fuser_main"),
@@ -38,26 +43,33 @@ MODULES = [
     ("telegram_export_studio.py", "_studio_main"),
 ]
 RELEASES = BASE / "releases"
-OUT = RELEASES / "telegram_export_studio_aio.py"
-OUT_PYW = RELEASES / "Telegram Export Studio.pyw"
+OUT = RELEASES / f"telegram_export_studio_aio_v{VERSION}.py"
+OUT_PYW = RELEASES / f"Telegram Export Studio v{VERSION}.pyw"
+# patrones de artefactos de versiones anteriores a limpiar antes de generar
+STALE_GLOBS = ("telegram_export_studio_aio_v*.py", "Telegram Export Studio v*.pyw",
+               "TelegramExportStudio-v*.exe")
 
-HEADER = '''#!/usr/bin/env python3
-"""Telegram Export Studio — All-In-One.
+HEADER = f'''#!/usr/bin/env python3
+"""Telegram Export Studio v{VERSION} — All-In-One.
 
 Todas las herramientas en un único archivo autocontenido (solo
 biblioteca estándar de Python 3.10+). 100% local: nada sale de tu
 equipo.
 
-    python telegram_export_studio_aio.py              -> interfaz gráfica
-    python telegram_export_studio_aio.py fuse e1 e2 -o salida   [opciones]
-    python telegram_export_studio_aio.py compact carpeta --files 1
-    python telegram_export_studio_aio.py enhance carpeta --me "Tu Nombre"
-    python telegram_export_studio_aio.py enhance carpeta --restore
-    python telegram_export_studio_aio.py convert carpeta [--to-json | --to-html | --enrich | --downgrade]
+    python telegram_export_studio_aio_v{VERSION}.py              -> interfaz gráfica
+    python telegram_export_studio_aio_v{VERSION}.py fuse e1 e2 -o salida   [opciones]
+    python telegram_export_studio_aio_v{VERSION}.py compact carpeta --files 1
+    python telegram_export_studio_aio_v{VERSION}.py enhance carpeta --me "Tu Nombre"
+    python telegram_export_studio_aio_v{VERSION}.py enhance carpeta --restore
+    python telegram_export_studio_aio_v{VERSION}.py convert carpeta [--to-json | --to-html | --enrich | --downgrade]
+    python telegram_export_studio_aio_v{VERSION}.py --version      -> muestra la versión y termina
 
 GENERADO por build_aio.py — no editar a mano; edita los módulos
-telegram_export_*.py y regenera.
+telegram_export_*.py y regenera. Ver VERSIONING.md para el significado
+de cada número de versión.
 """
+
+VERSION = "{VERSION}"
 
 '''
 
@@ -76,6 +88,9 @@ def main():
         sys.stdout = open(os.devnull, "w", encoding="utf-8")
     if sys.stderr is None:
         sys.stderr = open(os.devnull, "w", encoding="utf-8")
+    if len(sys.argv) > 1 and sys.argv[1] in ("-v", "--version"):
+        print(f"Telegram Export Studio v{VERSION}")
+        return
     commands = {
         "fuse": _fuser_main,
         "compact": _compactor_main,
@@ -103,8 +118,19 @@ MAIN_GUARD_RE = re.compile(
     r'\n*if __name__ == "__main__":\n    main\(\)\n*\Z')
 
 
+def _clean_stale_releases():
+    """Borra los artefactos de una versión anterior antes de generar los
+    nuevos, para que releases/ no acumule .py/.pyw/.exe de versiones
+    distintas a la vez."""
+    for pattern in STALE_GLOBS:
+        for f in RELEASES.glob(pattern):
+            if f not in (OUT, OUT_PYW):
+                f.unlink()
+
+
 def build_aio():
     RELEASES.mkdir(exist_ok=True)
+    _clean_stale_releases()
     parts = [HEADER]
     for filename, main_name in MODULES:
         src = (BASE / filename).read_text(encoding="utf-8")
@@ -143,7 +169,8 @@ def build_exe():
                   "(pip install pyinstaller para generarlo)")
             return
 
-    exe_path = RELEASES / "TelegramExportStudio.exe"
+    exe_name = f"TelegramExportStudio-v{VERSION}"
+    exe_path = RELEASES / f"{exe_name}.exe"
     if exe_path.exists():
         try:
             exe_path.unlink()
@@ -157,7 +184,7 @@ def build_exe():
     spec_dir = build_dir
     cmd = [
         sys.executable, "-m", "PyInstaller",
-        "--onefile", "--noconsole", "--name", "TelegramExportStudio",
+        "--onefile", "--noconsole", "--name", exe_name,
         "--distpath", str(RELEASES),
         "--workpath", str(build_dir),
         "--specpath", str(spec_dir),
