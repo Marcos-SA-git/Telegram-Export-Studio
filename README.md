@@ -11,7 +11,7 @@ Telegram Desktop exporta los chats en HTML, pero cada exportación es una foto f
 ## Privacidad, en serio
 
 - **Nada se sube a ningún sitio.** No hay backend: la versión de escritorio es un servidor que solo escucha en tu propio ordenador (`127.0.0.1`), y la versión web ejecuta el mismo motor Python **dentro de tu navegador** (WebAssembly, vía Pyodide).
-- **Código abierto y auditable.** Todo el procesado son cuatro scripts de Python con la biblioteca estándar, sin dependencias externas.
+- **Código abierto y auditable.** Todo el procesado son cinco scripts de Python con la biblioteca estándar, sin dependencias externas.
 - La versión web funciona incluso **sin conexión** una vez cargada.
 
 ## Cómo usarlo
@@ -44,13 +44,14 @@ La forma más sencilla de usarlo si no quieres nada relacionado con programació
   python telegram_export_studio_aio.py compact fusionado --files 1
   python telegram_export_studio_aio.py enhance fusionado --me "Tu Nombre"
   python telegram_export_studio_aio.py enhance fusionado --restore
+  python telegram_export_studio_aio.py convert fusionado
   ```
 
 La interfaz está disponible en español, inglés, francés, alemán, portugués, italiano, ruso, chino, japonés, hindi y árabe (con diseño derecha-a-izquierda).
 
 ## Referencia de la CLI
 
-Si prefieres la línea de comandos a la interfaz gráfica, estos son los tres comandos disponibles (con `telegram_export_studio_aio.py <comando> ...` o con el módulo suelto correspondiente — ver la tabla de la sección "Para desarrolladores").
+Si prefieres la línea de comandos a la interfaz gráfica, estos son los cuatro comandos disponibles (con `telegram_export_studio_aio.py <comando> ...` o con el módulo suelto correspondiente — ver la tabla de la sección "Para desarrolladores").
 
 ### `fuse` — fusionar varias exportaciones en una
 
@@ -93,6 +94,34 @@ python telegram_export_studio_aio.py enhance carpeta [--me "Tu Nombre"] [--layou
 - `--no-fullwidth`: mantiene la columna de mensajes centrada en vez de ocupar toda la pantalla.
 - `--restore`: deshace todas las mejoras aplicadas y devuelve el export a su HTML original exacto, sin pérdidas. Incompatible con el resto de flags (no hace falta combinarlo con nada).
 
+### `convert` — convertir entre HTML y JSON (el "Conversor" de la interfaz)
+
+```bash
+python telegram_export_studio_aio.py convert carpeta                 # autodetecta
+python telegram_export_studio_aio.py convert carpeta --to-json [--faithful] [-o salida.json] [--indent N | --compact]
+python telegram_export_studio_aio.py convert carpeta --to-html [--page-size TAMAÑO] [--force]
+python telegram_export_studio_aio.py convert carpeta --enrich [-o salida.json]
+python telegram_export_studio_aio.py convert carpeta --downgrade [-o salida.json]
+```
+
+- `carpeta` (obligatorio): la carpeta del export. Sin flags, se detecta automáticamente qué contiene: HTML → se convierte a JSON; JSON o solo un `result_enriched.json` → se genera la vista HTML; **HTML + JSON a la vez → se detiene con un aviso** (lo único útil en ese caso es `--enrich`).
+
+**HTML → JSON** (`--to-json`, funciona sobre exports sin procesar, fusionados, compactados y/o mejorados):
+- Por defecto genera el modo **enriquecido**: el [esquema del export JSON oficial de Telegram Desktop](https://core.telegram.org/import-export) más campos extra que el formato oficial no contempla (texto/dirección de estado de las llamadas, nombres de archivo, marca del generador) para no perder nada del HTML.
+- `--faithful`: modo **formato oficial** — solo las claves oficiales. Es **destructivo**: descarta esos campos extra Y **borra** las páginas `messages*.html` y los recursos web (`css/`, `js/`, `images/`) de la carpeta, para que quede idéntica a un export JSON real de Telegram (la interfaz lo avisa con un banner permanente).
+- El JSON sigue el esquema oficial: `id`, `type`, `date` ISO 8601 y `date_unixtime`, `from`, `text` y `text_entities` (`plain`/`link`/`text_link`/`bold`/`italic`/`custom_emoji`…), `reply_to_message_id`, `forwarded_from`, `reactions`, la media (`photo`, o `file` + `media_type` + `duration_seconds` + `thumbnail`) y las llamadas como mensajes de servicio con `action: phone_call`, `actor`, `duration_seconds` y `discard_reason`. Los campos que el HTML no contiene no se pueden recuperar (`from_id`, fechas de edición, tamaños y `mime_type` de la media).
+- `-o` (por defecto `result.json` en la carpeta), `--indent N` / `--compact` como de costumbre. Con `-o` la carpeta original no se toca (ni siquiera en modo `--faithful`): el borrado de páginas/recursos solo ocurre cuando el resultado se escribe en el propio directorio del export.
+
+**JSON → HTML** (`--to-html`): regenera los `messages*.html` navegables en la misma carpeta a partir del `result.json` (oficial o generado por esta herramienta) — o de `result_enriched.json` si es lo único que hay —, incluyendo la estructura web (`css/`, `js/`, `images/`) que el export JSON no trae — va embebida en el propio script. `--force` permite sobrescribir páginas existentes.
+
+**Ambos formatos a la vez** (`--enrich`): combina lo mejor de los dos — el `result.json` oficial (que tiene datos que el HTML no: `from_id`, ediciones, tamaños…) se enriquece con los campos extra recuperables del HTML y se escribe `result_enriched.json`, **sin tocar ninguno de los originales**.
+
+**Solo un JSON enriquecido** (`--downgrade`): cuando la carpeta ya no conserva ni el HTML ni el `result.json` oficial (por ejemplo, tras borrarlos a mano), esta opción quita los campos y la marca que añadió el enriquecido y deja un `result.json` igual al formato oficial de Telegram. Es **destructiva**: esos datos extra (dirección/estado de llamadas, nombres de archivo…) se pierden y no se pueden recuperar sin el HTML original.
+
+**Los archivos de media nunca se copian**: se referencian por su ruta relativa (`photos/…`, `video_files/…`), que ambos formatos de export comparten. Por ese mismo motivo el resultado se escribe **dentro de la propia carpeta del export** (guardarlo en otra ubicación rompería esas rutas relativas); si quieres el JSON en otro sitio, usa `-o` sabiendo que las referencias a la media dejarán de resolverse desde ahí.
+
+**Protección contra sobrescrituras**: `--to-json`, `--enrich` y `--downgrade` se niegan a sobrescribir un `result.json` / `result_enriched.json` que no haya generado esta herramienta (se detecta por la marca `generated_by` / `enriched_by`), y `--to-html` nunca sobrescribe páginas `messages*.html` existentes sin `--force`. Los exports originales de Telegram no se tocan jamás por accidente.
+
 ## Compatibilidad
 
 - Los exports mejorados siguen siendo fusionables y compactables (y viceversa), en cualquier orden. "Desmejorar" (`--restore`) devuelve el HTML original exacto, sin pérdidas.
@@ -107,22 +136,31 @@ python telegram_export_studio_aio.py enhance carpeta [--me "Tu Nombre"] [--layou
 
 ## Para desarrolladores
 
-El proyecto está escrito como cuatro módulos de Python independientes, cada uno con una sola responsabilidad y usable por su cuenta desde la línea de comandos:
+El proyecto está escrito como cinco módulos de Python independientes, cada uno con una sola responsabilidad y usable por su cuenta desde la línea de comandos:
 
 | Script | Qué hace |
 |---|---|
 | `telegram_export_fuser.py` | Fusiona varias exportaciones en una sola: deduplica por id de mensaje, re-pagina al estilo Telegram y copia la media. `python telegram_export_fuser.py export1 export2 [export3 …] -o carpeta_salida [--page-size 500KB\|1MB\|0] [-f]` |
 | `telegram_export_compactor.py` | Re-pagina un historial ya fusionado sin tocar la media. `python telegram_export_compactor.py carpeta [--files N \| --size 5MB]` |
 | `telegram_export_enhancer.py` | Aplica (o revierte) la visualización mejorada. `python telegram_export_enhancer.py carpeta [--me "Tu Nombre"] [--layout both\|chat\|original] [--restore]` |
-| `telegram_export_studio.py` | Interfaz gráfica local por encima de los tres anteriores: arranca un servidor en `127.0.0.1` y abre el navegador. |
+| `telegram_export_converter.py` | Convierte entre HTML y JSON (ambas direcciones, con autodetección), enriquece el JSON oficial con los datos del HTML y baja un JSON enriquecido al formato oficial. `python telegram_export_converter.py carpeta [--to-json [--faithful] \| --to-html \| --enrich \| --downgrade]` |
+| `telegram_export_studio.py` | Interfaz gráfica local por encima de los anteriores: arranca un servidor en `127.0.0.1` y abre el navegador. |
 
-Los archivos de `releases/` (`telegram_export_studio_aio.py`, `.pyw`, `.exe`) son **artefactos generados**, no código fuente: los produce `build_aio.py` concatenando los cuatro módulos en un único archivo autocontenido. Nunca se editan a mano — el propio archivo lo indica en su cabecera. Tras cambiar algo en los módulos, vuelve a ejecutar:
+Los archivos de `releases/` (`telegram_export_studio_aio.py`, `.pyw`, `.exe`) son **artefactos generados**, no código fuente: los produce `build_aio.py` concatenando los cinco módulos en un único archivo autocontenido. Nunca se editan a mano — el propio archivo lo indica en su cabecera. Tras cambiar algo en los módulos, vuelve a ejecutar:
 
 ```bash
 python build_aio.py
 ```
 
 La versión web tiene su propio generador, `build_pages.py`, que reutiliza los mismos tres módulos (sin `telegram_export_studio.py`, ya que no hay servidor en el navegador). Un workflow de GitHub Actions (`.github/workflows/deploy-pages.yml`) lo ejecuta automáticamente en cada push que toque un módulo o la carpeta `web/`, y publica el resultado en GitHub Pages — no hace falta ningún paso manual.
+
+### `tools/` — utilidades de mantenimiento
+
+`tools/pack_assets.py` regenera el bloque `ASSETS_BLOB` embebido en `telegram_export_converter.py`: la estructura web (`css/`, `js/`, `images/`) que `--to-html` escribe junto a los `messages*.html` que reconstruye, ya que el export JSON no la trae. Solo hace falta ejecutarlo si Telegram cambia esos assets estáticos en una versión futura de Desktop; con cualquier export HTML reciente como fuente:
+
+```bash
+python tools/pack_assets.py "carpeta_export_html"
+```
 
 ### Modo debug
 

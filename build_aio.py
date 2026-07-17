@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Genera releases/telegram_export_studio_aio.py — versión All-In-One:
-los cuatro scripts (fuser, compactor, enhancer y la interfaz gráfica)
-en un único archivo autocontenido. Sin argumentos lanza la interfaz;
-con subcomandos actúa como CLI:
+los cinco scripts (fuser, compactor, enhancer, converter y la interfaz
+gráfica) en un único archivo autocontenido. Sin argumentos lanza la
+interfaz; con subcomandos actúa como CLI:
     python telegram_export_studio_aio.py            -> GUI
     python telegram_export_studio_aio.py fuse ...
     python telegram_export_studio_aio.py compact ...
     python telegram_export_studio_aio.py enhance ...
+    python telegram_export_studio_aio.py convert ...
 
 También genera la copia `.pyw` (doble click sin consola) y, si
 `pyinstaller` está instalado, el `.exe` autocontenido.
@@ -33,6 +34,7 @@ MODULES = [
     ("telegram_export_fuser.py", "_fuser_main"),
     ("telegram_export_compactor.py", "_compactor_main"),
     ("telegram_export_enhancer.py", "_enhancer_main"),
+    ("telegram_export_converter.py", "_converter_main"),
     ("telegram_export_studio.py", "_studio_main"),
 ]
 RELEASES = BASE / "releases"
@@ -51,6 +53,7 @@ equipo.
     python telegram_export_studio_aio.py compact carpeta --files 1
     python telegram_export_studio_aio.py enhance carpeta --me "Tu Nombre"
     python telegram_export_studio_aio.py enhance carpeta --restore
+    python telegram_export_studio_aio.py convert carpeta [--to-json | --to-html | --enrich | --downgrade]
 
 GENERADO por build_aio.py — no editar a mano; edita los módulos
 telegram_export_*.py y regenera.
@@ -77,6 +80,7 @@ def main():
         "fuse": _fuser_main,
         "compact": _compactor_main,
         "enhance": _enhancer_main,
+        "convert": _converter_main,
         "gui": _studio_main,
     }
     if len(sys.argv) > 1 and sys.argv[1] in commands:

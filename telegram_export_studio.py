@@ -34,6 +34,9 @@ from telegram_export_fuser import (
 )
 from telegram_export_compactor import compact
 from telegram_export_enhancer import enhance, restore
+from telegram_export_converter import (
+    detect_formats, downgrade_json, enrich_json, from_json, load_chat, to_json,
+)
 
 # ---------------------------------------------------------------------------
 # Backend helpers
@@ -221,8 +224,9 @@ def pick_folders(title: str):
     return [single] if single else []
 
 
-def _locate_match(cand: Path, size: int, digest: str) -> bool:
-    mh = cand / "messages.html"
+def _locate_match(cand: Path, size: int, digest: str,
+                  fname: str = "messages.html") -> bool:
+    mh = cand / fname
     try:
         if not mh.is_file() or mh.stat().st_size != size:
             return False
@@ -232,16 +236,19 @@ def _locate_match(cand: Path, size: int, digest: str) -> bool:
         return False
 
 
-def locate_export(name: str, size: int, digest: str):
+def locate_export(name: str, size: int, digest: str,
+                  fname: str = "messages.html"):
     """Find the absolute path of a drag&dropped export folder.
 
     Browsers never reveal filesystem paths of dropped folders, so the
-    client sends the folder NAME plus a fingerprint of its messages.html
-    (byte size + sha256 of the first 4 KiB) and we search the disk for a
-    matching directory: recent locations first, then common user folders,
-    then a shallow, time-budgeted sweep of the drives.
+    client sends the folder NAME plus a fingerprint of one known file
+    (messages.html, or result.json for JSON exports: byte size + sha256
+    of the first 4 KiB) and we search the disk for a matching directory:
+    recent locations first, then common user folders, then a shallow,
+    time-budgeted sweep of the drives.
     """
-    if not name or "/" in name or "\\" in name or size <= 0:
+    if (not name or "/" in name or "\\" in name or size <= 0
+            or fname not in ("messages.html", "result.json")):
         return None
     roots = []
 
@@ -283,7 +290,7 @@ def locate_export(name: str, size: int, digest: str):
             continue
         seen.add(key)
         cand = base / name
-        if cand.is_dir() and _locate_match(cand, size, digest):
+        if cand.is_dir() and _locate_match(cand, size, digest, fname):
             LAST_DIR["path"] = str(base)
             return str(cand)
         if depth >= 3:
@@ -297,7 +304,7 @@ def locate_export(name: str, size: int, digest: str):
                         # exact-name child: verify right away instead of
                         # waiting for its turn in the BFS queue
                         if (entry.name == name and _locate_match(
-                                Path(entry.path), size, digest)):
+                                Path(entry.path), size, digest, fname)):
                             LAST_DIR["path"] = str(base)
                             return entry.path
                         queue.append((Path(entry.path), depth + 1))
@@ -431,6 +438,51 @@ def do_enhance(export, me, layout, features=None, fullwidth=True):
                    fullwidth=fullwidth)
 
 
+def inspect_convert(path: str) -> dict:
+    """Inspect a folder for the converter: HTML export, JSON export,
+    enriched-only JSON, or several at once. Unlike inspect_export, a
+    folder without messages.html is fine as long as it holds a
+    result.json or a result_enriched.json."""
+    d = Path(path).resolve()
+    if not d.is_dir():
+        raise ValueError(f"No es una carpeta: {d}")
+    found = detect_formats(d)
+    if not found["html"] and not found["json"] and not found["enriched"]:
+        raise ValueError(
+            "La carpeta no contiene messages.html, result.json ni "
+            "result_enriched.json — no parece un export de Telegram")
+
+    info = {"path": str(d), "name": d.name, "title": None, "messages": 0,
+            "has_html": found["html"], "has_json": found["json"],
+            "has_enriched": found["enriched"]}
+    if found["html"]:
+        base = inspect_export(path)
+        info.update(title=base["title"], messages=base["messages"])
+    elif found["json"]:
+        doc = load_chat(d / "result.json")  # raises on full-account export
+        info.update(title=doc.get("name"),
+                    messages=len(doc.get("messages", [])))
+    else:
+        doc = load_chat(d / "result_enriched.json")
+        info.update(title=doc.get("name"),
+                    messages=len(doc.get("messages", [])))
+    INSPECTED_PARENTS.add(str(d.parent))
+    return info
+
+
+def do_convert(export, mode, faithful=False):
+    d = Path(export).resolve()
+    if mode == "tojson":
+        return to_json(d, faithful=faithful)
+    if mode == "tohtml":
+        return from_json(d)
+    if mode == "enrich":
+        return enrich_json(d)
+    if mode == "downgrade":
+        return downgrade_json(d)
+    raise ValueError(f"Modo de conversión desconocido: {mode}")
+
+
 # ---------------------------------------------------------------------------
 # Frontend (single page, Material Design 3 inspired)
 # ---------------------------------------------------------------------------
@@ -441,6 +493,7 @@ PAGE = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Telegram Export Studio</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPgo8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyYWFiZWUiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxYThmZDEiLz4KPC9saW5lYXJHcmFkaWVudD48L2RlZnM+CjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjMyIiBmaWxsPSJ1cmwoI2cpIi8+CjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik00Ny44IDE3LjQgMTMuNiAzMC45Yy0xLjcuNy0xLjcgMS43LS4zIDIuMWw4LjggMi43IDMuNCAxMC4zYy40IDEuMiAxLjEgMS41IDIuMS45bDUuMS0zLjcgOC41IDYuMmMxLjYgMS4xIDIuNi41IDMtMS40bDUuNi0yNi41Yy41LTIuMy0uOC0zLjItMi45LTIuNnoiLz4KPHBhdGggZmlsbD0iI2M5ZThmYiIgZD0iTTI2LjQgMzcuNCA0My44IDIyLjdjLjktLjcgMS43LS4zIDEgLjZMMjguMSAzOS42bC0uNiA3LjMtMy4xLTkuNXoiLz4KPC9zdmc+">
 <style>
 :root {
   --bg: #f6f8fb;
@@ -597,6 +650,10 @@ select.lang {
 }
 .btn.tonal:hover { filter: brightness(.96); }
 .btn.tonal svg { width: 18px; height: 18px; fill: currentColor; }
+.btn.tonal.danger {
+  background: var(--err); color: #fff;
+}
+.btn.tonal.danger:hover { filter: brightness(1.08); }
 .btn.filled {
   background: linear-gradient(135deg, #2aabee, #1a8fd1);
   color: #fff; padding: 15px 34px; font-size: 15.5px; width: 100%;
@@ -707,6 +764,14 @@ select.unit { flex: none; width: 84px; cursor: pointer; }
 .warn-item svg { width: 17px; height: 17px; fill: var(--warn); flex: none;
   margin-top: 1px; }
 .warn-item span { word-break: break-all; }
+/* permanent destructive-mode banner (converter, faithful mode) */
+.warn-item.danger {
+  background: color-mix(in srgb, var(--err) 12%, transparent);
+  color: var(--err); font-weight: 600;
+  border: 1.5px solid color-mix(in srgb, var(--err) 45%, transparent);
+}
+.warn-item.danger svg { fill: var(--err); }
+.warn-item.danger span { word-break: normal; }
 
 details.logbox { margin-top: 14px; }
 details.logbox summary {
@@ -872,6 +937,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
   <button data-view="fuse" class="active" data-i18n="tab_fuse"></button>
   <button data-view="compact" data-i18n="tab_compact"></button>
   <button data-view="enhance" data-i18n="tab_enhance"></button>
+  <button data-view="convert" data-i18n="tab_convert"></button>
 </div>
 
 <!-- ================= FUSE ================= -->
@@ -913,7 +979,6 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
     <svg viewBox="0 0 24 24"><path d="M17 20.41 18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z"/></svg>
     <span id="fuse-btn-label"></span>
   </button>
-  <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a></div>
 </section>
 
 <!-- ================= COMPACT ================= -->
@@ -967,7 +1032,6 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
     <svg viewBox="0 0 24 24"><path d="M7.41 18.59 8.83 20 12 16.83 15.17 20l1.41-1.41L12 14l-4.59 4.59zm9.18-13.18L15.17 4 12 7.17 8.83 4 7.41 5.41 12 10l4.59-4.59z"/></svg>
     <span data-i18n="compact_btn"></span>
   </button>
-  <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a></div>
 </section>
 
 <!-- ================= ENHANCE ================= -->
@@ -1042,7 +1106,67 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
       <span data-i18n="restore_btn"></span>
     </button>
   </div>
-  <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a></div>
+</section>
+
+<!-- ================= CONVERT ================= -->
+<section id="view-convert" style="display:none">
+  <div class="card" id="convert-card">
+    <h2 data-i18n="convert_source"></h2>
+    <div id="convert-sel" class="empty" style="cursor:pointer" onclick="pickConvert()">
+      <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+      <span data-i18n-html="convert_pick"></span>
+    </div>
+    <div id="convert-info" style="display:none">
+      <div class="export-item" style="margin-bottom:0">
+        <div class="ficon"><svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg></div>
+        <div class="info"><b id="cv-name"></b><span id="cv-sub"></span></div>
+        <button class="iconbtn" onclick="clearConvert()">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="hint" id="cv-detected" style="font-weight:600"></div>
+    </div>
+  </div>
+
+  <div class="card" id="convert-opts" style="display:none">
+    <h2 data-i18n="convert_opts"></h2>
+    <div id="cv-tojson" style="display:none">
+      <div class="label" data-i18n="convert_mode"></div>
+      <div class="seg2" id="cv-mode">
+        <button data-mode="enriched" class="active" data-i18n="mode_enriched"></button>
+        <button data-mode="faithful" data-i18n="mode_faithful"></button>
+      </div>
+      <div class="hint" id="cv-mode-hint" style="margin-top:12px"></div>
+      <div class="warn-item danger" id="cv-faithful-warn" style="display:none;margin-top:14px">
+        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+        <span data-i18n="faithful_warn"></span>
+      </div>
+      <div class="hint" data-i18n="tojson_hint" style="margin-top:12px"></div>
+    </div>
+    <div id="cv-tohtml" style="display:none">
+      <div class="hint" data-i18n="tohtml_hint"></div>
+    </div>
+    <div id="cv-enrich" style="display:none">
+      <div class="hint" data-i18n="enrich_hint"></div>
+    </div>
+    <div id="cv-eo" style="display:none">
+      <div class="label" data-i18n="eo_choice"></div>
+      <div class="seg2" id="cv-eo-mode">
+        <button data-eo="tohtml" class="active" data-i18n="convert_btn_tohtml"></button>
+        <button data-eo="downgrade" data-i18n="convert_btn_downgrade"></button>
+      </div>
+      <div class="hint" id="cv-eo-hint" style="margin-top:12px"></div>
+      <div class="warn-item danger" id="cv-eo-warn" style="display:none;margin-top:14px">
+        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+        <span data-i18n="downgrade_warn"></span>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn filled" id="convert-btn" onclick="runConvert()" disabled>
+    <svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+    <span id="convert-btn-label"></span>
+  </button>
 </section>
 
 <!-- ================= JOB ================= -->
@@ -1068,7 +1192,10 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
   </div>
 </div>
 
-<footer data-i18n="footer"></footer>
+<footer>
+  <div data-i18n="footer"></div>
+  <a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a>
+</footer>
 </div>
 
 <div id="snack"></div>
@@ -1095,7 +1222,8 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const state = { exports: [], compact: null, enhance: null, view: "fuse" };
+const state = { exports: [], compact: null, enhance: null, view: "fuse",
+                convert: null, convertAction: null };
 
 /* URL del proyecto (código fuente) */
 const REPO_URL = "https://github.com/Marcos-SA-git/Telegram-Export-Studio";
@@ -1186,11 +1314,47 @@ es: {
   locate_fail: "No se pudo localizar la carpeta en el disco. Añádela una vez con el botón y los siguientes arrastres desde esa ubicación funcionarán.",
   drop_only_folders: "Suelta carpetas de export, no archivos",
   drop_no_messages: "«{name}» no contiene messages.html",
-  shutdown_tooltip: "Cerrar el servidor local",
-  shutdown_title: "¿Cerrar el servidor?",
-  shutdown_body: "Se detendrá el servidor local y esta pestaña dejará de funcionar. Podrás volver a abrir la aplicación cuando quieras.",
-  shutdown_done_h: "Servidor cerrado",
+  shutdown_tooltip: "Apagar la aplicación",
+  shutdown_title: "¿Apagar la aplicación?",
+  shutdown_body: "Se apagará y esta pestaña dejará de funcionar, <strong><u>incluso si hay algo en curso</u></strong>.",
+  shutdown_confirm: "Apagar",
+  shutdown_done_h: "Aplicación apagada",
   shutdown_done_p: "Ya puedes cerrar esta pestaña. Para volver a usar la app, abre de nuevo el script o el ejecutable.",
+  tab_convert: "Conversor",
+  convert_source: "Carpeta a convertir",
+  convert_pick: "Elige o arrastra aquí la carpeta del export<br>(HTML, JSON o ambos — se detecta automáticamente)",
+  convert_opts: "Opciones de conversión",
+  convert_mode: "Modo de conversión a JSON",
+  mode_enriched: "Enriquecida (recomendada)",
+  mode_faithful: "Formato oficial",
+  mode_hint_enriched: "JSON con el esquema oficial de Telegram más campos extra (texto de estado de llamadas, nombres de archivo…) para no perder nada de lo que contiene el HTML.",
+  mode_hint_faithful: "Solo las claves del result.json oficial de Telegram Desktop, sin ningún campo extra.",
+  faithful_warn: "PROCESO DESTRUCTIVO: el formato oficial descarta los datos que no contempla (dirección y texto de estado de las llamadas, nombres de archivo…) y BORRA las páginas messages*.html y los recursos web (css/, js/, images/) de la carpeta, para que quede igual que un export JSON real de Telegram. Si necesitas conservar esos datos o el HTML, usa el modo enriquecido.",
+  tojson_hint: "El resultado se guarda como result.json dentro de la propia carpeta del export — así las rutas relativas de la media (photos/…, voice_messages/…) siguen funcionando. Si ya existe un result.json que no generó esta herramienta, la operación se detiene para no sobrescribir el export oficial.",
+  tohtml_hint: "Se generará la vista HTML navegable (messages*.html) en la misma carpeta, incluyendo la estructura web (css/js/images) que el export JSON no trae. La media existente se referencia tal cual, sin copiarla. Las páginas messages*.html ya existentes nunca se sobrescriben sin confirmación.",
+  enrich_hint: "Se combinarán ambos formatos: el result.json oficial (que contiene datos que el HTML no tiene: ids, fechas de edición, tamaños…) se enriquecerá con los campos extra recuperables del HTML. Se escribirá result_enriched.json sin tocar ninguno de los archivos originales.",
+  eo_choice: "Solo hay un JSON enriquecido en esta carpeta. ¿Qué quieres hacer?",
+  eo_hint_tohtml: "Se generarán las páginas messages*.html y los recursos web (css/js/images) a partir de este JSON enriquecido.",
+  eo_hint_downgrade: "Se eliminarán los campos y la marca que añadió el enriquecido, dejando un result.json igual al formato oficial de Telegram.",
+  downgrade_warn: "PROCESO DESTRUCTIVO: se perderán los datos extra que solo estaban en el JSON enriquecido (dirección y texto de estado de las llamadas, nombres de archivo…) y no podrán recuperarse sin el HTML original.",
+  convert_btn_downgrade: "Bajar a formato oficial",
+  res_removed_assets: " · páginas y recursos HTML eliminados",
+  det_html: "Detectado: export HTML → se convertirá a JSON",
+  det_json: "Detectado: export JSON → se generará la vista HTML",
+  det_both: "Detectado: HTML + JSON a la vez → enriquecer el JSON",
+  det_enriched_only: "Detectado: solo JSON enriquecido → elige qué hacer",
+  both_title: "⚠ La carpeta contiene AMBOS formatos",
+  both_body: "Esta carpeta contiene A LA VEZ el export HTML (messages.html) y el JSON oficial (result.json). Convertir de un formato al otro no aporta nada: ya tienes los dos. Lo único útil es ENRIQUECER el JSON oficial con los datos extra del HTML (se escribe result_enriched.json, sin tocar los originales). ¿Quieres enriquecer el JSON o cancelar la operación?",
+  btn_enrich: "Enriquecer el JSON",
+  convert_btn_tojson: "Convertir a JSON",
+  convert_btn_tohtml: "Generar vista HTML",
+  convert_btn_enrich: "Enriquecer JSON",
+  job_converting: "Convirtiendo…",
+  stage_convert: "Convirtiendo mensajes…",
+  res_convert: "{msgs} mensajes",
+  res_enriched: "{msgs} mensajes · {n} campos añadidos desde el HTML",
+  pick_convert: "Elige la carpeta del export a convertir",
+  open_json: "Abrir JSON",
   footer: "Telegram Export Studio · se ejecuta íntegramente en tu equipo"
 },
 en: {
@@ -1276,11 +1440,47 @@ en: {
   locate_fail: "Couldn't locate the folder on disk. Add it once with the button and future drags from that location will work.",
   drop_only_folders: "Drop export folders, not files",
   drop_no_messages: "“{name}” doesn't contain messages.html",
-  shutdown_tooltip: "Shut down the local server",
-  shutdown_title: "Shut down the server?",
-  shutdown_body: "The local server will stop and this tab will stop working. You can reopen the app whenever you want.",
-  shutdown_done_h: "Server closed",
+  shutdown_tooltip: "Shut down the app",
+  shutdown_title: "Shut down the app?",
+  shutdown_body: "It will shut down and this tab will stop working, <strong><u>even if something is still in progress</u></strong>.",
+  shutdown_confirm: "Shut down",
+  shutdown_done_h: "App shut down",
   shutdown_done_p: "You can close this tab now. To use the app again, reopen the script or the executable.",
+  tab_convert: "Converter",
+  convert_source: "Folder to convert",
+  convert_pick: "Choose or drag the export folder here<br>(HTML, JSON or both — detected automatically)",
+  convert_opts: "Conversion options",
+  convert_mode: "JSON conversion mode",
+  mode_enriched: "Enriched (recommended)",
+  mode_faithful: "Official format",
+  mode_hint_enriched: "JSON with Telegram's official schema plus extra fields (call status texts, file names…) so nothing the HTML contains is lost.",
+  mode_hint_faithful: "Only the keys of Telegram Desktop's official result.json, with no extra fields at all.",
+  faithful_warn: "DESTRUCTIVE PROCESS: the official format drops the data it doesn't cover (call direction and status texts, file names…) and DELETES the messages*.html pages and web assets (css/, js/, images/) from the folder, so it ends up matching a real Telegram JSON export. If you need to keep that data or the HTML, use the enriched mode.",
+  tojson_hint: "The result is saved as result.json inside the export folder itself — that way the media's relative paths (photos/…, voice_messages/…) keep working. If a result.json this tool didn't generate already exists, the operation stops so the official export is never overwritten.",
+  tohtml_hint: "The browsable HTML view (messages*.html) will be generated in the same folder, including the web structure (css/js/images) the JSON export doesn't ship. Existing media is referenced as-is, never copied. Pre-existing messages*.html pages are never overwritten without confirmation.",
+  enrich_hint: "Both formats will be combined: the official result.json (which holds data the HTML lacks: ids, edit dates, sizes…) gets enriched with the extra fields recoverable from the HTML. result_enriched.json is written without touching either original file.",
+  eo_choice: "This folder only has an enriched JSON. What do you want to do?",
+  eo_hint_tohtml: "The messages*.html pages and web assets (css/js/images) will be generated from this enriched JSON.",
+  eo_hint_downgrade: "The fields and mark added by enrichment will be removed, leaving a result.json matching Telegram's official format.",
+  downgrade_warn: "DESTRUCTIVE PROCESS: the extra data that only existed in the enriched JSON (call direction and status texts, file names…) will be lost and can't be recovered without the original HTML.",
+  convert_btn_downgrade: "Downgrade to official format",
+  res_removed_assets: " · HTML pages and assets removed",
+  det_html: "Detected: HTML export → will be converted to JSON",
+  det_json: "Detected: JSON export → the HTML view will be generated",
+  det_both: "Detected: HTML + JSON at once → enrich the JSON",
+  det_enriched_only: "Detected: enriched JSON only → choose what to do",
+  both_title: "⚠ The folder contains BOTH formats",
+  both_body: "This folder contains BOTH the HTML export (messages.html) and the official JSON (result.json) at the same time. Converting one into the other adds nothing: you already have both. The only useful operation is ENRICHING the official JSON with the HTML's extra data (result_enriched.json is written, originals untouched). Enrich the JSON or cancel the operation?",
+  btn_enrich: "Enrich the JSON",
+  convert_btn_tojson: "Convert to JSON",
+  convert_btn_tohtml: "Generate HTML view",
+  convert_btn_enrich: "Enrich JSON",
+  job_converting: "Converting…",
+  stage_convert: "Converting messages…",
+  res_convert: "{msgs} messages",
+  res_enriched: "{msgs} messages · {n} fields added from the HTML",
+  pick_convert: "Choose the export folder to convert",
+  open_json: "Open JSON",
   footer: "Telegram Export Studio · runs entirely on your machine"
 },
 fr: {
@@ -1366,11 +1566,47 @@ fr: {
   locate_fail: "Impossible de localiser le dossier sur le disque. Ajoutez-le une fois avec le bouton et les prochains glisser-déposer depuis cet emplacement fonctionneront.",
   drop_only_folders: "Déposez des dossiers d'export, pas des fichiers",
   drop_no_messages: "« {name} » ne contient pas messages.html",
-  shutdown_tooltip: "Arrêter le serveur local",
-  shutdown_title: "Arrêter le serveur ?",
-  shutdown_body: "Le serveur local s'arrêtera et cet onglet cessera de fonctionner. Vous pourrez rouvrir l'application quand vous le souhaitez.",
-  shutdown_done_h: "Serveur arrêté",
+  shutdown_tooltip: "Éteindre l'application",
+  shutdown_title: "Éteindre l'application ?",
+  shutdown_body: "Elle s'éteindra et cet onglet cessera de fonctionner, <strong><u>même si une opération est en cours</u></strong>.",
+  shutdown_confirm: "Éteindre",
+  shutdown_done_h: "Application éteinte",
   shutdown_done_p: "Vous pouvez fermer cet onglet maintenant. Pour réutiliser l'application, rouvrez le script ou l'exécutable.",
+  tab_convert: "Convertisseur",
+  convert_source: "Dossier à convertir",
+  convert_pick: "Choisissez ou déposez ici le dossier de l'export<br>(HTML, JSON ou les deux — détection automatique)",
+  convert_opts: "Options de conversion",
+  convert_mode: "Mode de conversion JSON",
+  mode_enriched: "Enrichie (recommandée)",
+  mode_faithful: "Format officiel",
+  mode_hint_enriched: "JSON au schéma officiel de Telegram plus des champs extra (textes d'état des appels, noms de fichiers…) pour ne rien perdre de ce que contient le HTML.",
+  mode_hint_faithful: "Uniquement les clés du result.json officiel de Telegram Desktop, sans aucun champ supplémentaire.",
+  faithful_warn: "PROCESSUS DESTRUCTIF : le format officiel abandonne les données qu'il ne couvre pas (direction et texte d'état des appels, noms de fichiers…) et SUPPRIME les pages messages*.html et les ressources web (css/, js/, images/) du dossier, pour qu'il corresponde à un véritable export JSON de Telegram. Si vous devez conserver ces données ou le HTML, utilisez le mode enrichi.",
+  tojson_hint: "Le résultat est enregistré comme result.json dans le dossier même de l'export — ainsi les chemins relatifs des médias (photos/…, voice_messages/…) continuent de fonctionner. Si un result.json non généré par cet outil existe déjà, l'opération s'arrête pour ne jamais écraser l'export officiel.",
+  tohtml_hint: "La vue HTML navigable (messages*.html) sera générée dans le même dossier, avec la structure web (css/js/images) que l'export JSON n'inclut pas. Les médias existants sont référencés tels quels, jamais copiés. Les pages messages*.html déjà présentes ne sont jamais écrasées sans confirmation.",
+  enrich_hint: "Les deux formats seront combinés : le result.json officiel (qui contient des données absentes du HTML : ids, dates d'édition, tailles…) sera enrichi avec les champs extra récupérables du HTML. result_enriched.json est écrit sans toucher aux fichiers originaux.",
+  eo_choice: "Ce dossier ne contient qu'un JSON enrichi. Que voulez-vous faire ?",
+  eo_hint_tohtml: "Les pages messages*.html et les ressources web (css/js/images) seront générées à partir de ce JSON enrichi.",
+  eo_hint_downgrade: "Les champs et la marque ajoutés par l'enrichissement seront supprimés, pour obtenir un result.json conforme au format officiel de Telegram.",
+  downgrade_warn: "PROCESSUS DESTRUCTIF : les données supplémentaires qui n'existaient que dans le JSON enrichi (direction et texte d'état des appels, noms de fichiers…) seront perdues et ne pourront pas être récupérées sans le HTML d'origine.",
+  convert_btn_downgrade: "Revenir au format officiel",
+  res_removed_assets: " · pages et ressources HTML supprimées",
+  det_html: "Détecté : export HTML → sera converti en JSON",
+  det_json: "Détecté : export JSON → la vue HTML sera générée",
+  det_enriched_only: "Détecté : JSON enrichi uniquement → choisissez quoi faire",
+  det_both: "Détecté : HTML + JSON à la fois → enrichir le JSON",
+  both_title: "⚠ Le dossier contient LES DEUX formats",
+  both_body: "Ce dossier contient À LA FOIS l'export HTML (messages.html) et le JSON officiel (result.json). Convertir l'un vers l'autre n'apporte rien : vous avez déjà les deux. La seule opération utile est d'ENRICHIR le JSON officiel avec les données extra du HTML (result_enriched.json est écrit, originaux intacts). Enrichir le JSON ou annuler l'opération ?",
+  btn_enrich: "Enrichir le JSON",
+  convert_btn_tojson: "Convertir en JSON",
+  convert_btn_tohtml: "Générer la vue HTML",
+  convert_btn_enrich: "Enrichir le JSON",
+  job_converting: "Conversion…",
+  stage_convert: "Conversion des messages…",
+  res_convert: "{msgs} messages",
+  res_enriched: "{msgs} messages · {n} champs ajoutés depuis le HTML",
+  pick_convert: "Choisissez le dossier de l'export à convertir",
+  open_json: "Ouvrir le JSON",
   footer: "Telegram Export Studio · s'exécute entièrement sur votre machine"
 },
 de: {
@@ -1456,11 +1692,47 @@ de: {
   locate_fail: "Der Ordner konnte auf der Festplatte nicht gefunden werden. Füge ihn einmal über den Button hinzu; künftiges Ziehen von diesem Ort funktioniert dann.",
   drop_only_folders: "Ziehe Export-Ordner hierher, keine Dateien",
   drop_no_messages: "„{name}“ enthält keine messages.html",
-  shutdown_tooltip: "Lokalen Server beenden",
-  shutdown_title: "Server beenden?",
-  shutdown_body: "Der lokale Server wird gestoppt und dieser Tab funktioniert danach nicht mehr. Du kannst die App jederzeit erneut öffnen.",
-  shutdown_done_h: "Server beendet",
+  shutdown_tooltip: "App beenden",
+  shutdown_title: "App beenden?",
+  shutdown_body: "Sie wird beendet und dieser Tab funktioniert danach nicht mehr, <strong><u>auch wenn gerade etwas läuft</u></strong>.",
+  shutdown_confirm: "Beenden",
+  shutdown_done_h: "App beendet",
   shutdown_done_p: "Du kannst diesen Tab jetzt schließen. Um die App erneut zu nutzen, öffne das Skript oder die ausführbare Datei erneut.",
+  tab_convert: "Konverter",
+  convert_source: "Zu konvertierender Ordner",
+  convert_pick: "Wähle oder ziehe den Export-Ordner hierher<br>(HTML, JSON oder beides — wird automatisch erkannt)",
+  convert_opts: "Konvertierungsoptionen",
+  convert_mode: "JSON-Konvertierungsmodus",
+  mode_enriched: "Angereichert (empfohlen)",
+  mode_faithful: "Offizielles Format",
+  mode_hint_enriched: "JSON mit Telegrams offiziellem Schema plus Zusatzfeldern (Anruf-Statustexte, Dateinamen…), damit nichts aus dem HTML verloren geht.",
+  mode_hint_faithful: "Nur die Schlüssel der offiziellen result.json von Telegram Desktop, ohne jegliche Zusatzfelder.",
+  faithful_warn: "DESTRUKTIVER VORGANG: Das offizielle Format verwirft die Daten, die es nicht abdeckt (Richtung und Statustext von Anrufen, Dateinamen…) und LÖSCHT die messages*.html-Seiten sowie die Web-Ressourcen (css/, js/, images/) aus dem Ordner, damit er genau wie ein echter Telegram-JSON-Export aussieht. Wenn du diese Daten oder das HTML brauchst, nutze den angereicherten Modus.",
+  tojson_hint: "Das Ergebnis wird als result.json im Export-Ordner selbst gespeichert — so funktionieren die relativen Medienpfade (photos/…, voice_messages/…) weiterhin. Existiert bereits eine result.json, die nicht von diesem Tool stammt, stoppt der Vorgang, damit der offizielle Export nie überschrieben wird.",
+  tohtml_hint: "Die durchsuchbare HTML-Ansicht (messages*.html) wird im selben Ordner erzeugt, inklusive der Web-Struktur (css/js/images), die der JSON-Export nicht mitbringt. Vorhandene Medien werden unverändert referenziert, nie kopiert. Bereits vorhandene messages*.html-Seiten werden nie ohne Bestätigung überschrieben.",
+  enrich_hint: "Beide Formate werden kombiniert: die offizielle result.json (die Daten enthält, die dem HTML fehlen: IDs, Bearbeitungsdaten, Größen…) wird mit den aus dem HTML rekonstruierbaren Zusatzfeldern angereichert. result_enriched.json wird geschrieben, ohne die Originaldateien anzutasten.",
+  eo_choice: "Dieser Ordner enthält nur eine angereicherte JSON-Datei. Was möchtest du tun?",
+  eo_hint_tohtml: "Die messages*.html-Seiten und Web-Ressourcen (css/js/images) werden aus dieser angereicherten JSON-Datei erzeugt.",
+  eo_hint_downgrade: "Die durch die Anreicherung hinzugefügten Felder und die Markierung werden entfernt, sodass eine result.json entsprechend dem offiziellen Telegram-Format entsteht.",
+  downgrade_warn: "DESTRUKTIVER VORGANG: Die Zusatzdaten, die nur in der angereicherten JSON-Datei existierten (Richtung und Statustext von Anrufen, Dateinamen…), gehen verloren und können ohne das ursprüngliche HTML nicht wiederhergestellt werden.",
+  convert_btn_downgrade: "Auf offizielles Format zurückstufen",
+  res_removed_assets: " · HTML-Seiten und -Ressourcen entfernt",
+  det_html: "Erkannt: HTML-Export → wird in JSON konvertiert",
+  det_json: "Erkannt: JSON-Export → die HTML-Ansicht wird erzeugt",
+  det_enriched_only: "Erkannt: nur angereichertes JSON → wähle, was zu tun ist",
+  det_both: "Erkannt: HTML + JSON zugleich → JSON anreichern",
+  both_title: "⚠ Der Ordner enthält BEIDE Formate",
+  both_body: "Dieser Ordner enthält GLEICHZEITIG den HTML-Export (messages.html) und das offizielle JSON (result.json). Eine Konvertierung bringt nichts: beides ist schon da. Sinnvoll ist nur, das offizielle JSON mit den Zusatzdaten des HTML ANZUREICHERN (result_enriched.json wird geschrieben, Originale bleiben unberührt). JSON anreichern oder Vorgang abbrechen?",
+  btn_enrich: "JSON anreichern",
+  convert_btn_tojson: "In JSON konvertieren",
+  convert_btn_tohtml: "HTML-Ansicht erzeugen",
+  convert_btn_enrich: "JSON anreichern",
+  job_converting: "Konvertiere…",
+  stage_convert: "Konvertiere Nachrichten…",
+  res_convert: "{msgs} Nachrichten",
+  res_enriched: "{msgs} Nachrichten · {n} Felder aus dem HTML ergänzt",
+  pick_convert: "Wähle den zu konvertierenden Export-Ordner",
+  open_json: "JSON öffnen",
   footer: "Telegram Export Studio · läuft vollständig auf deinem Rechner"
 },
 pt: {
@@ -1546,11 +1818,47 @@ pt: {
   locate_fail: "Não foi possível localizar a pasta no disco. Adicione-a uma vez com o botão e os próximos arrastos desse local funcionarão.",
   drop_only_folders: "Solte pastas de export, não arquivos",
   drop_no_messages: "“{name}” não contém messages.html",
-  shutdown_tooltip: "Fechar o servidor local",
-  shutdown_title: "Fechar o servidor?",
-  shutdown_body: "O servidor local será interrompido e esta aba deixará de funcionar. Você pode abrir o aplicativo novamente quando quiser.",
-  shutdown_done_h: "Servidor fechado",
+  shutdown_tooltip: "Desligar o aplicativo",
+  shutdown_title: "Desligar o aplicativo?",
+  shutdown_body: "Ele será desligado e esta aba deixará de funcionar, <strong><u>mesmo que algo ainda esteja em andamento</u></strong>.",
+  shutdown_confirm: "Desligar",
+  shutdown_done_h: "Aplicativo desligado",
   shutdown_done_p: "Você já pode fechar esta aba. Para usar o app novamente, abra outra vez o script ou o executável.",
+  tab_convert: "Conversor",
+  convert_source: "Pasta a converter",
+  convert_pick: "Escolha ou arraste aqui a pasta do export<br>(HTML, JSON ou ambos — detetado automaticamente)",
+  convert_opts: "Opções de conversão",
+  convert_mode: "Modo de conversão para JSON",
+  mode_enriched: "Enriquecida (recomendada)",
+  mode_faithful: "Formato oficial",
+  mode_hint_enriched: "JSON com o esquema oficial do Telegram mais campos extra (textos de estado das chamadas, nomes de ficheiros…) para não perder nada do que o HTML contém.",
+  mode_hint_faithful: "Apenas as chaves do result.json oficial do Telegram Desktop, sem nenhum campo extra.",
+  faithful_warn: "PROCESSO DESTRUTIVO: o formato oficial descarta os dados que não contempla (direção e texto de estado das chamadas, nomes de ficheiros…) e APAGA as páginas messages*.html e os recursos web (css/, js/, images/) da pasta, para que fique igual a um export JSON real do Telegram. Se precisar de manter esses dados ou o HTML, use o modo enriquecido.",
+  tojson_hint: "O resultado é guardado como result.json dentro da própria pasta do export — assim os caminhos relativos da média (photos/…, voice_messages/…) continuam a funcionar. Se já existir um result.json que esta ferramenta não gerou, a operação para, para nunca sobrescrever o export oficial.",
+  tohtml_hint: "A vista HTML navegável (messages*.html) será gerada na mesma pasta, incluindo a estrutura web (css/js/images) que o export JSON não traz. A média existente é referenciada tal como está, nunca copiada. Páginas messages*.html já existentes nunca são sobrescritas sem confirmação.",
+  enrich_hint: "Os dois formatos serão combinados: o result.json oficial (que contém dados que o HTML não tem: ids, datas de edição, tamanhos…) será enriquecido com os campos extra recuperáveis do HTML. result_enriched.json é escrito sem tocar em nenhum dos ficheiros originais.",
+  eo_choice: "Esta pasta só tem um JSON enriquecido. O que quer fazer?",
+  eo_hint_tohtml: "As páginas messages*.html e os recursos web (css/js/images) serão gerados a partir deste JSON enriquecido.",
+  eo_hint_downgrade: "Os campos e a marca adicionados pelo enriquecimento serão removidos, deixando um result.json igual ao formato oficial do Telegram.",
+  downgrade_warn: "PROCESSO DESTRUTIVO: os dados extra que só existiam no JSON enriquecido (direção e texto de estado das chamadas, nomes de ficheiros…) serão perdidos e não poderão ser recuperados sem o HTML original.",
+  convert_btn_downgrade: "Reverter para formato oficial",
+  res_removed_assets: " · páginas e recursos HTML removidos",
+  det_html: "Detetado: export HTML → será convertido para JSON",
+  det_json: "Detetado: export JSON → será gerada a vista HTML",
+  det_enriched_only: "Detetado: apenas JSON enriquecido → escolha o que fazer",
+  det_both: "Detetado: HTML + JSON ao mesmo tempo → enriquecer o JSON",
+  both_title: "⚠ A pasta contém AMBOS os formatos",
+  both_body: "Esta pasta contém AO MESMO TEMPO o export HTML (messages.html) e o JSON oficial (result.json). Converter um no outro não acrescenta nada: já tem os dois. A única operação útil é ENRIQUECER o JSON oficial com os dados extra do HTML (escreve-se result_enriched.json, sem tocar nos originais). Enriquecer o JSON ou cancelar a operação?",
+  btn_enrich: "Enriquecer o JSON",
+  convert_btn_tojson: "Converter para JSON",
+  convert_btn_tohtml: "Gerar vista HTML",
+  convert_btn_enrich: "Enriquecer JSON",
+  job_converting: "A converter…",
+  stage_convert: "A converter mensagens…",
+  res_convert: "{msgs} mensagens",
+  res_enriched: "{msgs} mensagens · {n} campos adicionados do HTML",
+  pick_convert: "Escolha a pasta do export a converter",
+  open_json: "Abrir JSON",
   footer: "Telegram Export Studio · roda inteiramente no seu computador"
 },
 it: {
@@ -1636,11 +1944,47 @@ it: {
   locate_fail: "Impossibile localizzare la cartella sul disco. Aggiungila una volta con il pulsante e i prossimi trascinamenti da quella posizione funzioneranno.",
   drop_only_folders: "Trascina cartelle di export, non file",
   drop_no_messages: "«{name}» non contiene messages.html",
-  shutdown_tooltip: "Chiudi il server locale",
-  shutdown_title: "Chiudere il server?",
-  shutdown_body: "Il server locale verrà arrestato e questa scheda smetterà di funzionare. Potrai riaprire l'app quando vuoi.",
-  shutdown_done_h: "Server chiuso",
+  shutdown_tooltip: "Spegni l'app",
+  shutdown_title: "Spegnere l'app?",
+  shutdown_body: "Si spegnerà e questa scheda smetterà di funzionare, <strong><u>anche se c'è qualcosa in corso</u></strong>.",
+  shutdown_confirm: "Spegni",
+  shutdown_done_h: "App spenta",
   shutdown_done_p: "Ora puoi chiudere questa scheda. Per riutilizzare l'app, riapri lo script o l'eseguibile.",
+  tab_convert: "Convertitore",
+  convert_source: "Cartella da convertire",
+  convert_pick: "Scegli o trascina qui la cartella dell'export<br>(HTML, JSON o entrambi — rilevato automaticamente)",
+  convert_opts: "Opzioni di conversione",
+  convert_mode: "Modalità di conversione JSON",
+  mode_enriched: "Arricchita (consigliata)",
+  mode_faithful: "Formato ufficiale",
+  mode_hint_enriched: "JSON con lo schema ufficiale di Telegram più campi extra (testi di stato delle chiamate, nomi dei file…) per non perdere nulla di ciò che contiene l'HTML.",
+  mode_hint_faithful: "Solo le chiavi del result.json ufficiale di Telegram Desktop, senza alcun campo extra.",
+  faithful_warn: "PROCESSO DISTRUTTIVO: il formato ufficiale scarta i dati che non prevede (direzione e testo di stato delle chiamate, nomi dei file…) ed ELIMINA le pagine messages*.html e le risorse web (css/, js/, images/) dalla cartella, così che risulti identica a un vero export JSON di Telegram. Se ti servono quei dati o l'HTML, usa la modalità arricchita.",
+  tojson_hint: "Il risultato viene salvato come result.json dentro la cartella stessa dell'export — così i percorsi relativi dei media (photos/…, voice_messages/…) continuano a funzionare. Se esiste già un result.json non generato da questo strumento, l'operazione si ferma per non sovrascrivere mai l'export ufficiale.",
+  tohtml_hint: "La vista HTML navigabile (messages*.html) sarà generata nella stessa cartella, inclusa la struttura web (css/js/images) che l'export JSON non contiene. I media esistenti vengono referenziati così come sono, mai copiati. Le pagine messages*.html già presenti non vengono mai sovrascritte senza conferma.",
+  enrich_hint: "I due formati verranno combinati: il result.json ufficiale (che contiene dati assenti nell'HTML: id, date di modifica, dimensioni…) sarà arricchito con i campi extra recuperabili dall'HTML. result_enriched.json viene scritto senza toccare nessuno dei file originali.",
+  eo_choice: "Questa cartella contiene solo un JSON arricchito. Cosa vuoi fare?",
+  eo_hint_tohtml: "Le pagine messages*.html e le risorse web (css/js/images) verranno generate a partire da questo JSON arricchito.",
+  eo_hint_downgrade: "I campi e il marcatore aggiunti dall'arricchimento verranno rimossi, lasciando un result.json identico al formato ufficiale di Telegram.",
+  downgrade_warn: "PROCESSO DISTRUTTIVO: i dati extra presenti solo nel JSON arricchito (direzione e testo di stato delle chiamate, nomi dei file…) andranno persi e non potranno essere recuperati senza l'HTML originale.",
+  convert_btn_downgrade: "Torna al formato ufficiale",
+  res_removed_assets: " · pagine e risorse HTML rimosse",
+  det_html: "Rilevato: export HTML → sarà convertito in JSON",
+  det_json: "Rilevato: export JSON → sarà generata la vista HTML",
+  det_enriched_only: "Rilevato: solo JSON arricchito → scegli cosa fare",
+  det_both: "Rilevato: HTML + JSON insieme → arricchire il JSON",
+  both_title: "⚠ La cartella contiene ENTRAMBI i formati",
+  both_body: "Questa cartella contiene CONTEMPORANEAMENTE l'export HTML (messages.html) e il JSON ufficiale (result.json). Convertire l'uno nell'altro non aggiunge nulla: li hai già entrambi. L'unica operazione utile è ARRICCHIRE il JSON ufficiale con i dati extra dell'HTML (viene scritto result_enriched.json, originali intatti). Arricchire il JSON o annullare l'operazione?",
+  btn_enrich: "Arricchisci il JSON",
+  convert_btn_tojson: "Converti in JSON",
+  convert_btn_tohtml: "Genera vista HTML",
+  convert_btn_enrich: "Arricchisci JSON",
+  job_converting: "Conversione…",
+  stage_convert: "Conversione dei messaggi…",
+  res_convert: "{msgs} messaggi",
+  res_enriched: "{msgs} messaggi · {n} campi aggiunti dall'HTML",
+  pick_convert: "Scegli la cartella dell'export da convertire",
+  open_json: "Apri JSON",
   footer: "Telegram Export Studio · gira interamente sul tuo computer"
 },
 ru: {
@@ -1726,11 +2070,47 @@ ru: {
   locate_fail: "Не удалось найти папку на диске. Добавьте её один раз кнопкой, и дальнейшие перетаскивания из этого места будут работать.",
   drop_only_folders: "Перетаскивайте папки экспорта, а не файлы",
   drop_no_messages: "«{name}» не содержит messages.html",
-  shutdown_tooltip: "Остановить локальный сервер",
-  shutdown_title: "Остановить сервер?",
-  shutdown_body: "Локальный сервер остановится, и эта вкладка перестанет работать. Вы можете снова открыть приложение в любой момент.",
-  shutdown_done_h: "Сервер остановлен",
+  shutdown_tooltip: "Выключить приложение",
+  shutdown_title: "Выключить приложение?",
+  shutdown_body: "Оно выключится, и эта вкладка перестанет работать, <strong><u>даже если что-то ещё выполняется</u></strong>.",
+  shutdown_confirm: "Выключить",
+  shutdown_done_h: "Приложение выключено",
   shutdown_done_p: "Теперь можно закрыть эту вкладку. Чтобы снова использовать приложение, откройте скрипт или исполняемый файл заново.",
+  tab_convert: "Конвертер",
+  convert_source: "Папка для конвертации",
+  convert_pick: "Выберите или перетащите сюда папку экспорта<br>(HTML, JSON или оба — определяется автоматически)",
+  convert_opts: "Параметры конвертации",
+  convert_mode: "Режим конвертации в JSON",
+  mode_enriched: "Расширенный (рекомендуется)",
+  mode_faithful: "Официальный формат",
+  mode_hint_enriched: "JSON по официальной схеме Telegram плюс дополнительные поля (тексты статуса звонков, имена файлов…), чтобы ничего из HTML не потерялось.",
+  mode_hint_faithful: "Только ключи официального result.json из Telegram Desktop, без каких-либо дополнительных полей.",
+  faithful_warn: "ДЕСТРУКТИВНЫЙ ПРОЦЕСС: официальный формат отбрасывает данные, которых в нём нет (направление и текст статуса звонков, имена файлов…), а также УДАЛЯЕТ страницы messages*.html и веб-ресурсы (css/, js/, images/) из папки, чтобы она соответствовала настоящему JSON-экспорту Telegram. Если эти данные или HTML нужны, используйте расширенный режим.",
+  tojson_hint: "Результат сохраняется как result.json внутри самой папки экспорта — так относительные пути к медиа (photos/…, voice_messages/…) продолжают работать. Если result.json, созданный не этим инструментом, уже существует, операция останавливается, чтобы никогда не перезаписать официальный экспорт.",
+  tohtml_hint: "Просматриваемый HTML-вид (messages*.html) будет создан в той же папке, включая веб-структуру (css/js/images), которой нет в JSON-экспорте. Существующие медиафайлы используются как есть, без копирования. Уже существующие страницы messages*.html никогда не перезаписываются без подтверждения.",
+  enrich_hint: "Оба формата будут объединены: официальный result.json (содержащий данные, которых нет в HTML: id, даты правок, размеры…) будет дополнен полями, извлекаемыми из HTML. Записывается result_enriched.json, исходные файлы не изменяются.",
+  eo_choice: "В этой папке есть только расширенный JSON. Что вы хотите сделать?",
+  eo_hint_tohtml: "Страницы messages*.html и веб-ресурсы (css/js/images) будут созданы на основе этого расширенного JSON.",
+  eo_hint_downgrade: "Поля и метка, добавленные при расширении, будут удалены — получится result.json, соответствующий официальному формату Telegram.",
+  downgrade_warn: "ДЕСТРУКТИВНЫЙ ПРОЦЕСС: дополнительные данные, существовавшие только в расширенном JSON (направление и текст статуса звонков, имена файлов…), будут потеряны и не смогут быть восстановлены без исходного HTML.",
+  convert_btn_downgrade: "Вернуть к официальному формату",
+  res_removed_assets: " · страницы и ресурсы HTML удалены",
+  det_html: "Обнаружено: HTML-экспорт → будет сконвертирован в JSON",
+  det_json: "Обнаружено: JSON-экспорт → будет создан HTML-вид",
+  det_enriched_only: "Обнаружено: только расширенный JSON → выберите, что делать",
+  det_both: "Обнаружено: HTML + JSON одновременно → обогатить JSON",
+  both_title: "⚠ Папка содержит ОБА формата",
+  both_body: "Эта папка содержит ОДНОВРЕМЕННО HTML-экспорт (messages.html) и официальный JSON (result.json). Конвертация одного в другой ничего не даёт: у вас уже есть оба. Единственная полезная операция — ОБОГАТИТЬ официальный JSON дополнительными данными из HTML (записывается result_enriched.json, оригиналы не изменяются). Обогатить JSON или отменить операцию?",
+  btn_enrich: "Обогатить JSON",
+  convert_btn_tojson: "Конвертировать в JSON",
+  convert_btn_tohtml: "Создать HTML-вид",
+  convert_btn_enrich: "Обогатить JSON",
+  job_converting: "Конвертация…",
+  stage_convert: "Конвертация сообщений…",
+  res_convert: "{msgs} сообщений",
+  res_enriched: "{msgs} сообщений · {n} полей добавлено из HTML",
+  pick_convert: "Выберите папку экспорта для конвертации",
+  open_json: "Открыть JSON",
   footer: "Telegram Export Studio · работает полностью на вашем компьютере"
 },
 zh: {
@@ -1816,11 +2196,47 @@ zh: {
   locate_fail: "无法在磁盘上找到该文件夹。请先用按钮添加一次，之后从该位置拖入即可正常工作。",
   drop_only_folders: "请拖入导出文件夹，而不是文件",
   drop_no_messages: "「{name}」不包含 messages.html",
-  shutdown_tooltip: "关闭本地服务器",
-  shutdown_title: "关闭服务器？",
-  shutdown_body: "本地服务器将停止运行，此标签页将不再可用。你可以随时重新打开应用。",
-  shutdown_done_h: "服务器已关闭",
+  shutdown_tooltip: "关闭应用",
+  shutdown_title: "要关闭应用吗？",
+  shutdown_body: "应用将关闭，此标签页将不再可用，<strong><u>即使有任务正在进行中也会关闭</u></strong>。",
+  shutdown_confirm: "关闭",
+  shutdown_done_h: "应用已关闭",
   shutdown_done_p: "现在可以关闭此标签页了。要再次使用应用，请重新打开脚本或可执行文件。",
+  tab_convert: "转换器",
+  convert_source: "要转换的文件夹",
+  convert_pick: "选择或拖拽导出文件夹到这里<br>（HTML、JSON 或两者 — 自动检测）",
+  convert_opts: "转换选项",
+  convert_mode: "JSON 转换模式",
+  mode_enriched: "增强版（推荐）",
+  mode_faithful: "官方格式",
+  mode_hint_enriched: "采用 Telegram 官方架构的 JSON，并附加额外字段（通话状态文本、文件名等），确保 HTML 中的内容不丢失。",
+  mode_hint_faithful: "仅保留 Telegram Desktop 官方 result.json 的键，不含任何额外字段。",
+  faithful_warn: "破坏性过程：官方格式会丢弃其未涵盖的数据（通话方向和状态文本、文件名等），并会删除文件夹中的 messages*.html 页面和网页资源（css/、js/、images/），使其与真正的 Telegram JSON 导出完全一致。如果需要保留这些数据或 HTML，请使用增强模式。",
+  tojson_hint: "结果保存为导出文件夹内的 result.json — 这样媒体的相对路径（photos/…、voice_messages/…）才能继续有效。如果已存在非本工具生成的 result.json，操作将停止，绝不覆盖官方导出。",
+  tohtml_hint: "将在同一文件夹中生成可浏览的 HTML 视图（messages*.html），包括 JSON 导出所没有的网页结构（css/js/images）。现有媒体文件按原样引用，不会复制。已存在的 messages*.html 页面绝不会在未经确认的情况下被覆盖。",
+  enrich_hint: "两种格式将被合并：官方 result.json（包含 HTML 所没有的数据：id、编辑日期、大小等）将补充从 HTML 中可恢复的额外字段。写入 result_enriched.json，不改动任何原始文件。",
+  eo_choice: "此文件夹中只有一个增强版 JSON。你想怎么做？",
+  eo_hint_tohtml: "将根据这个增强版 JSON 生成 messages*.html 页面和网页资源（css/js/images）。",
+  eo_hint_downgrade: "将移除增强模式添加的字段和标记，得到与 Telegram 官方格式一致的 result.json。",
+  downgrade_warn: "破坏性过程：仅存在于增强版 JSON 中的额外数据（通话方向和状态文本、文件名等）将会丢失，且无法在没有原始 HTML 的情况下恢复。",
+  convert_btn_downgrade: "降级为官方格式",
+  res_removed_assets: " · 已移除 HTML 页面和资源",
+  det_html: "检测到：HTML 导出 → 将转换为 JSON",
+  det_json: "检测到：JSON 导出 → 将生成 HTML 视图",
+  det_enriched_only: "检测到：仅有增强版 JSON → 请选择操作",
+  det_both: "检测到：同时存在 HTML + JSON → 增强 JSON",
+  both_title: "⚠ 文件夹同时包含两种格式",
+  both_body: "此文件夹同时包含 HTML 导出（messages.html）和官方 JSON（result.json）。相互转换没有意义：两者你都已拥有。唯一有用的操作是用 HTML 的额外数据来增强官方 JSON（写入 result_enriched.json，原文件不变）。增强 JSON 还是取消操作？",
+  btn_enrich: "增强 JSON",
+  convert_btn_tojson: "转换为 JSON",
+  convert_btn_tohtml: "生成 HTML 视图",
+  convert_btn_enrich: "增强 JSON",
+  job_converting: "转换中…",
+  stage_convert: "正在转换消息…",
+  res_convert: "{msgs} 条消息",
+  res_enriched: "{msgs} 条消息 · 从 HTML 添加了 {n} 个字段",
+  pick_convert: "选择要转换的导出文件夹",
+  open_json: "打开 JSON",
   footer: "Telegram Export Studio · 完全在你的设备上运行"
 },
 ja: {
@@ -1906,11 +2322,47 @@ ja: {
   locate_fail: "ディスク上でフォルダが見つかりませんでした。一度ボタンで追加すると、その場所からのドラッグが使えるようになります。",
   drop_only_folders: "ファイルではなくエクスポートフォルダをドロップしてください",
   drop_no_messages: "「{name}」に messages.html がありません",
-  shutdown_tooltip: "ローカルサーバーを閉じる",
-  shutdown_title: "サーバーを閉じますか？",
-  shutdown_body: "ローカルサーバーが停止し、このタブは使用できなくなります。いつでもアプリを再度開くことができます。",
-  shutdown_done_h: "サーバーを閉じました",
+  shutdown_tooltip: "アプリを終了する",
+  shutdown_title: "アプリを終了しますか？",
+  shutdown_body: "<strong><u>処理中のものがあっても終了し</u></strong>、このタブは使用できなくなります。",
+  shutdown_confirm: "終了する",
+  shutdown_done_h: "アプリを終了しました",
   shutdown_done_p: "このタブは閉じて構いません。アプリを再度使うには、スクリプトまたは実行ファイルをもう一度開いてください。",
+  tab_convert: "コンバーター",
+  convert_source: "変換するフォルダー",
+  convert_pick: "エクスポートフォルダーを選択またはここにドラッグ<br>（HTML・JSON・両方 — 自動検出）",
+  convert_opts: "変換オプション",
+  convert_mode: "JSON 変換モード",
+  mode_enriched: "拡張版（推奨）",
+  mode_faithful: "公式フォーマット",
+  mode_hint_enriched: "Telegram の公式スキーマに追加フィールド（通話ステータスのテキスト、ファイル名など）を加えた JSON。HTML の内容を一切失いません。",
+  mode_hint_faithful: "Telegram Desktop の公式 result.json のキーのみで、追加フィールドは一切ありません。",
+  faithful_warn: "破壊的な処理：公式フォーマットでは、対応していないデータ（通話の方向やステータステキスト、ファイル名など）が失われるうえ、フォルダー内の messages*.html ページとウェブ資産（css/、js/、images/）が削除され、本物の Telegram JSON エクスポートと同じ構成になります。それらのデータや HTML が必要な場合は拡張モードを使用してください。",
+  tojson_hint: "結果はエクスポートフォルダー内に result.json として保存されます — これによりメディアの相対パス（photos/…、voice_messages/…）が引き続き機能します。このツールが生成していない result.json が既にある場合、公式エクスポートを上書きしないよう処理は停止します。",
+  tohtml_hint: "閲覧可能な HTML ビュー（messages*.html）が同じフォルダーに生成され、JSON エクスポートに含まれないウェブ構造（css/js/images）も追加されます。既存のメディアはコピーせずそのまま参照します。既存の messages*.html ページが確認なしに上書きされることはありません。",
+  enrich_hint: "両方のフォーマットを統合します：公式の result.json（HTML にないデータ：id、編集日時、サイズなど）に、HTML から復元できる追加フィールドを補います。result_enriched.json が書き込まれ、元のファイルには触れません。",
+  eo_choice: "このフォルダーには拡張版 JSON しかありません。何をしますか？",
+  eo_hint_tohtml: "この拡張版 JSON から messages*.html ページとウェブ資産（css/js/images）を生成します。",
+  eo_hint_downgrade: "拡張処理で追加されたフィールドとマークを削除し、Telegram の公式フォーマットと同じ result.json にします。",
+  downgrade_warn: "破壊的な処理：拡張版 JSON にのみ存在していた追加データ（通話の方向やステータステキスト、ファイル名など）は失われ、元の HTML なしでは復元できません。",
+  convert_btn_downgrade: "公式フォーマットに戻す",
+  res_removed_assets: " · HTML ページと資産を削除しました",
+  det_html: "検出：HTML エクスポート → JSON に変換します",
+  det_json: "検出：JSON エクスポート → HTML ビューを生成します",
+  det_enriched_only: "検出：拡張版 JSON のみ → 操作を選択してください",
+  det_both: "検出：HTML + JSON が同時に存在 → JSON を拡張",
+  both_title: "⚠ フォルダーに両方のフォーマットがあります",
+  both_body: "このフォルダーには HTML エクスポート（messages.html）と公式 JSON（result.json）が同時に含まれています。相互変換は無意味です：すでに両方お持ちです。有用なのは、HTML の追加データで公式 JSON を拡張することだけです（result_enriched.json を書き込み、元ファイルは変更しません）。JSON を拡張しますか、それとも操作をキャンセルしますか？",
+  btn_enrich: "JSON を拡張",
+  convert_btn_tojson: "JSON に変換",
+  convert_btn_tohtml: "HTML ビューを生成",
+  convert_btn_enrich: "JSON を拡張",
+  job_converting: "変換中…",
+  stage_convert: "メッセージを変換中…",
+  res_convert: "{msgs} 件のメッセージ",
+  res_enriched: "{msgs} 件のメッセージ · HTML から {n} 個のフィールドを追加",
+  pick_convert: "変換するエクスポートフォルダーを選択",
+  open_json: "JSON を開く",
   footer: "Telegram Export Studio · すべてあなたの端末上で動作します"
 },
 hi: {
@@ -1996,11 +2448,47 @@ hi: {
   locate_fail: "डिस्क पर फ़ोल्डर नहीं मिला। इसे एक बार बटन से जोड़ें, फिर उसी जगह से खींचना काम करेगा।",
   drop_only_folders: "फ़ाइलें नहीं, एक्सपोर्ट फ़ोल्डर छोड़ें",
   drop_no_messages: "«{name}» में messages.html नहीं है",
-  shutdown_tooltip: "लोकल सर्वर बंद करें",
-  shutdown_title: "सर्वर बंद करें?",
-  shutdown_body: "लोकल सर्वर रुक जाएगा और यह टैब काम करना बंद कर देगा। आप जब चाहें ऐप फिर से खोल सकते हैं।",
-  shutdown_done_h: "सर्वर बंद हो गया",
+  shutdown_tooltip: "ऐप बंद करें",
+  shutdown_title: "ऐप बंद करें?",
+  shutdown_body: "यह बंद हो जाएगा और यह टैब काम करना बंद कर देगा, <strong><u>भले ही कोई काम अभी चल रहा हो</u></strong>।",
+  shutdown_confirm: "बंद करें",
+  shutdown_done_h: "ऐप बंद हो गया",
   shutdown_done_p: "अब आप यह टैब बंद कर सकते हैं। ऐप फिर से इस्तेमाल करने के लिए, स्क्रिप्ट या एक्ज़ीक्यूटेबल फिर से खोलें।",
+  tab_convert: "कन्वर्टर",
+  convert_source: "कन्वर्ट करने के लिए फ़ोल्डर",
+  convert_pick: "एक्सपोर्ट फ़ोल्डर चुनें या यहाँ खींचें<br>(HTML, JSON या दोनों — अपने आप पहचाना जाता है)",
+  convert_opts: "कन्वर्ज़न विकल्प",
+  convert_mode: "JSON कन्वर्ज़न मोड",
+  mode_enriched: "समृद्ध (अनुशंसित)",
+  mode_faithful: "आधिकारिक फ़ॉर्मैट",
+  mode_hint_enriched: "Telegram की आधिकारिक स्कीमा वाला JSON, साथ में अतिरिक्त फ़ील्ड (कॉल स्थिति के टेक्स्ट, फ़ाइल नाम…) ताकि HTML की कोई जानकारी न खोए।",
+  mode_hint_faithful: "केवल Telegram Desktop की आधिकारिक result.json की कुंजियाँ, बिना किसी अतिरिक्त फ़ील्ड के।",
+  faithful_warn: "विनाशकारी प्रक्रिया: आधिकारिक फ़ॉर्मैट वह डेटा हटा देता है जो उसमें शामिल नहीं है (कॉल की दिशा और स्थिति के टेक्स्ट, फ़ाइल नाम…) और फ़ोल्डर से messages*.html पेज तथा वेब एसेट्स (css/, js/, images/) भी मिटा देता है, ताकि वह असली Telegram JSON एक्सपोर्ट जैसा ही बन जाए। यदि यह डेटा या HTML चाहिए, तो समृद्ध मोड इस्तेमाल करें।",
+  tojson_hint: "परिणाम एक्सपोर्ट फ़ोल्डर के अंदर ही result.json के रूप में सहेजा जाता है — ताकि मीडिया के सापेक्ष पथ (photos/…, voice_messages/…) काम करते रहें। यदि पहले से कोई ऐसा result.json मौजूद है जो इस टूल ने नहीं बनाया, तो आधिकारिक एक्सपोर्ट को कभी न मिटाने के लिए ऑपरेशन रुक जाता है।",
+  tohtml_hint: "ब्राउज़ करने योग्य HTML व्यू (messages*.html) उसी फ़ोल्डर में बनाया जाएगा, जिसमें वह वेब संरचना (css/js/images) भी होगी जो JSON एक्सपोर्ट में नहीं आती। मौजूदा मीडिया जस का तस संदर्भित होता है, कभी कॉपी नहीं होता। पहले से मौजूद messages*.html पेज बिना पुष्टि के कभी नहीं मिटाए जाते।",
+  enrich_hint: "दोनों फ़ॉर्मैट मिलाए जाएँगे: आधिकारिक result.json (जिसमें HTML में न होने वाला डेटा है: id, संपादन तिथियाँ, आकार…) को HTML से पुनर्प्राप्त होने वाले अतिरिक्त फ़ील्ड से समृद्ध किया जाएगा। result_enriched.json लिखा जाता है, मूल फ़ाइलें अछूती रहती हैं।",
+  eo_choice: "इस फ़ोल्डर में केवल एक समृद्ध JSON है। आप क्या करना चाहते हैं?",
+  eo_hint_tohtml: "इस समृद्ध JSON से messages*.html पेज और वेब एसेट्स (css/js/images) बनाए जाएँगे।",
+  eo_hint_downgrade: "समृद्धिकरण द्वारा जोड़े गए फ़ील्ड और मार्क हटा दिए जाएँगे, जिससे Telegram के आधिकारिक फ़ॉर्मैट जैसा result.json बनेगा।",
+  downgrade_warn: "विनाशकारी प्रक्रिया: केवल समृद्ध JSON में मौजूद अतिरिक्त डेटा (कॉल की दिशा और स्थिति के टेक्स्ट, फ़ाइल नाम…) खो जाएगा और मूल HTML के बिना वापस नहीं पाया जा सकेगा।",
+  convert_btn_downgrade: "आधिकारिक फ़ॉर्मैट पर वापस जाएँ",
+  res_removed_assets: " · HTML पेज और एसेट्स हटा दिए गए",
+  det_html: "पहचाना गया: HTML एक्सपोर्ट → JSON में कन्वर्ट होगा",
+  det_json: "पहचाना गया: JSON एक्सपोर्ट → HTML व्यू बनाया जाएगा",
+  det_enriched_only: "पहचाना गया: केवल समृद्ध JSON → चुनें कि क्या करना है",
+  det_both: "पहचाना गया: HTML + JSON एक साथ → JSON को समृद्ध करें",
+  both_title: "⚠ फ़ोल्डर में दोनों फ़ॉर्मैट हैं",
+  both_body: "इस फ़ोल्डर में एक साथ HTML एक्सपोर्ट (messages.html) और आधिकारिक JSON (result.json) दोनों हैं। एक को दूसरे में बदलने से कुछ नहीं मिलेगा: दोनों पहले से मौजूद हैं। एकमात्र उपयोगी काम है आधिकारिक JSON को HTML के अतिरिक्त डेटा से समृद्ध करना (result_enriched.json लिखा जाता है, मूल फ़ाइलें अछूती)। JSON समृद्ध करें या ऑपरेशन रद्द करें?",
+  btn_enrich: "JSON समृद्ध करें",
+  convert_btn_tojson: "JSON में कन्वर्ट करें",
+  convert_btn_tohtml: "HTML व्यू बनाएँ",
+  convert_btn_enrich: "JSON समृद्ध करें",
+  job_converting: "कन्वर्ट हो रहा है…",
+  stage_convert: "संदेश कन्वर्ट हो रहे हैं…",
+  res_convert: "{msgs} संदेश",
+  res_enriched: "{msgs} संदेश · HTML से {n} फ़ील्ड जोड़े गए",
+  pick_convert: "कन्वर्ट करने के लिए एक्सपोर्ट फ़ोल्डर चुनें",
+  open_json: "JSON खोलें",
   footer: "Telegram Export Studio · पूरी तरह आपके कंप्यूटर पर चलता है"
 },
 ar: {
@@ -2086,11 +2574,47 @@ ar: {
   locate_fail: "تعذر العثور على المجلد في القرص. أضفه مرة واحدة بالزر وستعمل عمليات السحب التالية من ذلك الموقع.",
   drop_only_folders: "اسحب مجلدات تصدير، لا ملفات",
   drop_no_messages: "«{name}» لا يحتوي على messages.html",
-  shutdown_tooltip: "إغلاق الخادم المحلي",
-  shutdown_title: "إغلاق الخادم؟",
-  shutdown_body: "سيتوقف الخادم المحلي ولن يعمل هذا التبويب بعد الآن. يمكنك إعادة فتح التطبيق متى شئت.",
-  shutdown_done_h: "تم إغلاق الخادم",
+  shutdown_tooltip: "إيقاف تشغيل التطبيق",
+  shutdown_title: "إيقاف تشغيل التطبيق؟",
+  shutdown_body: "سيتوقف التطبيق ولن يعمل هذا التبويب بعد الآن، <strong><u>حتى لو كانت هناك عملية جارية</u></strong>.",
+  shutdown_confirm: "إيقاف التشغيل",
+  shutdown_done_h: "تم إيقاف تشغيل التطبيق",
   shutdown_done_p: "يمكنك الآن إغلاق هذا التبويب. لاستخدام التطبيق مرة أخرى، أعد فتح السكربت أو الملف التنفيذي.",
+  tab_convert: "المحوِّل",
+  convert_source: "المجلد المراد تحويله",
+  convert_pick: "اختر أو اسحب مجلد التصدير هنا<br>(HTML أو JSON أو كلاهما — يُكتشف تلقائيًا)",
+  convert_opts: "خيارات التحويل",
+  convert_mode: "وضع التحويل إلى JSON",
+  mode_enriched: "مُثرى (موصى به)",
+  mode_faithful: "التنسيق الرسمي",
+  mode_hint_enriched: "ملف JSON بالمخطط الرسمي لتيليجرام مع حقول إضافية (نصوص حالة المكالمات، أسماء الملفات…) حتى لا يضيع أي شيء مما يحتويه HTML.",
+  mode_hint_faithful: "فقط مفاتيح result.json الرسمي من Telegram Desktop، دون أي حقول إضافية.",
+  faithful_warn: "عملية تدميرية: التنسيق الرسمي يتخلص من البيانات التي لا يشملها (اتجاه المكالمات ونص حالتها، أسماء الملفات…) ويحذف صفحات messages*.html وموارد الويب (css/، js/، images/) من المجلد، بحيث يصبح مطابقًا لتصدير JSON حقيقي من تيليجرام. إذا كنت بحاجة إلى تلك البيانات أو إلى HTML فاستخدم الوضع المُثرى.",
+  tojson_hint: "يُحفظ الناتج باسم result.json داخل مجلد التصدير نفسه — وهكذا تبقى المسارات النسبية للوسائط (photos/…، voice_messages/…) صالحة. إذا وُجد مسبقًا result.json لم تنشئه هذه الأداة، تتوقف العملية حتى لا يُستبدل التصدير الرسمي أبدًا.",
+  tohtml_hint: "سيتم إنشاء واجهة HTML قابلة للتصفح (messages*.html) في نفس المجلد، مع البنية الويب (css/js/images) التي لا يتضمنها تصدير JSON. تُستخدم الوسائط الموجودة كما هي دون نسخها. صفحات messages*.html الموجودة مسبقًا لا تُستبدل أبدًا دون تأكيد.",
+  enrich_hint: "سيتم دمج التنسيقين: ملف result.json الرسمي (الذي يحتوي بيانات لا يملكها HTML: المعرّفات، تواريخ التعديل، الأحجام…) سيُثرى بالحقول الإضافية القابلة للاستخراج من HTML. يُكتب result_enriched.json دون المساس بأي من الملفين الأصليين.",
+  eo_choice: "هذا المجلد يحتوي فقط على JSON مُثرى. ماذا تريد أن تفعل؟",
+  eo_hint_tohtml: "سيتم إنشاء صفحات messages*.html وموارد الويب (css/js/images) انطلاقًا من ملف JSON المُثرى هذا.",
+  eo_hint_downgrade: "ستُحذف الحقول والعلامة التي أضافها الإثراء، لينتج ملف result.json مطابق للتنسيق الرسمي لتيليجرام.",
+  downgrade_warn: "عملية تدميرية: البيانات الإضافية التي كانت موجودة فقط في JSON المُثرى (اتجاه المكالمات ونص حالتها، أسماء الملفات…) ستُفقد ولن يمكن استرجاعها دون ملف HTML الأصلي.",
+  convert_btn_downgrade: "الرجوع إلى التنسيق الرسمي",
+  res_removed_assets: " · تم حذف صفحات وموارد HTML",
+  det_html: "اكتُشف: تصدير HTML → سيُحوَّل إلى JSON",
+  det_json: "اكتُشف: تصدير JSON → ستُنشأ واجهة HTML",
+  det_enriched_only: "اكتُشف: JSON مُثرى فقط → اختر ما تريد فعله",
+  det_both: "اكتُشف: HTML + JSON معًا → إثراء JSON",
+  both_title: "⚠ المجلد يحتوي على كلا التنسيقين",
+  both_body: "يحتوي هذا المجلد في آنٍ واحد على تصدير HTML (ملف messages.html) وJSON الرسمي (ملف result.json). التحويل من تنسيق إلى الآخر لا يضيف شيئًا: كلاهما لديك بالفعل. العملية المفيدة الوحيدة هي إثراء JSON الرسمي بالبيانات الإضافية من HTML (يُكتب result_enriched.json دون المساس بالأصلين). أتريد إثراء JSON أم إلغاء العملية؟",
+  btn_enrich: "إثراء JSON",
+  convert_btn_tojson: "التحويل إلى JSON",
+  convert_btn_tohtml: "إنشاء واجهة HTML",
+  convert_btn_enrich: "إثراء JSON",
+  job_converting: "جارٍ التحويل…",
+  stage_convert: "جارٍ تحويل الرسائل…",
+  res_convert: "{msgs} رسالة",
+  res_enriched: "{msgs} رسالة · أُضيف {n} حقلًا من HTML",
+  pick_convert: "اختر مجلد التصدير المراد تحويله",
+  open_json: "فتح JSON",
   footer: "Telegram Export Studio · يعمل بالكامل على جهازك"
 }
 };
@@ -2150,12 +2674,14 @@ function snack(msg) {
   s._t = setTimeout(() => s.classList.remove("show"), 3600);
 }
 
-function confirmDialog(title, body) {
+function confirmDialog(title, body, yesLabel, danger, bodyHtml) {
   return new Promise(resolve => {
     $("modal-title").textContent = title;
-    $("modal-body").textContent = body;
+    if (bodyHtml) $("modal-body").innerHTML = body;
+    else $("modal-body").textContent = body;
     $("modal-no").textContent = t("btn_cancel");
-    $("modal-yes").textContent = t("btn_continue");
+    $("modal-yes").textContent = yesLabel || t("btn_continue");
+    $("modal-yes").classList.toggle("danger", !!danger);
     $("modal-back").classList.add("show");
     const close = ok => {
       $("modal-back").classList.remove("show");
@@ -2171,7 +2697,8 @@ function confirmDialog(title, body) {
 
 /* =============== cerrar el servidor =============== */
 async function confirmShutdown() {
-  const ok = await confirmDialog(t("shutdown_title"), t("shutdown_body"));
+  const ok = await confirmDialog(
+    t("shutdown_title"), t("shutdown_body"), t("shutdown_confirm"), true, true);
   if (!ok) return;
   $("shutdown-btn").classList.add("closed");
   try { await api("/api/shutdown"); } catch (e) { /* el servidor ya está cerrando */ }
@@ -2204,7 +2731,7 @@ document.querySelectorAll("#tabs button").forEach(b => {
     document.querySelectorAll("#tabs button").forEach(x => x.classList.remove("active"));
     b.classList.add("active");
     state.view = b.dataset.view;
-    ["fuse", "compact", "enhance"].forEach(v => {
+    ["fuse", "compact", "enhance", "convert"].forEach(v => {
       $("view-" + v).style.display = v === state.view ? "" : "none";
     });
     movePill();
@@ -2322,15 +2849,15 @@ async function addExport() {
    Browsers hide real filesystem paths, so we fingerprint the dropped
    folder's messages.html (size + sha256 of the first 4 KiB) and let the
    backend locate the matching directory on disk. */
-function dirFingerprint(entry) {
+function dirFingerprint(entry, fname = "messages.html") {
   return new Promise((resolve, reject) => {
-    entry.getFile("messages.html", {}, fe => fe.file(f => {
+    entry.getFile(fname, {}, fe => fe.file(f => {
       f.slice(0, 4096).arrayBuffer()
         .then(buf => crypto.subtle.digest("SHA-256", buf))
         .then(dig => {
           const hex = [...new Uint8Array(dig)]
             .map(b => b.toString(16).padStart(2, "0")).join("");
-          resolve({ name: entry.name, size: f.size, sha256: hex });
+          resolve({ name: entry.name, size: f.size, sha256: hex, fname });
         }).catch(reject);
     }, reject), reject);
   });
@@ -2358,8 +2885,12 @@ function wireDrop(el, onPath) {
         try {
           sig = await dirFingerprint(entry);
         } catch (_) {
-          snack(t("drop_no_messages", { name: entry.name }));
-          continue;
+          try {  // JSON-only exports have result.json instead
+            sig = await dirFingerprint(entry, "result.json");
+          } catch (_2) {
+            snack(t("drop_no_messages", { name: entry.name }));
+            continue;
+          }
         }
         const { path } = await api("/api/locate", sig);
         if (!path) {
@@ -2535,6 +3066,114 @@ function runRestore() {
   startJob("/api/restore", { export: state.enhance.path }, t("job_restoring"));
 }
 
+/* =============== convert =============== */
+function setConvert(info, action) {
+  state.convert = info;
+  state.convertAction = action;
+  $("cv-name").textContent = info.name + (info.title ? " — " + info.title : "");
+  $("cv-name").title = info.path;
+  $("cv-sub").textContent = t("res_convert", { msgs: info.messages });
+  $("cv-detected").textContent = t(
+    action === "enrich" ? "det_both"
+      : action === "tojson" ? "det_html"
+      : action === "eo" ? "det_enriched_only" : "det_json");
+  $("convert-sel").style.display = "none";
+  $("convert-info").style.display = "";
+  $("convert-opts").style.display = "";
+  $("cv-tojson").style.display = action === "tojson" ? "" : "none";
+  $("cv-tohtml").style.display = action === "tohtml" ? "" : "none";
+  $("cv-enrich").style.display = action === "enrich" ? "" : "none";
+  $("cv-eo").style.display = action === "eo" ? "" : "none";
+  $("convert-btn").disabled = false;
+  if (action === "tojson") {
+    $("convert-btn-label").textContent = t("convert_btn_tojson");
+    updateConvertMode();
+  } else if (action === "eo") {
+    updateEoMode();
+  } else {
+    $("convert-btn-label").textContent = t("convert_btn_" + action);
+  }
+}
+
+function clearConvert() {
+  state.convert = null;
+  state.convertAction = null;
+  $("convert-sel").style.display = "";
+  $("convert-info").style.display = "none";
+  $("convert-opts").style.display = "none";
+  $("convert-btn").disabled = true;
+}
+
+async function loadConvertPath(path) {
+  const info = await api("/api/inspect-convert", { path });
+  if (info.has_html && info.has_json) {
+    // both formats at once: the only useful operation is enriching the
+    // official JSON with the HTML's extra data — ask harshly first
+    const ok = await confirmDialog(t("both_title"), t("both_body"),
+                                   t("btn_enrich"));
+    if (!ok) { clearConvert(); return; }
+    setConvert(info, "enrich");
+  } else if (info.has_html) {
+    setConvert(info, "tojson");
+  } else if (info.has_json) {
+    setConvert(info, "tohtml");
+  } else {
+    // only a result_enriched.json: let the user pick the HTML view or
+    // go back to the plain official format
+    setConvert(info, "eo");
+  }
+}
+
+async function pickConvert() {
+  try {
+    const { path } = await api("/api/pick-folder", { title: t("pick_convert") });
+    if (path) await loadConvertPath(path);
+  } catch (e) { snack(e.message); }
+}
+
+function updateConvertMode() {
+  const mode = document.querySelector("#cv-mode button.active").dataset.mode;
+  $("cv-mode-hint").textContent = t("mode_hint_" + mode);
+  // destructive-mode banner: always visible while "faithful" is selected,
+  // with no way to dismiss it
+  $("cv-faithful-warn").style.display = mode === "faithful" ? "" : "none";
+}
+document.querySelectorAll("#cv-mode button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#cv-mode button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    updateConvertMode();
+  };
+});
+
+function updateEoMode() {
+  const sub = document.querySelector("#cv-eo-mode button.active").dataset.eo;
+  $("cv-eo-hint").textContent = t("eo_hint_" + sub);
+  // destructive-mode banner: always visible while "downgrade" is
+  // selected, with no way to dismiss it
+  $("cv-eo-warn").style.display = sub === "downgrade" ? "" : "none";
+  $("convert-btn-label").textContent = t("convert_btn_" + sub);
+}
+document.querySelectorAll("#cv-eo-mode button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#cv-eo-mode button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    updateEoMode();
+  };
+});
+
+function runConvert() {
+  if (!state.convert || !state.convertAction) return;
+  const mode = state.convertAction === "eo"
+    ? document.querySelector("#cv-eo-mode button.active").dataset.eo
+    : state.convertAction;
+  const faithful = mode === "tojson" &&
+    document.querySelector("#cv-mode button.active").dataset.mode === "faithful";
+  startJob("/api/convert",
+    { export: state.convert.path, mode, faithful },
+    t("job_converting"));
+}
+
 /* =============== job =============== */
 let pollTimer = null;
 let warnCount = 0;
@@ -2599,6 +3238,7 @@ async function poll() {
   renderExports();
   if (!state.compact) $("compact-btn").disabled = true;
   if (!state.enhance) $("enhance-btn").disabled = true;
+  if (!state.convert) $("convert-btn").disabled = true;
   if (state.enhance) {
     api("/api/inspect", { path: state.enhance.path })
       .then(applyEnhanceState).catch(() => {});
@@ -2612,13 +3252,17 @@ async function poll() {
     icon.className = "ricon ok";
     icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
     const res = s.result;
-    $("job-rtitle").textContent =
-      t("res_summary", { msgs: res.messages, pages: res.pages.length })
-      + (typeof res.own === "number" && res.own > 0
-         ? t("res_own", { n: res.own }) : "");
+    $("job-rtitle").textContent = res.pages
+      ? t("res_summary", { msgs: res.messages, pages: res.pages.length })
+        + (typeof res.own === "number" && res.own > 0
+           ? t("res_own", { n: res.own }) : "")
+      : (typeof res.added_fields === "number"
+         ? t("res_enriched", { msgs: res.messages, n: res.added_fields })
+         : t("res_convert", { msgs: res.messages }))
+        + (res.removed_assets ? t("res_removed_assets") : "");
     $("job-rsub").textContent =
       (res.range ? t("res_range", { a: res.range[0], b: res.range[1] }) : "")
-      + res.out_dir;
+      + (res.out_file || res.out_dir);
     const mk = (label, path, iconSvg) => {
       const b = document.createElement("button");
       b.className = "btn text";
@@ -2630,8 +3274,12 @@ async function poll() {
       acts.appendChild(b);
     };
     const sep = res.out_dir.includes("\\") ? "\\" : "/";
-    mk(t("open_chat"), res.out_dir + sep + "messages.html",
-      '<svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>');
+    if (res.pages)
+      mk(t("open_chat"), res.out_dir + sep + "messages.html",
+        '<svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>');
+    if (res.out_file)
+      mk(t("open_json"), res.out_file,
+        '<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>');
     mk(t("open_folder"), res.out_dir,
       '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>');
   } else {
@@ -2646,6 +3294,7 @@ async function poll() {
 wireDrop($("fuse-card"), addExportByPath);
 wireDrop($("compact-card"), loadCompactPath);
 wireDrop($("enhance-card"), loadEnhancePath);
+wireDrop($("convert-card"), loadConvertPath);
 
 applyLang();
 applyVerboseBtn();
@@ -2702,9 +3351,17 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/locate":
                 self._json({"path": locate_export(
                     body.get("name", ""), int(body.get("size", 0)),
-                    body.get("sha256", ""))})
+                    body.get("sha256", ""),
+                    body.get("fname", "messages.html"))})
             elif self.path == "/api/inspect":
                 self._json(inspect_export(body["path"]))
+            elif self.path == "/api/inspect-convert":
+                self._json(inspect_convert(body["path"]))
+            elif self.path == "/api/convert":
+                start_job(lambda: do_convert(
+                    body["export"], body["mode"],
+                    body.get("faithful", False)))
+                self._json({"ok": True})
             elif self.path == "/api/fuse":
                 start_job(lambda: do_fuse(
                     body["exports"], body["output"], body["page_size"],
