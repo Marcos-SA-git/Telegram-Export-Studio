@@ -36,6 +36,13 @@ Leyendo de izquierda a derecha, `MAYOR.MENOR.PARCHE`:
   `-v`) la imprime y termina sin hacer nada más.
 - **Módulos sueltos / repositorio:** [`telegram_export_version.py`](telegram_export_version.py)
   siempre tiene la versión vigente en el momento de ese commit.
+- **Versión web (GitHub Pages):** por su naturaleza, siempre corresponde a
+  la última versión desarrollada — el workflow de GitHub Actions
+  (`.github/workflows/deploy-pages.yml`) la reconstruye con `build_pages.py`
+  en cada push a `main`, tomando el `VERSION` de ese mismo commit. A
+  diferencia de las apps AIO (que quedan fijadas a la versión que se
+  descargó), la web nunca se queda desactualizada ni exige que el usuario
+  la reinstale.
 
 ## Al publicar una nueva versión
 
