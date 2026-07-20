@@ -486,6 +486,8 @@ es: {
   res_summary: "{msgs} mensajes en {pages} página(s)",
   res_written: "Escrito directamente en tu carpeta. Abre messages.html para verlo.",
   stage_scan: "Escaneando {name}…", stage_merge: "Combinando mensajes…",
+  warn_media_skipped: "No se pudo copiar {name}: el navegador bloqueó la escritura. Su enlace quedará roto.",
+  warn_media_skipped_total: "{n} archivo(s) no se copiaron, pero el resto de la fusión se completó.",
   stage_media: "Copiando media · {n} archivos…", stage_write: "Escribiendo páginas…",
   stage_enhance: "Mejorando {name}…", stage_restore: "Restaurando {name}…",
   stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…"
@@ -546,6 +548,8 @@ en: {
   res_summary: "{msgs} messages in {pages} page(s)",
   res_written: "Written straight into your folder. Open messages.html to view it.",
   stage_scan: "Scanning {name}…", stage_merge: "Merging messages…",
+  warn_media_skipped: "Could not copy {name}: the browser blocked the write. Its link will be broken.",
+  warn_media_skipped_total: "{n} file(s) were not copied, but the rest of the merge completed.",
   stage_media: "Copying media · {n} files…", stage_write: "Writing pages…",
   stage_enhance: "Enhancing {name}…", stage_restore: "Restoring {name}…",
   stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…"
@@ -604,6 +608,8 @@ fr: {
   res_summary: "{msgs} messages sur {pages} page(s)",
   res_written: "Écrit directement dans votre dossier. Ouvrez messages.html pour le voir.",
   stage_scan: "Analyse de {name}…", stage_merge: "Fusion des messages…",
+  warn_media_skipped: "Impossible de copier {name} : le navigateur a bloqué l'écriture. Son lien sera cassé.",
+  warn_media_skipped_total: "{n} fichier(s) n'ont pas été copiés, mais le reste de la fusion a abouti.",
   stage_media: "Copie des médias · {n} fichiers…", stage_write: "Écriture des pages…",
   stage_enhance: "Amélioration de {name}…", stage_restore: "Restauration de {name}…",
   stage_working: "Traitement…", stage_reading: "Lecture des exports…", stage_saving: "Enregistrement dans votre dossier…"
@@ -662,6 +668,8 @@ de: {
   res_summary: "{msgs} Nachrichten auf {pages} Seite(n)",
   res_written: "Direkt in deinen Ordner geschrieben. Öffne messages.html, um es anzusehen.",
   stage_scan: "{name} wird gescannt…", stage_merge: "Nachrichten werden zusammengeführt…",
+  warn_media_skipped: "{name} konnte nicht kopiert werden: Der Browser hat das Schreiben blockiert. Der Link bleibt defekt.",
+  warn_media_skipped_total: "{n} Datei(en) wurden nicht kopiert, der Rest der Zusammenführung war aber erfolgreich.",
   stage_media: "Medien werden kopiert · {n} Dateien…", stage_write: "Seiten werden geschrieben…",
   stage_enhance: "{name} wird verbessert…", stage_restore: "{name} wird wiederhergestellt…",
   stage_working: "Verarbeitung…", stage_reading: "Exporte werden gelesen…", stage_saving: "Wird in deinem Ordner gespeichert…"
@@ -720,6 +728,8 @@ pt: {
   res_summary: "{msgs} mensagens em {pages} página(s)",
   res_written: "Gravado diretamente na sua pasta. Abra messages.html para ver.",
   stage_scan: "Escaneando {name}…", stage_merge: "Mesclando mensagens…",
+  warn_media_skipped: "Não foi possível copiar {name}: o navegador bloqueou a gravação. O link ficará quebrado.",
+  warn_media_skipped_total: "{n} arquivo(s) não foram copiados, mas o restante da fusão foi concluído.",
   stage_media: "Copiando mídia · {n} arquivos…", stage_write: "Gravando páginas…",
   stage_enhance: "Melhorando {name}…", stage_restore: "Restaurando {name}…",
   stage_working: "Processando…", stage_reading: "Lendo exports…", stage_saving: "Salvando na sua pasta…"
@@ -778,6 +788,8 @@ it: {
   res_summary: "{msgs} messaggi in {pages} pagina(e)",
   res_written: "Scritto direttamente nella tua cartella. Apri messages.html per vederlo.",
   stage_scan: "Scansione di {name}…", stage_merge: "Unione dei messaggi…",
+  warn_media_skipped: "Impossibile copiare {name}: il browser ha bloccato la scrittura. Il suo link sarà interrotto.",
+  warn_media_skipped_total: "{n} file non sono stati copiati, ma il resto della fusione è stato completato.",
   stage_media: "Copia dei media · {n} file…", stage_write: "Scrittura delle pagine…",
   stage_enhance: "Miglioramento di {name}…", stage_restore: "Ripristino di {name}…",
   stage_working: "Elaborazione…", stage_reading: "Lettura degli export…", stage_saving: "Salvataggio nella tua cartella…"
@@ -836,6 +848,8 @@ ru: {
   res_summary: "{msgs} сообщений на {pages} страниц(ах)",
   res_written: "Записано прямо в вашу папку. Откройте messages.html, чтобы посмотреть.",
   stage_scan: "Сканирование {name}…", stage_merge: "Объединение сообщений…",
+  warn_media_skipped: "Не удалось скопировать {name}: браузер заблокировал запись. Ссылка на него будет нерабочей.",
+  warn_media_skipped_total: "Файлов не скопировано: {n}, но остальная часть объединения завершена.",
   stage_media: "Копирование медиа · {n} файлов…", stage_write: "Запись страниц…",
   stage_enhance: "Улучшение {name}…", stage_restore: "Восстановление {name}…",
   stage_working: "Обработка…", stage_reading: "Чтение экспортов…", stage_saving: "Сохранение в вашу папку…"
@@ -894,6 +908,8 @@ zh: {
   res_summary: "{msgs} 条消息，共 {pages} 页",
   res_written: "已直接写入你的文件夹。打开 messages.html 查看。",
   stage_scan: "正在扫描 {name}…", stage_merge: "正在合并消息…",
+  warn_media_skipped: "无法复制 {name}：浏览器阻止了写入。其链接将失效。",
+  warn_media_skipped_total: "有 {n} 个文件未被复制，但合并的其余部分已完成。",
   stage_media: "正在复制媒体 · {n} 个文件…", stage_write: "正在写入页面…",
   stage_enhance: "正在美化 {name}…", stage_restore: "正在恢复 {name}…",
   stage_working: "处理中…", stage_reading: "正在读取导出…", stage_saving: "正在保存到你的文件夹…"
@@ -952,6 +968,8 @@ ja: {
   res_summary: "{msgs} 件のメッセージ、{pages} ページ",
   res_written: "フォルダに直接書き込みました。messages.html を開いてご覧ください。",
   stage_scan: "{name} をスキャン中…", stage_merge: "メッセージを結合中…",
+  warn_media_skipped: "{name} をコピーできませんでした：ブラウザが書き込みをブロックしました。リンクは切れます。",
+  warn_media_skipped_total: "{n} 個のファイルがコピーされませんでしたが、統合の残りは完了しました。",
   stage_media: "メディアをコピー中 · {n} ファイル…", stage_write: "ページを書き込み中…",
   stage_enhance: "{name} を強化中…", stage_restore: "{name} を復元中…",
   stage_working: "処理中…", stage_reading: "エクスポートを読み込み中…", stage_saving: "フォルダに保存中…"
@@ -1010,6 +1028,8 @@ hi: {
   res_summary: "{pages} पेज में {msgs} संदेश",
   res_written: "सीधे आपके फ़ोल्डर में लिखा गया। देखने के लिए messages.html खोलें।",
   stage_scan: "{name} स्कैन हो रहा है…", stage_merge: "संदेश मिलाए जा रहे हैं…",
+  warn_media_skipped: "{name} कॉपी नहीं हो सकी: ब्राउज़र ने लिखने से रोक दिया। इसका लिंक टूटा रहेगा।",
+  warn_media_skipped_total: "{n} फ़ाइलें कॉपी नहीं हुईं, लेकिन बाकी विलय पूरा हो गया।",
   stage_media: "मीडिया कॉपी हो रहा है · {n} फ़ाइलें…", stage_write: "पेज लिखे जा रहे हैं…",
   stage_enhance: "{name} बेहतर बनाया जा रहा है…", stage_restore: "{name} बहाल हो रहा है…",
   stage_working: "प्रोसेस हो रहा है…", stage_reading: "एक्सपोर्ट पढ़े जा रहे हैं…", stage_saving: "आपके फ़ोल्डर में सहेजा जा रहा है…"
@@ -1068,6 +1088,8 @@ ar: {
   res_summary: "{msgs} رسالة في {pages} صفحة",
   res_written: "كُتب مباشرة في مجلدك. افتح messages.html لعرضه.",
   stage_scan: "جارٍ فحص {name}…", stage_merge: "جارٍ دمج الرسائل…",
+  warn_media_skipped: "تعذّر نسخ {name}: حظر المتصفح الكتابة. سيبقى الرابط معطّلًا.",
+  warn_media_skipped_total: "لم يُنسخ {n} من الملفات، لكن بقية عملية الدمج اكتملت.",
   stage_media: "جارٍ نسخ الوسائط · {n} ملفًا…", stage_write: "جارٍ كتابة الصفحات…",
   stage_enhance: "جارٍ تحسين {name}…", stage_restore: "جارٍ استعادة {name}…",
   stage_working: "جارٍ المعالجة…", stage_reading: "جارٍ قراءة التصديرات…", stage_saving: "جارٍ الحفظ في مجلدك…"
@@ -1513,6 +1535,7 @@ async function benchmarkConcurrency(outHandle) {
 
 async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency) {
   const renames = {};
+  const blocked = [];
 
   // File I/O round-trips (getFile/getFileHandle/createWritable) are cheap on
   // desktop but on Android each one is a slow IPC hop through the Storage
@@ -1573,8 +1596,25 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
     if (target === null) return;
     const tName = target.slice(target.lastIndexOf("/") + 1);
     const tf0 = performance.now();
-    const fh = await dst.getFileHandle(tName, { create: true });
-    await f.stream().pipeTo(await fh.createWritable());
+    // Chrome runs Safe Browsing on the *close* of a writable stream and
+    // rejects the whole write if the verdict is "dangerous" — an .exe or
+    // .apk someone once sent in the chat is enough. Without this catch a
+    // single such attachment rejects here, blows up the Promise.all in
+    // walk() and throws away the entire merge. Skipping the file and
+    // warning is strictly better than losing the job; the merged HTML
+    // keeps its reference, so the link just points at a missing file.
+    try {
+      const fh = await dst.getFileHandle(tName, { create: true });
+      await f.stream().pipeTo(await fh.createWritable());
+    } catch (e) {
+      blocked.push(target);
+      dbg(`copyMediaTree: NO copiado — ${target} (${f.size}B): ${e.name}: ${e.message}`);
+      // getFileHandle already created the entry; a failed write leaves a
+      // 0-byte file behind that looks like a corrupt media file.
+      try { await dst.removeEntry(tName); } catch (_) {}
+      pushWarn(t("warn_media_skipped", { name: target }));
+      return;
+    }
     if (DEBUG) {
       const ms = performance.now() - tf0;
       if (ms > 500) dbg(`copyMediaTree: archivo lento — ${target} (${f.size}B) = ${ms.toFixed(0)}ms`);
@@ -1604,6 +1644,10 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
   const elapsed = (performance.now() - t0) / 1000;
   dbg(`copyMediaTree: terminado — ${filesCopied} archivos en ${elapsed.toFixed(1)}s ` +
       `(${(filesCopied / elapsed || 0).toFixed(1)} archivos/s, concurrency=${CONCURRENCY})`);
+  if (blocked.length) {
+    dbg(`copyMediaTree: ${blocked.length} archivos no copiados: ${blocked.join(", ")}`);
+    pushWarn(t("warn_media_skipped_total", { n: blocked.length }));
+  }
   return renames;
 }
 
