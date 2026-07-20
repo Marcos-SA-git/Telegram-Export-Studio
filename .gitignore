@@ -3,3 +3,9 @@ __pycache__/
 _site/
 releases/
 build/
+
+# Exports de Telegram usados para depurar. Contienen conversaciones
+# reales y nunca deben acabar en el repositorio, ni siquiera tras pasar
+# por tools/make_safe_sample.py.
+ChatExport_*/
+*_safe/
