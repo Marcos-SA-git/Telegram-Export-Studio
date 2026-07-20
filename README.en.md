@@ -164,6 +164,24 @@ The web version has its own generator, `build_pages.py`, which reuses the same t
 python tools/pack_assets.py "html_export_folder"
 ```
 
+`tools/make_safe_sample.py` creates a content-free copy of an export, so you can attach a real case to a bug report without handing over the conversation:
+
+```bash
+python tools/make_safe_sample.py "export_folder" --scrub-filenames
+```
+
+It replaces every message body with the word `mensaje`, empties all media files to 0 bytes while keeping their name and extension, pseudonymises names to `Persona N` (real senders) and `Reenviado N` (authors of forwarded messages) — including where they appear in reactions, replies and mentions — and points external URLs at `example.invalid`. It deliberately keeps message ids, dates, ordering and the forwarding structure, which is usually the thing being debugged.
+
+Use `--scrub-filenames` unless you specifically need the original names: files sent through Telegram often carry text written by the user. Telegram's own assets (`css/`, `js/`, `images/`) are copied intact, as they hold no personal data.
+
+With `--report-only` it writes nothing and just prints how many real senders and how many forwarded-message authors the export has — the quick way to check whether a private chat is being counted as a group:
+
+```bash
+python tools/make_safe_sample.py "export_folder" --report-only
+```
+
+Always review the result before sharing it.
+
 ### Debug mode
 
 Both interfaces have a hidden diagnostic mode, meant for investigating performance issues (e.g. on mobile) without having to instrument the code by hand:

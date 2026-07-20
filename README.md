@@ -164,6 +164,24 @@ La versión web tiene su propio generador, `build_pages.py`, que reutiliza los m
 python tools/pack_assets.py "carpeta_export_html"
 ```
 
+`tools/make_safe_sample.py` crea una copia de un export sin ningún contenido, para poder adjuntar un caso real a un informe de error sin entregar la conversación:
+
+```bash
+python tools/make_safe_sample.py "carpeta_export" --scrub-filenames
+```
+
+Sustituye el cuerpo de cada mensaje por la palabra `mensaje`, vacía todos los archivos de media a 0 bytes conservando nombre y extensión, seudonimiza los nombres a `Persona N` (remitentes reales) y `Reenviado N` (autores de mensajes reenviados) — incluyendo sus apariciones en reacciones, respuestas y menciones — y manda las URL externas a `example.invalid`. Conserva a propósito los ids de mensaje, las fechas, el orden y la estructura de reenvíos, que es justo lo que suele haber que depurar.
+
+Usa `--scrub-filenames` salvo que necesites los nombres originales: los archivos que envía Telegram a menudo llevan texto escrito por el propio usuario. Los assets de Telegram (`css/`, `js/`, `images/`) se copian intactos porque no contienen datos personales.
+
+Con `--report-only` no escribe nada y solo imprime cuántos remitentes reales y cuántos autores de reenvíos tiene el export, que es la forma rápida de comprobar si un chat privado se está contando como grupo:
+
+```bash
+python tools/make_safe_sample.py "carpeta_export" --report-only
+```
+
+Revisa siempre el resultado antes de compartirlo.
+
 ### Modo debug
 
 Ambas interfaces tienen un modo de diagnóstico oculto, pensado para investigar problemas de rendimiento (por ejemplo, en móviles) sin tener que instrumentar el código a mano:
