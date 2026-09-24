@@ -1312,7 +1312,7 @@ def inspect(path):
     for p in pages:
         h = p.read_text(encoding="utf-8")
         ids.update(int(m) for m in re.findall(r'id="message(\d+)"', h))
-        senders.update(s.strip() for s in F.FROM_NAME_RE.findall(h))
+        senders.update(F.count_senders(h))
         if title is None:
             tm = re.search(r'<div class="text bold">\s*\n(.*?)\n', h)
             title = tm.group(1).strip() if tm else None

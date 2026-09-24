@@ -30,7 +30,7 @@ from pathlib import Path
 
 import telegram_export_fuser as tef
 from telegram_export_fuser import (
-    DATE_TITLE_RE, FROM_NAME_RE, fuse, order_exports, parse_size,
+    DATE_TITLE_RE, count_senders, fuse, order_exports, parse_size,
 )
 from telegram_export_compactor import compact
 from telegram_export_enhancer import enhance, restore
@@ -342,7 +342,7 @@ def inspect_export(path: str) -> dict:
     for p in pages:
         html = p.read_text(encoding="utf-8")
         ids.update(int(m) for m in re.findall(r'id="message(\d+)"', html))
-        senders.update(s.strip() for s in FROM_NAME_RE.findall(html))
+        senders.update(count_senders(html))
         if title is None:
             tm = re.search(r'<div class="text bold">\s*\n(.*?)\n', html)
             title = tm.group(1).strip() if tm else None

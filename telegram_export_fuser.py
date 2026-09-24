@@ -31,6 +31,7 @@ import math
 import re
 import shutil
 import sys
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -47,6 +48,11 @@ DATE_TITLE_RE = re.compile(
     r'(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2}):(\d{2})[^"]*"')
 FROM_NAME_RE = re.compile(r'<div class="from_name">\s*\n(.*?)\n\s*</div>',
                           re.DOTALL)
+# A from_name nested right inside a forwarded body names the original
+# author of the forwarded content, not a real chat participant.
+FORWARDED_FROM_NAME_RE = re.compile(
+    r'<div class="forwarded body">\s*<div class="from_name">.*?</div>',
+    re.DOTALL)
 USERPIC_RE = re.compile(
     r'(<div class="pull_left userpic_wrap">.*?\n      </div>\n)', re.DOTALL)
 MEDIA_REF_RE = re.compile(r'(?:\bsrc|\bhref|\bposter)="([^":#]+)"')
@@ -101,6 +107,13 @@ def parse_size(text: str) -> float:
     unit = m.group(2).rstrip("b")
     value *= {"": 1, "k": 1024, "m": 1024 ** 2, "g": 1024 ** 3}[unit]
     return math.inf if value == 0 else value
+
+
+def count_senders(html: str) -> Counter:
+    """Count message senders in a page, ignoring forwarded-message authors
+    (they show up as a nested from_name but aren't chat participants)."""
+    cleaned = FORWARDED_FROM_NAME_RE.sub('<div class="forwarded body">', html)
+    return Counter(s.strip() for s in FROM_NAME_RE.findall(cleaned))
 
 
 def extract_message_blocks(html: str):
