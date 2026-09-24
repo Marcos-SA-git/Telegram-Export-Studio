@@ -174,6 +174,7 @@ select.unit { flex: none; width: 84px; }
 
 #job { display: none; }
 #job.show { display: block; }
+.dlg-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 .job-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .spinner { width: 22px; height: 22px; flex: none; border-radius: 50%;
   border: 3px solid var(--primary-soft); border-top-color: var(--primary);
@@ -399,6 +400,17 @@ select.unit { flex: none; width: 84px; }
       <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a><span class="app-version">v__APP_VERSION__</span></div>
     </section>
 
+    <!-- SIZE / RAM WARNING -->
+    <div class="card" id="size-warn" style="display:none">
+      <h2 data-i18n="size_warn_h"></h2>
+      <p id="size-warn-text" style="font-size:14px"></p>
+      <div class="dlg-actions">
+        <a class="btn tonal" id="size-warn-desktop" href="#" target="_blank" rel="noopener" data-i18n="cta_download"></a>
+        <button class="btn filled" id="size-warn-continue" data-i18n="size_warn_continue"></button>
+        <button class="btn" id="size-warn-cancel" data-i18n="size_warn_cancel"></button>
+      </div>
+    </div>
+
     <!-- JOB -->
     <div class="card" id="job">
       <div class="job-head">
@@ -490,7 +502,14 @@ es: {
   warn_media_skipped_total: "{n} archivo(s) no se copiaron, pero el resto de la fusión se completó.",
   stage_media: "Copiando media · {n} archivos…", stage_write: "Escribiendo páginas…",
   stage_enhance: "Mejorando {name}…", stage_restore: "Restaurando {name}…",
-  stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…"
+  stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…",
+  confirm_dangerous_zip: "Se han detectado archivos con extensiones que tu navegador puede bloquear al fusionar ({list}). Para completar la operación con seguridad, se generará un ZIP que podrás descargar bajo tu propio criterio. ¿Generarlo?",
+  stage_zipping: "Generando el ZIP…",
+  res_written_zip: "ZIP guardado. Descomprímelo para ver tu chat fusionado.",
+  size_warn_h: "Export considerable",
+  size_warn_text: "Este chat ocupa unos {size}. La fusión en la web puede tardar un poco; para un resultado más rápido y directo se recomienda la versión de escritorio.",
+  size_warn_continue: "Continuar de todas formas",
+  size_warn_cancel: "Cancelar"
 },
 en: {
   cta_download: "Desktop version",
@@ -552,7 +571,14 @@ en: {
   warn_media_skipped_total: "{n} file(s) were not copied, but the rest of the merge completed.",
   stage_media: "Copying media · {n} files…", stage_write: "Writing pages…",
   stage_enhance: "Enhancing {name}…", stage_restore: "Restoring {name}…",
-  stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…"
+  stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…",
+  confirm_dangerous_zip: "Files with extensions your browser may block during the merge were detected ({list}). To complete the operation safely, a ZIP will be generated for you to download at your own discretion. Generate it?",
+  stage_zipping: "Building the ZIP…",
+  res_written_zip: "ZIP saved. Unzip it to see your merged chat.",
+  size_warn_h: "Large export",
+  size_warn_text: "This chat is about {size}. Merging on the web may take a while; for a faster, more direct result the desktop version is recommended.",
+  size_warn_continue: "Continue anyway",
+  size_warn_cancel: "Cancel"
 },
 fr: {
   cta_download: "Version de bureau",
@@ -1386,6 +1412,101 @@ async function boot() {
 const HTML_RE = /^messages\d*\.html$/;
 const ASSETS = ["css", "js", "images"];
 
+// Extensions Chromium's own download-protection file-type policy treats as
+// dangerous enough to run a Safe Browsing check on — and reject at write
+// time (see the "Blocked by Safe Browsing" mitigation in copyOneFile below).
+// Mirrors the public categories in Chromium's
+// components/safe_browsing/content/resources/download_file_types.asciipb;
+// kept conservative on purpose (common chat media — jpg/mp4/m4a/mov/wav/
+// pdf/gif — is never in it) and easy to refresh if Chrome's own list moves.
+const DANGEROUS_EXTENSIONS = new Set([
+  // Windows executables & installers
+  "exe", "msi", "msix", "msixbundle", "msp", "mst", "bat", "cmd", "com",
+  "cpl", "gadget", "hta", "inf1", "ins", "inx", "isu", "job", "jse", "lnk",
+  "msc", "paf", "pif", "ps1", "ps2", "psc1", "psc2", "reg", "scf", "scr",
+  "sct", "shb", "shs", "u3p", "vb", "vbe", "vbs", "vbscript", "vxd", "ws",
+  "wsf", "wsh", "wsc",
+  // Windows system files
+  "dll", "sys", "drv", "ocx",
+  // macOS
+  "app", "command", "dmg", "pkg", "osx", "workflow",
+  // Linux/Unix
+  "sh", "bash", "csh", "run", "bin", "out", "elf",
+  // Mobile
+  "apk", "aab", "ipa",
+  // Cross-platform executables / installers
+  "jar", "jnlp",
+  // Browser extensions
+  "crx", "xpi",
+  // Disk/archive images that can carry a payload
+  "iso", "img", "vhd", "vhdx",
+  // Office documents with macros
+  "docm", "xlsm", "xltm", "pptm", "potm", "xlm",
+  // Scripts Chrome flags on their own
+  "js",
+]);
+
+function fileExt(name) {
+  const dot = name.lastIndexOf(".");
+  return dot < 0 ? "" : name.slice(dot + 1).toLowerCase();
+}
+
+// Read-only pass over an export's media (same tree copyMediaTree will later
+// walk): collects both the dangerous-extension set and the total media size,
+// so runFuse can decide on the Safe-Browsing ZIP fallback and the RAM-vs-disk
+// strategy before anything is actually copied or an output folder is picked.
+async function scanExport(handle) {
+  const dangerous = new Set();
+  let totalSize = 0;
+  async function walk(dir, rel) {
+    for await (const [name, h] of dir.entries()) {
+      if (h.kind === "directory") {
+        if (rel === "" && ASSETS.includes(name)) continue;
+        await walk(h, rel + name + "/");
+        continue;
+      }
+      if (rel === "") continue; // top-level messages*.html, not media
+      const ext = fileExt(name);
+      if (DANGEROUS_EXTENSIONS.has(ext)) dangerous.add(ext);
+      totalSize += (await h.getFile()).size;
+    }
+  }
+  await walk(handle, "");
+  return { dangerous, totalSize };
+}
+
+function humanSize(n) {
+  const units = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return (i === 0 ? n.toFixed(0) : n.toFixed(1)) + " " + units[i];
+}
+
+// Past this, merging on the web is just slow (lots of File System Access
+// round-trips) — a plain size heads-up, no memory reasoning involved now
+// that the ZIP fallback always streams straight to disk (see ZipWriter).
+const LARGE_EXPORT_BYTES = 4 * 1024 ** 3;
+
+// Blocks on a choice between going to the desktop app, continuing on the
+// web anyway, or cancelling — shown when an export is large enough that
+// the web version will noticeably drag. Not a native confirm() because it
+// needs three distinct outcomes, not two.
+function showSizeWarning(totalSize) {
+  return new Promise((resolve) => {
+    $("size-warn-text").textContent = t("size_warn_text", { size: humanSize(totalSize) });
+    const panel = $("size-warn");
+    panel.style.display = "";
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    function done(choice) {
+      panel.style.display = "none";
+      resolve(choice);
+    }
+    $("size-warn-desktop").onclick = () => done("desktop");
+    $("size-warn-continue").onclick = () => done("continue");
+    $("size-warn-cancel").onclick = () => done("cancel");
+  });
+}
+
 async function dirFromDrop(e) {
   const out = [];
   for (const item of e.dataTransfer.items) {
@@ -1412,6 +1533,120 @@ function wireDrop(el, onHandle) {
       try { await onHandle(h); } catch (err) { snack(pyError(err)); }
     }
   });
+}
+
+/* ================= minimal ZIP writer (safe-browsing fallback) =========
+ * Streams a ZIP straight to an open FileSystemWritableFileStream as entries
+ * are added — STORE-only (no compression — chat media is already
+ * compressed), no external dependency, peak memory is one file at a time
+ * rather than the whole export. Used only for the rare case where the fuse
+ * source contains an extension Chrome's Safe Browsing may block (see
+ * DANGEROUS_EXTENSIONS): the resulting .zip itself is not a dangerous
+ * extension, so it can be written normally instead of losing the whole
+ * merge to a silent AbortError.
+ *
+ * Known limits (acceptable for this fallback path): no Zip64, so a single
+ * file or the archive as a whole over 4 GiB, or more than 65535 entries,
+ * will produce a corrupt archive. Chat exports practically never hit this.
+ * ======================================================================= */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function dosDateTime(date) {
+  const time = ((date.getHours() & 0x1f) << 11) | ((date.getMinutes() & 0x3f) << 5)
+             | ((date.getSeconds() >> 1) & 0x1f);
+  const day = (((date.getFullYear() - 1980) & 0x7f) << 9) | (((date.getMonth() + 1) & 0xf) << 5)
+            | (date.getDate() & 0x1f);
+  return { time, day };
+}
+class ZipWriter {
+  // writable: an open FileSystemWritableFileStream. Every entry is written
+  // straight to it and never retained, so peak memory is one file at a time.
+  constructor(writable) {
+    this.writable = writable;
+    this.offset = 0;
+    this.entries = [];
+  }
+  async _push(bytes) {
+    await this.writable.write(bytes);
+    this.offset += bytes.length;
+  }
+  async addFile(name, source) {
+    const bytes = source instanceof Uint8Array
+      ? source : new Uint8Array(await source.arrayBuffer());
+    const nameBytes = new TextEncoder().encode(name);
+    const mtime = (source instanceof File && source.lastModified)
+      ? new Date(source.lastModified) : new Date();
+    const { time, day } = dosDateTime(mtime);
+    const crc = crc32(bytes);
+    const offset = this.offset;
+
+    const header = new DataView(new ArrayBuffer(30));
+    header.setUint32(0, 0x04034b50, true);
+    header.setUint16(4, 20, true);        // version needed
+    header.setUint16(6, 0x0800, true);    // general flags: UTF-8 names
+    header.setUint16(8, 0, true);         // method: store
+    header.setUint16(10, time, true);
+    header.setUint16(12, day, true);
+    header.setUint32(14, crc, true);
+    header.setUint32(18, bytes.length, true);
+    header.setUint32(22, bytes.length, true);
+    header.setUint16(26, nameBytes.length, true);
+    header.setUint16(28, 0, true);        // extra field length
+    await this._push(new Uint8Array(header.buffer));
+    await this._push(nameBytes);
+    await this._push(bytes);
+
+    this.entries.push({ name: nameBytes, crc, size: bytes.length, offset, time, day });
+  }
+  async finish() {
+    const cdStart = this.offset;
+    for (const e of this.entries) {
+      const rec = new DataView(new ArrayBuffer(46));
+      rec.setUint32(0, 0x02014b50, true);
+      rec.setUint16(4, 20, true);         // version made by
+      rec.setUint16(6, 20, true);         // version needed
+      rec.setUint16(8, 0x0800, true);
+      rec.setUint16(10, 0, true);         // store
+      rec.setUint16(12, e.time, true);
+      rec.setUint16(14, e.day, true);
+      rec.setUint32(16, e.crc, true);
+      rec.setUint32(20, e.size, true);
+      rec.setUint32(24, e.size, true);
+      rec.setUint16(28, e.name.length, true);
+      rec.setUint16(30, 0, true);         // extra length
+      rec.setUint16(32, 0, true);         // comment length
+      rec.setUint16(34, 0, true);         // disk number
+      rec.setUint16(36, 0, true);         // internal attrs
+      rec.setUint32(38, 0, true);         // external attrs
+      rec.setUint32(42, e.offset, true);
+      await this._push(new Uint8Array(rec.buffer));
+      await this._push(e.name);
+    }
+    const cdSize = this.offset - cdStart;
+    const eocd = new DataView(new ArrayBuffer(22));
+    eocd.setUint32(0, 0x06054b50, true);
+    eocd.setUint16(4, 0, true);
+    eocd.setUint16(6, 0, true);
+    eocd.setUint16(8, this.entries.length, true);
+    eocd.setUint16(10, this.entries.length, true);
+    eocd.setUint32(12, cdSize, true);
+    eocd.setUint32(16, cdStart, true);
+    eocd.setUint16(20, 0, true);          // comment length
+    await this._push(new Uint8Array(eocd.buffer));
+    await this.writable.close();
+  }
 }
 
 async function loadHtmlsToFS(handle, target) {
@@ -1533,6 +1768,62 @@ async function benchmarkConcurrency(outHandle) {
   return cachedConcurrency;
 }
 
+// Decides the deduped target path for one media file (dedup-by-name+size,
+// renaming on genuine collision) and records it into `written`/`renames`.
+// Shared by the real-directory copy path and the ZIP fallback so both
+// produce the exact same layout — `renames` is what tells the Python fuse
+// step how to rewrite HTML references either way.
+function resolveTarget(written, renames, rel, name, size, isAsset) {
+  let tgt = rel + name;
+  if (written.has(tgt)) {
+    if (isAsset || written.get(tgt) === size) return null;
+    let n = 2;
+    const dot = name.indexOf(".");
+    const stem = dot < 0 ? name : name.slice(0, dot);
+    const ext = dot < 0 ? "" : name.slice(dot);
+    let cand;
+    do { cand = rel + stem + "__" + n + ext; n++; }
+    while (written.has(cand) && written.get(cand) !== size);
+    renames[tgt] = cand;
+    if (written.has(cand)) return null;
+    tgt = cand;
+  }
+  written.set(tgt, size);
+  return tgt;
+}
+
+// Sequential counterpart to copyMediaTree, for the Safe-Browsing ZIP
+// fallback: a ZipWriter has one growing byte sequence, so entries must be
+// added one at a time rather than with copyMediaTree's concurrent writes.
+async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAssets, rootPrefix) {
+  async function walk(src, rel) {
+    for await (const [name, h] of src.entries()) {
+      if (h.kind === "directory") {
+        const isAsset = rel === "" && ASSETS.includes(name);
+        if (isAsset && !includeAssets) continue;
+        await walk(h, rel + name + "/");
+        continue;
+      }
+      if (rel === "") continue;
+      const isAsset = ASSETS.includes(rel.split("/")[0]);
+      const f = await h.getFile();
+      const target = resolveTarget(written, renames, rel, name, f.size, isAsset);
+      if (target === null) continue;
+      await zipWriter.addFile(rootPrefix + target, f);
+      mediaDone++;
+      setStage(t("stage_media", { n: mediaDone }), null);
+    }
+  }
+  await walk(srcHandle, "");
+}
+
+async function zipBackPages(zipWriter, target, pageNames, rootPrefix) {
+  for (const name of pageNames) {
+    const data = pyodide.FS.readFile(target + "/" + name);
+    await zipWriter.addFile(rootPrefix + name, data);
+  }
+}
+
 async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency) {
   const renames = {};
   const blocked = [];
@@ -1575,24 +1866,7 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
   async function copyOneFile(h, dst, rel, name) {
     const isAsset = ASSETS.includes(rel.split("/")[0]);
     const f = await h.getFile();
-    const target = await withLock(() => {
-      let tgt = rel + name;
-      if (written.has(tgt)) {
-        if (isAsset || written.get(tgt) === f.size) return null;
-        let n = 2;
-        const dot = name.indexOf(".");
-        const stem = dot < 0 ? name : name.slice(0, dot);
-        const ext = dot < 0 ? "" : name.slice(dot);
-        let cand;
-        do { cand = rel + stem + "__" + n + ext; n++; }
-        while (written.has(cand) && written.get(cand) !== f.size);
-        renames[tgt] = cand;
-        if (written.has(cand)) return null;
-        tgt = cand;
-      }
-      written.set(tgt, f.size);
-      return tgt;
-    });
+    const target = await withLock(() => resolveTarget(written, renames, rel, name, f.size, isAsset));
     if (target === null) return;
     const tName = target.slice(target.lastIndexOf("/") + 1);
     const tf0 = performance.now();
@@ -1688,7 +1962,7 @@ function onPyProgress(kind, payloadJson) {
   setStage(t("stage_" + p.key, { name: p.name || "", n: p.copied || 0 }),
            typeof p.frac === "number" ? p.frac : null);
 }
-function endJob(ok, res, errText) {
+function endJob(ok, res, errText, subText) {
   $("job-spin").style.display = "none";
   $("job-progress").classList.remove("indet");
   $("job-bar").style.width = "100%";
@@ -1705,7 +1979,7 @@ function endJob(ok, res, errText) {
     icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
     $("job-rtitle").textContent =
       t("res_summary", { msgs: res.messages, pages: res.pages.length });
-    $("job-rsub").textContent = t("res_written");
+    $("job-rsub").textContent = subText || t("res_written");
   } else {
     $("job-stage").textContent = t("job_error");
     icon.className = "ricon err";
@@ -1785,7 +2059,36 @@ async function addExport() {
   } catch (e) { if (e.name !== "AbortError") snack(pyError(e)); }
 }
 
+function fuseZipName() {
+  const title = (state.exports[0] && state.exports[0].title) || "export";
+  return title.replace(/[\\/:*?"<>|]+/g, "_").trim() || "export";
+}
+
 async function runFuse() {
+  // Cheap read-only pass first: total size decides the RAM warning below,
+  // and a dangerous extension offers the Safe-Browsing ZIP fallback — both
+  // *before* even asking for an output folder, instead of discovering
+  // either mid-merge.
+  const dangerous = new Set();
+  let totalSize = 0;
+  for (const e of state.exports) {
+    const scan = await scanExport(e.handle);
+    scan.dangerous.forEach(x => dangerous.add(x));
+    totalSize += scan.totalSize;
+  }
+
+  if (totalSize > LARGE_EXPORT_BYTES) {
+    const choice = await showSizeWarning(totalSize);
+    if (choice !== "continue") return; // "desktop" already opened the releases page; "cancel" just stops
+  }
+
+  if (dangerous.size) {
+    const list = [...dangerous].sort().map(x => "." + x).join(", ");
+    if (confirm(t("confirm_dangerous_zip", { list }))) return runFuseAsZip();
+    // Declined: fall through to the normal path below. copyOneFile still
+    // catches and skips any file Chrome actually blocks, same as before.
+  }
+
   let out;
   try {
     out = await showDirectoryPicker({ id: "tgx-out", mode: "readwrite" });
@@ -1817,6 +2120,56 @@ async function runFuse() {
     await writeBackPages("/out", out, res.pages);
     endJob(true, res);
   } catch (e) {
+    endJob(false, null, pyError(e));
+  }
+}
+
+// Safe-Browsing fallback: build the fused export as a single ZIP instead of
+// writing media straight into the output folder. The .zip extension itself
+// is not on Chrome's dangerous-file list, so this write should go through
+// even when the individual files inside it would have been blocked.
+// ZipWriter streams every entry straight to the picked file as it's
+// produced, so peak memory is one file at a time, never the whole export.
+async function runFuseAsZip() {
+  const safeName = fuseZipName();
+  let fh;
+  try {
+    fh = await showSaveFilePicker({
+      suggestedName: safeName + ".zip",
+      types: [{ description: "ZIP", accept: { "application/zip": [".zip"] } }],
+    });
+  } catch (e) { return; }
+
+  showJob(t("job_fusing"));
+  let writable;
+  try {
+    mediaDone = 0;
+    const maps = {};
+    const written = new Map();
+    writable = await fh.createWritable();
+    const zip = new ZipWriter(writable);
+    const root = safeName + "/";
+    for (let i = 0; i < state.exports.length; i++) {
+      const exRenames = {};
+      await zipMediaTree(state.exports[i].handle, zip, written, exRenames, i === 0, root);
+      maps["/work/ex" + i] = exRenames;
+    }
+    setStage(t("stage_reading"), null);
+    for (let i = 0; i < state.exports.length; i++) {
+      await loadHtmlsToFS(state.exports[i].handle, "/work/ex" + i);
+    }
+    try { pyodide.FS.mkdirTree("/out"); } catch (_) {}
+    const paths = state.exports.map((_, i) => "/work/ex" + i);
+    const res = JSON.parse(glue.run_fuse(
+      JSON.stringify(paths), "/out",
+      chipValue("fuse-chips", "fuse-custom-n", "fuse-custom-u"),
+      state.forceMix, JSON.stringify(maps)));
+    setStage(t("stage_zipping"), null);
+    await zipBackPages(zip, "/out", res.pages, root);
+    await zip.finish(); // writes the central directory and closes `writable`
+    endJob(true, res, null, t("res_written_zip"));
+  } catch (e) {
+    if (writable) { try { await writable.abort(); } catch (_) {} }
     endJob(false, null, pyError(e));
   }
 }
@@ -1957,6 +2310,7 @@ async function runRestore() {
 
 /* ================= init ================= */
 $("download-link").href = REPO_URL + "/releases";
+$("size-warn-desktop").href = REPO_URL + "/releases";
 wireDrop($("fuse-card"), addExportHandle);
 wireDrop($("compact-card"), setCompactHandle);
 wireDrop($("enhance-card"), setEnhanceHandle);
