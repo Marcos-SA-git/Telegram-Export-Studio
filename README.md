@@ -25,7 +25,7 @@ Requiere un navegador basado en Chromium (Chrome, Edge, Opera) por la File Syste
 Antes de fusionar (o de crear una copia, ver más abajo) la web analiza los exports y te avisa de dos cosas:
 
 - **Si el resultado supera los 4 GB**, te recomienda la versión de escritorio, que es más rápida y directa con exports grandes; puedes continuar igualmente.
-- **Si hay archivos que Chrome puede bloquear** al escribirlos en una carpeta (ejecutables, `.apk`, scripts… que alguien envió en el chat), te ofrece generar el resultado como **ZIP**, que Chrome no bloquea. Al fusionar también puedes continuar sin ZIP, omitiendo esos archivos; al crear una copia no, porque una copia con archivos de menos no es una copia. El ZIP se escribe por partes directamente en disco, así que funciona con exports de decenas de GB.
+- **Si hay archivos que Chrome puede bloquear** al escribirlos en una carpeta (ejecutables, `.apk`, scripts… que alguien envió en el chat), te ofrece generar el resultado como **ZIP**, que Chrome no bloquea. Al fusionar también puedes continuar sin ZIP: los archivos que Chrome bloquee se listan en un desplegable y, al terminar, puedes descargarlos en un **ZIP de rescate** con la misma estructura de carpetas; copiando su contenido dentro de la carpeta de la fusión no queda ningún enlace roto. Al crear una copia no hay esa opción, porque una copia con archivos de menos no es una copia. El ZIP se escribe por partes directamente en disco, así que funciona con exports de decenas de GB.
 
 Las operaciones largas se pueden **cancelar** desde la propia tarjeta de progreso. Mientras haya una en marcha, no recargues ni cierres la pestaña o el navegador: la operación se interrumpiría a medias (el navegador te pedirá confirmación si lo intentas).
 

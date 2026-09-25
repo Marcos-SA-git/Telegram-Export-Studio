@@ -197,6 +197,21 @@ select.unit { flex: none; width: 84px; }
   background: var(--warn-soft); border-radius: 12px; padding: 10px 14px;
   font-size: 13px; color: var(--warn); animation: rise .3s both; }
 .warn-item svg { width: 17px; height: 17px; fill: var(--warn); flex: none; margin-top: 1px; }
+/* Per-file warnings: one collapsible group per kind, so hundreds of them
+   don't make the page endless. */
+details.warn-item { display: block; }
+details.warn-item summary { display: flex; gap: 10px; align-items: flex-start;
+  cursor: pointer; list-style: none; }
+details.warn-item summary::-webkit-details-marker { display: none; }
+details.warn-item summary::after { content: "▾"; margin-left: auto; transition: transform .2s; }
+details.warn-item[open] summary::after { transform: rotate(180deg); }
+.warn-list { margin: 8px 0 0 27px; padding: 0; list-style: none; max-height: 220px;
+  overflow: auto; font-size: 12.5px; overflow-wrap: anywhere; }
+.warn-list li { padding: 2px 0; }
+.rescue { margin-top: 12px; background: var(--surface-2); border-radius: 12px;
+  padding: 12px 14px; font-size: 13px; }
+.rescue p { margin: 0; }
+.rescue .dlg-actions { margin-top: 10px; }
 .warn-item span { word-break: break-all; }
 .result { display: none; align-items: flex-start; gap: 14px; margin-top: 16px; }
 .result.show { display: flex; }
@@ -440,6 +455,12 @@ select.unit { flex: none; width: 84px; }
         <div class="ricon" id="job-ricon"></div>
         <div style="flex:1"><b id="job-rtitle"></b><p id="job-rsub"></p></div>
       </div>
+      <div class="rescue" id="job-rescue" style="display:none">
+        <p id="job-rescue-text"></p>
+        <div class="dlg-actions">
+          <button class="btn filled" id="job-rescue-btn" onclick="downloadRescueZip()"></button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -514,16 +535,26 @@ es: {
   res_summary: "{msgs} mensajes en {pages} página(s)",
   res_written: "Escrito directamente en tu carpeta. Abre messages.html para verlo.",
   stage_scan: "Escaneando {name}…", stage_merge: "Combinando mensajes…",
-  warn_media_skipped: "No se pudo copiar {name}: el navegador bloqueó la escritura. Su enlace quedará roto.",
-  warn_media_skipped_total: "{n} archivo(s) no se copiaron, pero el resto de la fusión se completó.",
   stage_media: "Copiando media · {n} archivos…", stage_write: "Escribiendo páginas…",
   stage_enhance: "Mejorando {name}…", stage_restore: "Restaurando {name}…",
   stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…",
   confirm_dangerous_zip: "Se han detectado archivos con extensiones que tu navegador puede bloquear al fusionar ({list}). Para completar la operación con seguridad, se puede generar un ZIP que podrás descargar bajo tu propio criterio. Si continúas sin ZIP, los archivos que el navegador bloquee se omitirán.",
-  warn_media_unreadable: "No se pudo leer {name} ({size}, {err}): se omite del ZIP y su enlace quedará roto. Suele deberse a un antivirus que bloquea ese archivo.",
   stage_zip_media: "Añadiendo media al ZIP · {n} archivos · {done} de ~{total}…",
   stage_zip_index: "Escribiendo el índice del ZIP ({n} archivos)…",
   stage_zip_verify: "Chrome está verificando el ZIP ({size}) antes de guardarlo. Con archivos grandes puede tardar varios minutos; no cierres la pestaña.",
+  stage_benchmark: "Midiendo la velocidad de la carpeta de destino para ajustar cuántos archivos copiar a la vez…",
+  warn_group_blocked: "{n} archivo(s) que el navegador no dejó escribir en la carpeta (tipos como .exe o .apk). Al terminar podrás descargarlos en un ZIP aparte. Pulsa para ver la lista.",
+  warn_group_unreadable: "{n} archivo(s) no se pudieron leer (suele deberse a un antivirus) y no están en el ZIP. Pulsa para ver la lista.",
+  rescue_text: "Faltan {n} archivo(s) ({size}) en la carpeta «{folder}»: el navegador no dejó escribirlos ahí, pero sí dentro de un ZIP. Descarga este ZIP de rescate, ábrelo y copia todo su contenido dentro de la carpeta «{folder}», combinando las carpetas si te lo pregunta. Cada archivo quedará en su sitio y sus enlaces funcionarán.",
+  rescue_btn: "Descargar ZIP con los archivos que faltan",
+  rescue_btn_again: "Volver a descargar el ZIP",
+  rescue_progress: "Generando el ZIP de rescate · {done} de {n} archivos…",
+  rescue_done: "ZIP de rescate guardado. Ábrelo y copia todo su contenido dentro de la carpeta «{folder}», combinando las carpetas si te lo pregunta, para completar la fusión.",
+  rescue_partial: "Ojo: {n} archivo(s) tampoco se pudieron leer ahora y no están en el ZIP: {list}",
+  rescue_failed: "No se pudo generar el ZIP de rescate: {err}",
+  rescue_zip_name: "{folder} - archivos que faltan",
+  rescue_readme_name: "LEEME - archivos rescatados.txt",
+  rescue_readme: "Estos archivos forman parte de la fusión guardada en la carpeta «{folder}», pero el navegador no dejó escribirlos ahí porque su tipo (por ejemplo .exe o .apk) puede ser peligroso.\r\n\r\nPara completar la fusión, copia todo el contenido de este ZIP dentro de la carpeta «{folder}», combinando las carpetas si te lo pregunta. Cada archivo quedará en su sitio y los enlaces del chat funcionarán.\r\n\r\nÁbrelos solo si confías en quien los envió. Este archivo de texto puedes borrarlo.",
   job_cancel: "Cancelar", job_cancelling: "Cancelando…", job_cancelled: "Operación cancelada",
   job_keep_open: "No recargues ni cierres esta pestaña ni el navegador hasta que termine: la operación se interrumpiría y el resultado quedaría incompleto.",
   cancel_nothing_written: "No se ha escrito nada.",
@@ -608,16 +639,26 @@ en: {
   res_summary: "{msgs} messages in {pages} page(s)",
   res_written: "Written straight into your folder. Open messages.html to view it.",
   stage_scan: "Scanning {name}…", stage_merge: "Merging messages…",
-  warn_media_skipped: "Could not copy {name}: the browser blocked the write. Its link will be broken.",
-  warn_media_skipped_total: "{n} file(s) were not copied, but the rest of the merge completed.",
   stage_media: "Copying media · {n} files…", stage_write: "Writing pages…",
   stage_enhance: "Enhancing {name}…", stage_restore: "Restoring {name}…",
   stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…",
   confirm_dangerous_zip: "Files with extensions your browser may block during the merge were detected ({list}). To complete the operation safely, a ZIP can be generated for you to download at your own discretion. If you continue without a ZIP, any file the browser blocks will be skipped.",
-  warn_media_unreadable: "Could not read {name} ({size}, {err}): it is left out of the ZIP and its link will be broken. Usually caused by antivirus software blocking that file.",
   stage_zip_media: "Adding media to the ZIP · {n} files · {done} of ~{total}…",
   stage_zip_index: "Writing the ZIP index ({n} files)…",
   stage_zip_verify: "Chrome is verifying the ZIP ({size}) before saving it. With large files this can take several minutes — don't close the tab.",
+  stage_benchmark: "Measuring the output folder's speed to tune how many files to copy at once…",
+  warn_group_blocked: "{n} file(s) the browser wouldn't write into the folder (types such as .exe or .apk). When it finishes you can download them in a separate ZIP. Click to see the list.",
+  warn_group_unreadable: "{n} file(s) could not be read (usually antivirus software) and are not in the ZIP. Click to see the list.",
+  rescue_text: "{n} file(s) ({size}) are missing from the “{folder}” folder: the browser wouldn't write them there, but it will inside a ZIP. Download this rescue ZIP, open it and copy all of its contents into the “{folder}” folder, merging folders if asked. Every file will land in its place and its links will work.",
+  rescue_btn: "Download ZIP with the missing files",
+  rescue_btn_again: "Download the ZIP again",
+  rescue_progress: "Building the rescue ZIP · {done} of {n} files…",
+  rescue_done: "Rescue ZIP saved. Open it and copy all of its contents into the “{folder}” folder, merging folders if asked, to complete the merge.",
+  rescue_partial: "Note: {n} file(s) still could not be read and are not in the ZIP: {list}",
+  rescue_failed: "Could not build the rescue ZIP: {err}",
+  rescue_zip_name: "{folder} - missing files",
+  rescue_readme_name: "README - rescued files.txt",
+  rescue_readme: "These files belong to the merge saved in the “{folder}” folder, but the browser wouldn't write them there because their type (e.g. .exe or .apk) can be dangerous.\r\n\r\nTo complete the merge, copy all of this ZIP's contents into the “{folder}” folder, merging folders if asked. Every file will land in its place and the chat's links will work.\r\n\r\nOnly open them if you trust whoever sent them. You can delete this text file.",
   job_cancel: "Cancel", job_cancelling: "Cancelling…", job_cancelled: "Operation cancelled",
   job_keep_open: "Don't reload or close this tab or the browser until it finishes: the operation would be interrupted and the result left incomplete.",
   cancel_nothing_written: "Nothing was written.",
@@ -700,8 +741,6 @@ fr: {
   res_summary: "{msgs} messages sur {pages} page(s)",
   res_written: "Écrit directement dans votre dossier. Ouvrez messages.html pour le voir.",
   stage_scan: "Analyse de {name}…", stage_merge: "Fusion des messages…",
-  warn_media_skipped: "Impossible de copier {name} : le navigateur a bloqué l'écriture. Son lien sera cassé.",
-  warn_media_skipped_total: "{n} fichier(s) n'ont pas été copiés, mais le reste de la fusion a abouti.",
   stage_media: "Copie des médias · {n} fichiers…", stage_write: "Écriture des pages…",
   stage_enhance: "Amélioration de {name}…", stage_restore: "Restauration de {name}…",
   stage_working: "Traitement…", stage_reading: "Lecture des exports…", stage_saving: "Enregistrement dans votre dossier…",
@@ -741,8 +780,20 @@ fr: {
   stage_zip_media: "Ajout des médias au ZIP · {n} fichiers · {done} sur ~{total}…",
   stage_zip_index: "Écriture de l'index du ZIP ({n} fichiers)…",
   stage_zip_verify: "Chrome vérifie le ZIP ({size}) avant de l'enregistrer. Avec de gros fichiers, cela peut prendre plusieurs minutes ; ne fermez pas l'onglet.",
+  stage_benchmark: "Mesure de la vitesse du dossier de destination pour régler le nombre de fichiers copiés en parallèle…",
+  warn_group_blocked: "{n} fichier(s) que le navigateur a refusé d'écrire dans le dossier (types comme .exe ou .apk). À la fin, vous pourrez les télécharger dans un ZIP à part. Cliquez pour voir la liste.",
+  warn_group_unreadable: "{n} fichier(s) n'ont pas pu être lus (souvent à cause d'un antivirus) et ne sont pas dans le ZIP. Cliquez pour voir la liste.",
+  rescue_text: "Il manque {n} fichier(s) ({size}) dans le dossier « {folder} » : le navigateur a refusé de les y écrire, mais il accepte de les mettre dans un ZIP. Téléchargez ce ZIP de secours, ouvrez-le et copiez tout son contenu dans le dossier « {folder} », en fusionnant les dossiers si on vous le demande. Chaque fichier retrouvera sa place et ses liens fonctionneront.",
+  rescue_btn: "Télécharger le ZIP des fichiers manquants",
+  rescue_btn_again: "Télécharger à nouveau le ZIP",
+  rescue_progress: "Création du ZIP de secours · {done} sur {n} fichiers…",
+  rescue_done: "ZIP de secours enregistré. Ouvrez-le et copiez tout son contenu dans le dossier « {folder} », en fusionnant les dossiers si on vous le demande, pour compléter la fusion.",
+  rescue_partial: "Attention : {n} fichier(s) n'ont toujours pas pu être lus et ne sont pas dans le ZIP : {list}",
+  rescue_failed: "Impossible de créer le ZIP de secours : {err}",
+  rescue_zip_name: "{folder} - fichiers manquants",
+  rescue_readme_name: "LISEZMOI - fichiers récupérés.txt",
+  rescue_readme: "Ces fichiers font partie de la fusion enregistrée dans le dossier « {folder} », mais le navigateur a refusé de les y écrire car leur type (par exemple .exe ou .apk) peut être dangereux.\r\n\r\nPour compléter la fusion, copiez tout le contenu de ce ZIP dans le dossier « {folder} », en fusionnant les dossiers si on vous le demande. Chaque fichier retrouvera sa place et les liens du chat fonctionneront.\r\n\r\nNe les ouvrez que si vous faites confiance à leur expéditeur. Vous pouvez supprimer ce fichier texte.",
   stage_zipping: "Création du ZIP…",
-  warn_media_unreadable: "Impossible de lire {name} ({size}, {err}) : il est exclu du ZIP et son lien sera rompu. C'est généralement dû à un antivirus qui bloque ce fichier.",
   zip_btn: "Générer le ZIP"
 },
 de: {
@@ -799,8 +850,6 @@ de: {
   res_summary: "{msgs} Nachrichten auf {pages} Seite(n)",
   res_written: "Direkt in deinen Ordner geschrieben. Öffne messages.html, um es anzusehen.",
   stage_scan: "{name} wird gescannt…", stage_merge: "Nachrichten werden zusammengeführt…",
-  warn_media_skipped: "{name} konnte nicht kopiert werden: Der Browser hat das Schreiben blockiert. Der Link bleibt defekt.",
-  warn_media_skipped_total: "{n} Datei(en) wurden nicht kopiert, der Rest der Zusammenführung war aber erfolgreich.",
   stage_media: "Medien werden kopiert · {n} Dateien…", stage_write: "Seiten werden geschrieben…",
   stage_enhance: "{name} wird verbessert…", stage_restore: "{name} wird wiederhergestellt…",
   stage_working: "Verarbeitung…", stage_reading: "Exporte werden gelesen…", stage_saving: "Wird in deinem Ordner gespeichert…",
@@ -840,8 +889,20 @@ de: {
   stage_zip_media: "Medien werden zum ZIP hinzugefügt · {n} Dateien · {done} von ~{total}…",
   stage_zip_index: "ZIP-Verzeichnis wird geschrieben ({n} Dateien)…",
   stage_zip_verify: "Chrome überprüft das ZIP ({size}) vor dem Speichern. Bei großen Dateien kann das mehrere Minuten dauern – Tab nicht schließen.",
+  stage_benchmark: "Geschwindigkeit des Zielordners wird gemessen, um festzulegen, wie viele Dateien gleichzeitig kopiert werden…",
+  warn_group_blocked: "{n} Datei(en), die der Browser nicht in den Ordner schreiben ließ (Typen wie .exe oder .apk). Am Ende kannst du sie in einem separaten ZIP herunterladen. Klicke, um die Liste zu sehen.",
+  warn_group_unreadable: "{n} Datei(en) konnten nicht gelesen werden (meist wegen einer Antivirensoftware) und fehlen im ZIP. Klicke, um die Liste zu sehen.",
+  rescue_text: "Im Ordner „{folder}“ fehlen {n} Datei(en) ({size}): Der Browser ließ sie dort nicht schreiben, in einem ZIP aber schon. Lade dieses Rettungs-ZIP herunter, öffne es und kopiere seinen gesamten Inhalt in den Ordner „{folder}“; führe Ordner zusammen, wenn du gefragt wirst. Jede Datei landet an ihrem Platz und ihre Links funktionieren.",
+  rescue_btn: "ZIP mit den fehlenden Dateien herunterladen",
+  rescue_btn_again: "ZIP erneut herunterladen",
+  rescue_progress: "Rettungs-ZIP wird erstellt · {done} von {n} Dateien…",
+  rescue_done: "Rettungs-ZIP gespeichert. Öffne es und kopiere seinen gesamten Inhalt in den Ordner „{folder}“ (Ordner zusammenführen, wenn gefragt), um die Zusammenführung abzuschließen.",
+  rescue_partial: "Achtung: {n} Datei(en) konnten auch jetzt nicht gelesen werden und fehlen im ZIP: {list}",
+  rescue_failed: "Das Rettungs-ZIP konnte nicht erstellt werden: {err}",
+  rescue_zip_name: "{folder} - fehlende Dateien",
+  rescue_readme_name: "LIESMICH - gerettete Dateien.txt",
+  rescue_readme: "Diese Dateien gehören zur Zusammenführung im Ordner „{folder}“, aber der Browser ließ sie dort nicht schreiben, weil ihr Typ (z. B. .exe oder .apk) gefährlich sein kann.\r\n\r\nUm die Zusammenführung abzuschließen, kopiere den gesamten Inhalt dieses ZIPs in den Ordner „{folder}“ und führe Ordner zusammen, wenn du gefragt wirst. Jede Datei landet an ihrem Platz und die Links im Chat funktionieren.\r\n\r\nÖffne sie nur, wenn du dem Absender vertraust. Diese Textdatei kannst du löschen.",
   stage_zipping: "ZIP wird erstellt…",
-  warn_media_unreadable: "{name} ({size}, {err}) konnte nicht gelesen werden: Die Datei fehlt im ZIP und ihr Link wird nicht funktionieren. Meist blockiert eine Antivirensoftware diese Datei.",
   zip_btn: "ZIP erstellen"
 },
 pt: {
@@ -898,8 +959,6 @@ pt: {
   res_summary: "{msgs} mensagens em {pages} página(s)",
   res_written: "Gravado diretamente na sua pasta. Abra messages.html para ver.",
   stage_scan: "Escaneando {name}…", stage_merge: "Mesclando mensagens…",
-  warn_media_skipped: "Não foi possível copiar {name}: o navegador bloqueou a gravação. O link ficará quebrado.",
-  warn_media_skipped_total: "{n} arquivo(s) não foram copiados, mas o restante da fusão foi concluído.",
   stage_media: "Copiando mídia · {n} arquivos…", stage_write: "Gravando páginas…",
   stage_enhance: "Melhorando {name}…", stage_restore: "Restaurando {name}…",
   stage_working: "Processando…", stage_reading: "Lendo exports…", stage_saving: "Salvando na sua pasta…",
@@ -939,8 +998,20 @@ pt: {
   stage_zip_media: "Adicionando mídia ao ZIP · {n} arquivos · {done} de ~{total}…",
   stage_zip_index: "Escrevendo o índice do ZIP ({n} arquivos)…",
   stage_zip_verify: "O Chrome está verificando o ZIP ({size}) antes de salvá-lo. Com arquivos grandes, isso pode levar vários minutos; não feche a aba.",
+  stage_benchmark: "Medindo a velocidade da pasta de destino para ajustar quantos arquivos copiar ao mesmo tempo…",
+  warn_group_blocked: "{n} arquivo(s) que o navegador não deixou gravar na pasta (tipos como .exe ou .apk). Ao terminar, você poderá baixá-los num ZIP à parte. Clique para ver a lista.",
+  warn_group_unreadable: "{n} arquivo(s) não puderam ser lidos (geralmente por causa de um antivírus) e não estão no ZIP. Clique para ver a lista.",
+  rescue_text: "Faltam {n} arquivo(s) ({size}) na pasta “{folder}”: o navegador não deixou gravá-los ali, mas deixa dentro de um ZIP. Baixe este ZIP de resgate, abra-o e copie todo o seu conteúdo para dentro da pasta “{folder}”, mesclando as pastas se for perguntado. Cada arquivo ficará no seu lugar e os links funcionarão.",
+  rescue_btn: "Baixar ZIP com os arquivos que faltam",
+  rescue_btn_again: "Baixar o ZIP de novo",
+  rescue_progress: "Gerando o ZIP de resgate · {done} de {n} arquivos…",
+  rescue_done: "ZIP de resgate salvo. Abra-o e copie todo o seu conteúdo para dentro da pasta “{folder}”, mesclando as pastas se for perguntado, para completar a fusão.",
+  rescue_partial: "Atenção: {n} arquivo(s) também não puderam ser lidos agora e não estão no ZIP: {list}",
+  rescue_failed: "Não foi possível gerar o ZIP de resgate: {err}",
+  rescue_zip_name: "{folder} - arquivos que faltam",
+  rescue_readme_name: "LEIAME - arquivos resgatados.txt",
+  rescue_readme: "Estes arquivos fazem parte da fusão salva na pasta “{folder}”, mas o navegador não deixou gravá-los ali porque o tipo deles (por exemplo .exe ou .apk) pode ser perigoso.\r\n\r\nPara completar a fusão, copie todo o conteúdo deste ZIP para dentro da pasta “{folder}”, mesclando as pastas se for perguntado. Cada arquivo ficará no seu lugar e os links do chat funcionarão.\r\n\r\nSó os abra se confiar em quem os enviou. Você pode apagar este arquivo de texto.",
   stage_zipping: "Gerando o ZIP…",
-  warn_media_unreadable: "Não foi possível ler {name} ({size}, {err}): ele fica fora do ZIP e seu link ficará quebrado. Costuma ser causado por um antivírus que bloqueia esse arquivo.",
   zip_btn: "Gerar ZIP"
 },
 it: {
@@ -997,8 +1068,6 @@ it: {
   res_summary: "{msgs} messaggi in {pages} pagina(e)",
   res_written: "Scritto direttamente nella tua cartella. Apri messages.html per vederlo.",
   stage_scan: "Scansione di {name}…", stage_merge: "Unione dei messaggi…",
-  warn_media_skipped: "Impossibile copiare {name}: il browser ha bloccato la scrittura. Il suo link sarà interrotto.",
-  warn_media_skipped_total: "{n} file non sono stati copiati, ma il resto della fusione è stato completato.",
   stage_media: "Copia dei media · {n} file…", stage_write: "Scrittura delle pagine…",
   stage_enhance: "Miglioramento di {name}…", stage_restore: "Ripristino di {name}…",
   stage_working: "Elaborazione…", stage_reading: "Lettura degli export…", stage_saving: "Salvataggio nella tua cartella…",
@@ -1038,8 +1107,20 @@ it: {
   stage_zip_media: "Aggiunta dei media allo ZIP · {n} file · {done} di ~{total}…",
   stage_zip_index: "Scrittura dell'indice dello ZIP ({n} file)…",
   stage_zip_verify: "Chrome sta verificando lo ZIP ({size}) prima di salvarlo. Con file grandi può richiedere diversi minuti; non chiudere la scheda.",
+  stage_benchmark: "Misurazione della velocità della cartella di destinazione per regolare quanti file copiare in parallelo…",
+  warn_group_blocked: "{n} file che il browser non ha lasciato scrivere nella cartella (tipi come .exe o .apk). Al termine potrai scaricarli in uno ZIP a parte. Clicca per vedere l'elenco.",
+  warn_group_unreadable: "{n} file non sono stati letti (di solito a causa di un antivirus) e non sono nello ZIP. Clicca per vedere l'elenco.",
+  rescue_text: "Mancano {n} file ({size}) nella cartella «{folder}»: il browser non li ha lasciati scrivere lì, ma lo consente dentro uno ZIP. Scarica questo ZIP di recupero, aprilo e copia tutto il suo contenuto nella cartella «{folder}», unendo le cartelle se richiesto. Ogni file tornerà al suo posto e i suoi link funzioneranno.",
+  rescue_btn: "Scarica lo ZIP con i file mancanti",
+  rescue_btn_again: "Scarica di nuovo lo ZIP",
+  rescue_progress: "Creazione dello ZIP di recupero · {done} di {n} file…",
+  rescue_done: "ZIP di recupero salvato. Aprilo e copia tutto il suo contenuto nella cartella «{folder}», unendo le cartelle se richiesto, per completare la fusione.",
+  rescue_partial: "Attenzione: {n} file non sono stati letti neanche ora e non sono nello ZIP: {list}",
+  rescue_failed: "Impossibile creare lo ZIP di recupero: {err}",
+  rescue_zip_name: "{folder} - file mancanti",
+  rescue_readme_name: "LEGGIMI - file recuperati.txt",
+  rescue_readme: "Questi file fanno parte della fusione salvata nella cartella «{folder}», ma il browser non li ha lasciati scrivere lì perché il loro tipo (ad esempio .exe o .apk) può essere pericoloso.\r\n\r\nPer completare la fusione, copia tutto il contenuto di questo ZIP nella cartella «{folder}», unendo le cartelle se richiesto. Ogni file tornerà al suo posto e i link della chat funzioneranno.\r\n\r\nAprili solo se ti fidi di chi li ha inviati. Puoi eliminare questo file di testo.",
   stage_zipping: "Creazione dello ZIP…",
-  warn_media_unreadable: "Impossibile leggere {name} ({size}, {err}): resta fuori dallo ZIP e il suo link sarà interrotto. Di solito è causato da un antivirus che blocca quel file.",
   zip_btn: "Genera ZIP"
 },
 ru: {
@@ -1096,8 +1177,6 @@ ru: {
   res_summary: "{msgs} сообщений на {pages} страниц(ах)",
   res_written: "Записано прямо в вашу папку. Откройте messages.html, чтобы посмотреть.",
   stage_scan: "Сканирование {name}…", stage_merge: "Объединение сообщений…",
-  warn_media_skipped: "Не удалось скопировать {name}: браузер заблокировал запись. Ссылка на него будет нерабочей.",
-  warn_media_skipped_total: "Файлов не скопировано: {n}, но остальная часть объединения завершена.",
   stage_media: "Копирование медиа · {n} файлов…", stage_write: "Запись страниц…",
   stage_enhance: "Улучшение {name}…", stage_restore: "Восстановление {name}…",
   stage_working: "Обработка…", stage_reading: "Чтение экспортов…", stage_saving: "Сохранение в вашу папку…",
@@ -1137,8 +1216,20 @@ ru: {
   stage_zip_media: "Добавление медиа в ZIP · файлов: {n} · {done} из ~{total}…",
   stage_zip_index: "Запись оглавления ZIP (файлов: {n})…",
   stage_zip_verify: "Chrome проверяет ZIP ({size}) перед сохранением. Для больших файлов это может занять несколько минут — не закрывайте вкладку.",
+  stage_benchmark: "Измеряем скорость папки назначения, чтобы подобрать, сколько файлов копировать одновременно…",
+  warn_group_blocked: "Файлов, которые браузер не разрешил записать в папку (типы вроде .exe или .apk): {n}. По завершении их можно будет скачать отдельным ZIP. Нажмите, чтобы увидеть список.",
+  warn_group_unreadable: "Файлов, которые не удалось прочитать (обычно из-за антивируса), и их нет в ZIP: {n}. Нажмите, чтобы увидеть список.",
+  rescue_text: "В папке «{folder}» не хватает файлов: {n} ({size}). Браузер не разрешил записать их туда, но разрешает внутри ZIP. Скачайте этот ZIP-архив для восстановления, откройте его и скопируйте всё содержимое в папку «{folder}», объединяя папки, если будет вопрос. Каждый файл окажется на своём месте, и ссылки на него заработают.",
+  rescue_btn: "Скачать ZIP с недостающими файлами",
+  rescue_btn_again: "Скачать ZIP ещё раз",
+  rescue_progress: "Создание ZIP для восстановления · {done} из {n} файлов…",
+  rescue_done: "ZIP для восстановления сохранён. Откройте его и скопируйте всё содержимое в папку «{folder}», объединяя папки, если будет вопрос, чтобы завершить объединение.",
+  rescue_partial: "Внимание: файлов, которые и сейчас не удалось прочитать и которых нет в ZIP: {n}: {list}",
+  rescue_failed: "Не удалось создать ZIP для восстановления: {err}",
+  rescue_zip_name: "{folder} - недостающие файлы",
+  rescue_readme_name: "ПРОЧТИ - восстановленные файлы.txt",
+  rescue_readme: "Эти файлы относятся к объединению, сохранённому в папке «{folder}», но браузер не разрешил записать их туда, потому что их тип (например, .exe или .apk) может быть опасным.\r\n\r\nЧтобы завершить объединение, скопируйте всё содержимое этого ZIP в папку «{folder}», объединяя папки, если будет вопрос. Каждый файл окажется на своём месте, и ссылки в чате заработают.\r\n\r\nОткрывайте их, только если доверяете отправителю. Этот текстовый файл можно удалить.",
   stage_zipping: "Создание ZIP…",
-  warn_media_unreadable: "Не удалось прочитать {name} ({size}, {err}): файл не попадёт в ZIP, и ссылка на него будет нерабочей. Обычно причина — антивирус, блокирующий этот файл.",
   zip_btn: "Создать ZIP"
 },
 zh: {
@@ -1195,8 +1286,6 @@ zh: {
   res_summary: "{msgs} 条消息，共 {pages} 页",
   res_written: "已直接写入你的文件夹。打开 messages.html 查看。",
   stage_scan: "正在扫描 {name}…", stage_merge: "正在合并消息…",
-  warn_media_skipped: "无法复制 {name}：浏览器阻止了写入。其链接将失效。",
-  warn_media_skipped_total: "有 {n} 个文件未被复制，但合并的其余部分已完成。",
   stage_media: "正在复制媒体 · {n} 个文件…", stage_write: "正在写入页面…",
   stage_enhance: "正在美化 {name}…", stage_restore: "正在恢复 {name}…",
   stage_working: "处理中…", stage_reading: "正在读取导出…", stage_saving: "正在保存到你的文件夹…",
@@ -1236,8 +1325,20 @@ zh: {
   stage_zip_media: "正在将媒体添加到 ZIP · {n} 个文件 · {done} / 约 {total}…",
   stage_zip_index: "正在写入 ZIP 索引（{n} 个文件）…",
   stage_zip_verify: "Chrome 正在保存前校验 ZIP（{size}）。文件较大时可能需要几分钟，请勿关闭标签页。",
+  stage_benchmark: "正在测量目标文件夹的速度，以确定同时复制多少个文件…",
+  warn_group_blocked: "有 {n} 个文件浏览器不允许写入该文件夹（如 .exe 或 .apk 类型）。完成后可以将它们下载为单独的 ZIP。点击查看列表。",
+  warn_group_unreadable: "有 {n} 个文件无法读取（通常是杀毒软件所致），不在 ZIP 中。点击查看列表。",
+  rescue_text: "文件夹“{folder}”中缺少 {n} 个文件（{size}）：浏览器不允许将它们写入该文件夹，但允许放入 ZIP。请下载此补救 ZIP，打开后将其全部内容复制到文件夹“{folder}”中，如有提示请合并文件夹。每个文件都会回到原位，链接也能正常使用。",
+  rescue_btn: "下载包含缺失文件的 ZIP",
+  rescue_btn_again: "再次下载 ZIP",
+  rescue_progress: "正在生成补救 ZIP · 第 {done} / {n} 个文件…",
+  rescue_done: "补救 ZIP 已保存。打开它并将全部内容复制到文件夹“{folder}”中（如有提示请合并文件夹），即可完成合并。",
+  rescue_partial: "注意：仍有 {n} 个文件无法读取，未包含在 ZIP 中：{list}",
+  rescue_failed: "无法生成补救 ZIP：{err}",
+  rescue_zip_name: "{folder} - 缺失的文件",
+  rescue_readme_name: "说明 - 补救的文件.txt",
+  rescue_readme: "这些文件属于保存在文件夹“{folder}”中的合并结果，但由于其类型（例如 .exe 或 .apk）可能有危险，浏览器不允许将它们写入该文件夹。\r\n\r\n要完成合并，请将此 ZIP 的全部内容复制到文件夹“{folder}”中，如有提示请合并文件夹。每个文件都会回到原位，聊天中的链接也能正常使用。\r\n\r\n仅在信任发送者时才打开它们。此文本文件可以删除。",
   stage_zipping: "正在生成 ZIP…",
-  warn_media_unreadable: "无法读取 {name}（{size}，{err}）：它不会被放入 ZIP，其链接将失效。通常是杀毒软件拦截了该文件。",
   zip_btn: "生成 ZIP"
 },
 ja: {
@@ -1294,8 +1395,6 @@ ja: {
   res_summary: "{msgs} 件のメッセージ、{pages} ページ",
   res_written: "フォルダに直接書き込みました。messages.html を開いてご覧ください。",
   stage_scan: "{name} をスキャン中…", stage_merge: "メッセージを結合中…",
-  warn_media_skipped: "{name} をコピーできませんでした：ブラウザが書き込みをブロックしました。リンクは切れます。",
-  warn_media_skipped_total: "{n} 個のファイルがコピーされませんでしたが、統合の残りは完了しました。",
   stage_media: "メディアをコピー中 · {n} ファイル…", stage_write: "ページを書き込み中…",
   stage_enhance: "{name} を強化中…", stage_restore: "{name} を復元中…",
   stage_working: "処理中…", stage_reading: "エクスポートを読み込み中…", stage_saving: "フォルダに保存中…",
@@ -1335,8 +1434,20 @@ ja: {
   stage_zip_media: "メディアを ZIP に追加中 · {n} ファイル · {done} / 約 {total}…",
   stage_zip_index: "ZIP のインデックスを書き込み中（{n} ファイル）…",
   stage_zip_verify: "Chrome が保存前に ZIP（{size}）を検証しています。大きなファイルでは数分かかることがあります。タブを閉じないでください。",
+  stage_benchmark: "同時にコピーするファイル数を調整するため、保存先フォルダーの速度を測定中…",
+  warn_group_blocked: "ブラウザーがフォルダーへの書き込みを許可しなかったファイルが {n} 個あります（.exe や .apk など）。完了後、別の ZIP としてダウンロードできます。クリックで一覧を表示。",
+  warn_group_unreadable: "{n} 個のファイルを読み込めず（多くはウイルス対策ソフトが原因）、ZIP に含まれていません。クリックで一覧を表示。",
+  rescue_text: "フォルダー「{folder}」に {n} 個のファイル（{size}）が不足しています。ブラウザーはそこへの書き込みを許可しませんでしたが、ZIP 内なら可能です。この復旧用 ZIP をダウンロードして開き、中身をすべてフォルダー「{folder}」にコピーしてください（確認されたらフォルダーを統合）。各ファイルが元の場所に入り、リンクも機能します。",
+  rescue_btn: "不足ファイルの ZIP をダウンロード",
+  rescue_btn_again: "ZIP をもう一度ダウンロード",
+  rescue_progress: "復旧用 ZIP を作成中 · {n} 個中 {done} 個…",
+  rescue_done: "復旧用 ZIP を保存しました。開いて中身をすべてフォルダー「{folder}」にコピーすると（確認されたらフォルダーを統合）、統合が完了します。",
+  rescue_partial: "注意：{n} 個のファイルは今回も読み込めず、ZIP に含まれていません：{list}",
+  rescue_failed: "復旧用 ZIP を作成できませんでした：{err}",
+  rescue_zip_name: "{folder} - 不足ファイル",
+  rescue_readme_name: "はじめにお読みください - 復旧ファイル.txt",
+  rescue_readme: "これらのファイルはフォルダー「{folder}」に保存された統合結果の一部ですが、種類（.exe や .apk など）が危険な可能性があるため、ブラウザーがそこへの書き込みを許可しませんでした。\r\n\r\n統合を完了するには、この ZIP の中身をすべてフォルダー「{folder}」にコピーしてください（確認されたらフォルダーを統合）。各ファイルが元の場所に入り、チャットのリンクも機能します。\r\n\r\n送信者を信頼できる場合にのみ開いてください。このテキストファイルは削除してかまいません。",
   stage_zipping: "ZIP を作成中…",
-  warn_media_unreadable: "{name} を読み込めませんでした（{size}、{err}）。ZIP には含まれず、リンクは切れた状態になります。通常はウイルス対策ソフトがそのファイルをブロックしていることが原因です。",
   zip_btn: "ZIP を作成"
 },
 hi: {
@@ -1393,8 +1504,6 @@ hi: {
   res_summary: "{pages} पेज में {msgs} संदेश",
   res_written: "सीधे आपके फ़ोल्डर में लिखा गया। देखने के लिए messages.html खोलें।",
   stage_scan: "{name} स्कैन हो रहा है…", stage_merge: "संदेश मिलाए जा रहे हैं…",
-  warn_media_skipped: "{name} कॉपी नहीं हो सकी: ब्राउज़र ने लिखने से रोक दिया। इसका लिंक टूटा रहेगा।",
-  warn_media_skipped_total: "{n} फ़ाइलें कॉपी नहीं हुईं, लेकिन बाकी विलय पूरा हो गया।",
   stage_media: "मीडिया कॉपी हो रहा है · {n} फ़ाइलें…", stage_write: "पेज लिखे जा रहे हैं…",
   stage_enhance: "{name} बेहतर बनाया जा रहा है…", stage_restore: "{name} बहाल हो रहा है…",
   stage_working: "प्रोसेस हो रहा है…", stage_reading: "एक्सपोर्ट पढ़े जा रहे हैं…", stage_saving: "आपके फ़ोल्डर में सहेजा जा रहा है…",
@@ -1434,8 +1543,20 @@ hi: {
   stage_zip_media: "ZIP में मीडिया जोड़ा जा रहा है · {n} फ़ाइलें · ~{total} में से {done}…",
   stage_zip_index: "ZIP इंडेक्स लिखा जा रहा है ({n} फ़ाइलें)…",
   stage_zip_verify: "Chrome सहेजने से पहले ZIP ({size}) की जाँच कर रहा है। बड़ी फ़ाइलों में इसमें कई मिनट लग सकते हैं — टैब बंद न करें।",
+  stage_benchmark: "एक साथ कितनी फ़ाइलें कॉपी करनी हैं, यह तय करने के लिए गंतव्य फ़ोल्डर की गति मापी जा रही है…",
+  warn_group_blocked: "{n} फ़ाइलें जिन्हें ब्राउज़र ने फ़ोल्डर में लिखने नहीं दिया (.exe या .apk जैसे प्रकार)। पूरा होने पर आप इन्हें अलग ZIP में डाउनलोड कर सकेंगे। सूची देखने के लिए क्लिक करें।",
+  warn_group_unreadable: "{n} फ़ाइलें पढ़ी नहीं जा सकीं (आमतौर पर एंटीवायरस के कारण) और ZIP में नहीं हैं। सूची देखने के लिए क्लिक करें।",
+  rescue_text: "फ़ोल्डर “{folder}” में {n} फ़ाइलें ({size}) नहीं हैं: ब्राउज़र ने उन्हें वहाँ लिखने नहीं दिया, पर ZIP के अंदर लिखने देता है। यह बचाव ZIP डाउनलोड करें, इसे खोलें और इसकी सारी सामग्री फ़ोल्डर “{folder}” के अंदर कॉपी करें; पूछे जाने पर फ़ोल्डर मर्ज करें। हर फ़ाइल अपनी जगह पहुँचेगी और उसके लिंक काम करेंगे।",
+  rescue_btn: "छूटी फ़ाइलों वाला ZIP डाउनलोड करें",
+  rescue_btn_again: "ZIP फिर से डाउनलोड करें",
+  rescue_progress: "बचाव ZIP बनाया जा रहा है · {n} में से {done} फ़ाइलें…",
+  rescue_done: "बचाव ZIP सहेजा गया। विलय पूरा करने के लिए इसे खोलें और इसकी सारी सामग्री फ़ोल्डर “{folder}” के अंदर कॉपी करें (पूछे जाने पर फ़ोल्डर मर्ज करें)।",
+  rescue_partial: "ध्यान दें: {n} फ़ाइलें अब भी पढ़ी नहीं जा सकीं और ZIP में नहीं हैं: {list}",
+  rescue_failed: "बचाव ZIP नहीं बनाया जा सका: {err}",
+  rescue_zip_name: "{folder} - छूटी फ़ाइलें",
+  rescue_readme_name: "पढ़ें - बचाई गई फ़ाइलें.txt",
+  rescue_readme: "ये फ़ाइलें फ़ोल्डर “{folder}” में सहेजे गए विलय का हिस्सा हैं, लेकिन ब्राउज़र ने उन्हें वहाँ लिखने नहीं दिया क्योंकि उनका प्रकार (जैसे .exe या .apk) खतरनाक हो सकता है।\r\n\r\nविलय पूरा करने के लिए इस ZIP की सारी सामग्री फ़ोल्डर “{folder}” के अंदर कॉपी करें; पूछे जाने पर फ़ोल्डर मर्ज करें। हर फ़ाइल अपनी जगह पहुँचेगी और चैट के लिंक काम करेंगे।\r\n\r\nइन्हें तभी खोलें जब आपको भेजने वाले पर भरोसा हो। यह टेक्स्ट फ़ाइल आप हटा सकते हैं।",
   stage_zipping: "ZIP बनाई जा रही है…",
-  warn_media_unreadable: "{name} ({size}, {err}) पढ़ी नहीं जा सकी: यह ZIP में शामिल नहीं होगी और इसका लिंक टूट जाएगा। आमतौर पर इसकी वजह कोई एंटीवायरस होता है जो उस फ़ाइल को ब्लॉक करता है।",
   zip_btn: "ZIP बनाएँ"
 },
 ar: {
@@ -1492,8 +1613,6 @@ ar: {
   res_summary: "{msgs} رسالة في {pages} صفحة",
   res_written: "كُتب مباشرة في مجلدك. افتح messages.html لعرضه.",
   stage_scan: "جارٍ فحص {name}…", stage_merge: "جارٍ دمج الرسائل…",
-  warn_media_skipped: "تعذّر نسخ {name}: حظر المتصفح الكتابة. سيبقى الرابط معطّلًا.",
-  warn_media_skipped_total: "لم يُنسخ {n} من الملفات، لكن بقية عملية الدمج اكتملت.",
   stage_media: "جارٍ نسخ الوسائط · {n} ملفًا…", stage_write: "جارٍ كتابة الصفحات…",
   stage_enhance: "جارٍ تحسين {name}…", stage_restore: "جارٍ استعادة {name}…",
   stage_working: "جارٍ المعالجة…", stage_reading: "جارٍ قراءة التصديرات…", stage_saving: "جارٍ الحفظ في مجلدك…",
@@ -1533,8 +1652,20 @@ ar: {
   stage_zip_media: "جارٍ إضافة الوسائط إلى ZIP · {n} ملف · {done} من ~{total}…",
   stage_zip_index: "جارٍ كتابة فهرس ZIP ({n} ملف)…",
   stage_zip_verify: "يتحقق Chrome من ملف ZIP ({size}) قبل حفظه. قد يستغرق ذلك عدة دقائق مع الملفات الكبيرة، فلا تغلق علامة التبويب.",
+  stage_benchmark: "جارٍ قياس سرعة مجلد الوجهة لضبط عدد الملفات التي تُنسخ في وقت واحد…",
+  warn_group_blocked: "{n} ملف لم يسمح المتصفح بكتابتها في المجلد (أنواع مثل .exe أو .apk). عند الانتهاء يمكنك تنزيلها في ملف ZIP منفصل. انقر لعرض القائمة.",
+  warn_group_unreadable: "تعذّرت قراءة {n} ملف (غالبًا بسبب برنامج مكافحة فيروسات) وهي غير موجودة في ZIP. انقر لعرض القائمة.",
+  rescue_text: "ينقص المجلد «{folder}» {n} ملف ({size}): لم يسمح المتصفح بكتابتها هناك، لكنه يسمح بوضعها داخل ZIP. نزّل ملف ZIP الإنقاذ هذا، وافتحه وانسخ كل محتواه إلى داخل المجلد «{folder}»، مع دمج المجلدات إذا سُئلت. سيعود كل ملف إلى مكانه وستعمل روابطه.",
+  rescue_btn: "تنزيل ZIP بالملفات الناقصة",
+  rescue_btn_again: "تنزيل ZIP مرة أخرى",
+  rescue_progress: "جارٍ إنشاء ZIP الإنقاذ · {done} من {n} ملف…",
+  rescue_done: "حُفظ ZIP الإنقاذ. افتحه وانسخ كل محتواه إلى داخل المجلد «{folder}»، مع دمج المجلدات إذا سُئلت، لإكمال الدمج.",
+  rescue_partial: "تنبيه: تعذّرت قراءة {n} ملف هذه المرة أيضًا وهي غير موجودة في ZIP: {list}",
+  rescue_failed: "تعذّر إنشاء ZIP الإنقاذ: {err}",
+  rescue_zip_name: "{folder} - الملفات الناقصة",
+  rescue_readme_name: "اقرأني - الملفات المستعادة.txt",
+  rescue_readme: "هذه الملفات جزء من الدمج المحفوظ في المجلد «{folder}»، لكن المتصفح لم يسمح بكتابتها هناك لأن نوعها (مثل .exe أو .apk) قد يكون خطيرًا.\r\n\r\nلإكمال الدمج، انسخ كل محتوى ملف ZIP هذا إلى داخل المجلد «{folder}»، مع دمج المجلدات إذا سُئلت. سيعود كل ملف إلى مكانه وستعمل روابط المحادثة.\r\n\r\nلا تفتحها إلا إذا كنت تثق بمن أرسلها. يمكنك حذف هذا الملف النصي.",
   stage_zipping: "جارٍ إنشاء ZIP…",
-  warn_media_unreadable: "تعذّرت قراءة {name} ({size}، {err}): لن يُضمَّن في ZIP وسيتعطل رابطه. يحدث هذا عادةً بسبب برنامج مكافحة فيروسات يحظر ذلك الملف.",
   zip_btn: "إنشاء ZIP"
 }
 };
@@ -2389,6 +2520,10 @@ let cachedConcurrency = null;
 // concurrency ladder only while it still pays off.
 async function benchmarkConcurrency(outHandle) {
   if (cachedConcurrency) return cachedConcurrency;
+  // A few seconds of saturated small writes: say so, or the jump in CPU
+  // under a "merging" label looks alarming.
+  setStage(t("stage_benchmark"), null);
+  const tb0 = performance.now();
 
   const BENCH_DIR = "_tgx_bench";
   const payload = new Uint8Array(4096);
@@ -2427,6 +2562,7 @@ async function benchmarkConcurrency(outHandle) {
     // Best-of-2: a single run can be skewed by one unlucky slow SAF call.
     // Take the faster of two runs as this level's real-world rate.
     async function trial(concurrency) {
+      checkCancel();
       const a = await runBatches(concurrency);
       const b = await runBatches(concurrency);
       const rate = Math.max(a, b);
@@ -2451,8 +2587,10 @@ async function benchmarkConcurrency(outHandle) {
       }
     }
     cachedConcurrency = best;
-    dbg(`benchmark: elegido concurrency=${best} (${bestRate.toFixed(1)} archivos/s)`);
+    dbg(`benchmark: elegido concurrency=${best} (${bestRate.toFixed(1)} archivos/s) ` +
+        `en ${((performance.now() - tb0) / 1000).toFixed(1)}s`);
   } catch (e) {
+    if (e instanceof JobCancelled) throw e; // finally still removes the bench dir
     cachedConcurrency = 4; // benchmark itself failed: fall back conservatively
     dbg(`benchmark: FALLÓ (${e && e.message}) → fallback concurrency=4`);
   } finally {
@@ -2546,9 +2684,7 @@ async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAsset
         const where = target || rel + name;
         skipped.push(where);
         dbg(`zipMediaTree: NO añadido — ${where} (${size === null ? "?" : size + "B"}): ${e.name}: ${e.message}`);
-        pushWarn(t("warn_media_unreadable", {
-          name: where, size: size === null ? "?" : humanSize(size), err: e.name,
-        }));
+        pushWarnItem("unreadable", `${where} (${size === null ? "?" : humanSize(size)}, ${e.name})`);
         continue;
       }
       // Big videos legitimately take seconds; flag only poor throughput.
@@ -2567,7 +2703,6 @@ async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAsset
   const secs = (performance.now() - t0) / 1000;
   dbg(`zipMediaTree: terminado ${srcHandle.name} — ${added} archivos en ${secs.toFixed(1)}s, ` +
       `${skipped.length} omitidos` + (skipped.length ? `: ${skipped.join(", ")}` : ""));
-  if (skipped.length) pushWarn(t("warn_media_skipped_total", { n: skipped.length }));
 }
 
 async function zipBackPages(zipWriter, target, pageNames, rootPrefix) {
@@ -2580,7 +2715,9 @@ async function zipBackPages(zipWriter, target, pageNames, rootPrefix) {
 
 // blockedSink (optional array) receives the target path of every file whose
 // write failed, so a caller that can't accept gaps (copy mode) can fail.
-async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency, blockedSink) {
+// failedSink (optional array) receives { handle, target, size } for each of
+// them instead, so the fuse can offer them afterwards as a rescue ZIP.
+async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency, blockedSink, failedSink) {
   const renames = {};
   const blocked = [];
 
@@ -2640,6 +2777,7 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
     } catch (e) {
       blocked.push(target);
       if (blockedSink) blockedSink.push(target);
+      if (failedSink) failedSink.push({ handle: h, target, size: f.size });
       // An AbortError at close() is Safe Browsing's verdict: remember the
       // extension for this session so the next preflight catches it.
       if (e.name === "AbortError" && fileExt(name)) DANGEROUS_EXTENSIONS.add(fileExt(name));
@@ -2647,7 +2785,7 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
       // getFileHandle already created the entry; a failed write leaves a
       // 0-byte file behind that looks like a corrupt media file.
       try { await dst.removeEntry(tName); } catch (_) {}
-      if (!blockedSink) pushWarn(t("warn_media_skipped", { name: target }));
+      if (!blockedSink) pushWarnItem("blocked", `${target} (${humanSize(f.size)})`);
       return;
     }
     if (DEBUG) {
@@ -2659,30 +2797,37 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
     setStage(t("stage_media", { n: mediaDone }), null);
   }
 
+  // Waits for every copy it started before rethrowing: with Promise.all the
+  // first rejection (a cancel) returned at once while queued copies kept
+  // running and repainting the progress after the job had already ended.
+  // Queued ones bail out fast at their own checkCancel().
   async function walk(src, dst, rel) {
     const jobs = [];
-    for await (const [name, h] of src.entries()) {
-      if (h.kind === "directory") {
-        const isAsset = rel === "" && ASSETS.includes(name);
-        if (isAsset && !includeAssets) continue;
-        jobs.push(walk(h, await dst.getDirectoryHandle(name, { create: true }),
-                       rel + name + "/"));
-        continue;
+    try {
+      for await (const [name, h] of src.entries()) {
+        checkCancel();
+        if (h.kind === "directory") {
+          const isAsset = rel === "" && ASSETS.includes(name);
+          if (isAsset && !includeAssets) continue;
+          jobs.push(walk(h, await dst.getDirectoryHandle(name, { create: true }),
+                         rel + name + "/"));
+          continue;
+        }
+        if (rel === "") continue;
+        jobs.push(schedule(() => copyOneFile(h, dst, rel, name)));
       }
-      if (rel === "") continue;
-      jobs.push(schedule(() => copyOneFile(h, dst, rel, name)));
+    } finally {
+      const results = await Promise.allSettled(jobs);
+      const failed = results.find(r => r.status === "rejected");
+      if (failed) throw failed.reason;
     }
-    await Promise.all(jobs);
   }
 
   await walk(srcHandle, outHandle, "");
   const elapsed = (performance.now() - t0) / 1000;
   dbg(`copyMediaTree: terminado — ${filesCopied} archivos en ${elapsed.toFixed(1)}s ` +
       `(${(filesCopied / elapsed || 0).toFixed(1)} archivos/s, concurrency=${CONCURRENCY})`);
-  if (blocked.length) {
-    dbg(`copyMediaTree: ${blocked.length} archivos no copiados: ${blocked.join(", ")}`);
-    if (!blockedSink) pushWarn(t("warn_media_skipped_total", { n: blocked.length }));
-  }
+  if (blocked.length) dbg(`copyMediaTree: ${blocked.length} archivos no copiados: ${blocked.join(", ")}`);
   return renames;
 }
 
@@ -2738,6 +2883,8 @@ function showJob(title, cancellable) {
   $("job-bar").style.width = "0%";
   $("job-warns").innerHTML = "";
   $("job-result").classList.remove("show");
+  $("job-rescue").style.display = "none";
+  rescue = null;
   document.querySelectorAll(".btn.filled").forEach(b => b.disabled = true);
   $("job").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
@@ -2776,6 +2923,26 @@ function pushWarn(text) {
   div.innerHTML = '<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg><span></span>';
   div.querySelector("span").textContent = text;
   $("job-warns").appendChild(div);
+}
+// Per-file warnings go into one collapsible group per kind; its summary
+// ("warn_group_<kind>") carries the running count and the explanation.
+const warnGroups = {};
+function pushWarnItem(kind, text) {
+  dbg(`aviso (${kind}): ${text}`);
+  let g = warnGroups[kind];
+  if (!g || !g.el.isConnected) {
+    const el = document.createElement("details");
+    el.className = "warn-item";
+    el.innerHTML = '<summary><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>' +
+      '<span></span></summary><ul class="warn-list"></ul>';
+    $("job-warns").appendChild(el);
+    g = warnGroups[kind] = { el, n: 0 };
+  }
+  g.n++;
+  g.el.querySelector("summary span").textContent = t("warn_group_" + kind, { n: g.n });
+  const li = document.createElement("li");
+  li.textContent = text;
+  g.el.querySelector(".warn-list").appendChild(li);
 }
 function onPyProgress(kind, payloadJson) {
   const p = JSON.parse(payloadJson);
@@ -3045,10 +3212,11 @@ async function runFuse() {
     mediaDone = 0;
     const maps = {};
     const written = new Map();
+    const failed = [];
     const concurrency = await benchmarkConcurrency(out);
     for (let i = 0; i < state.exports.length; i++) {
       maps["/work/ex" + i] = await copyMediaTree(
-        state.exports[i].handle, out, written, i === 0, concurrency);
+        state.exports[i].handle, out, written, i === 0, concurrency, null, failed);
     }
     setStage(t("stage_reading"), null);
     for (let i = 0; i < state.exports.length; i++) {
@@ -3066,9 +3234,81 @@ async function runFuse() {
     setStage(t("stage_saving"), null);
     await writeBackPages("/out", out, res.pages);
     endJob(true, res);
+    if (failed.length) offerRescue(out.name, failed);
   } catch (e) {
     if (e instanceof JobCancelled) endCancelled(t("cancel_partial_dir"));
     else endJob(false, null, pyError(e));
+  }
+}
+
+// Files Chrome refused to write into the output folder (Safe Browsing) can
+// still travel inside a .zip. The fuse keeps their source handles and, once
+// it's done, offers a ZIP holding just those files at their final paths:
+// extracting it into the output folder fills the gaps, so no link stays
+// dead. It's built on click because the save dialog needs a user gesture.
+let rescue = null;
+function offerRescue(folder, files) {
+  const total = files.reduce((s, f) => s + f.size, 0);
+  rescue = { folder, files };
+  dbg(`rescate: ${files.length} archivo(s), ${humanSize(total)} disponibles para ZIP aparte`);
+  $("job-rescue-text").textContent = t("rescue_text", { n: files.length, size: humanSize(total), folder });
+  const btn = $("job-rescue-btn");
+  btn.textContent = t("rescue_btn");
+  btn.disabled = false;
+  $("job-rescue").style.display = "";
+}
+
+async function downloadRescueZip() {
+  if (!rescue || jobRunning) return;
+  const { folder, files } = rescue;
+  let fh;
+  try {
+    fh = await showSaveFilePicker({
+      suggestedName: t("rescue_zip_name", { folder }) + ".zip",
+      types: [{ description: "ZIP", accept: { "application/zip": [".zip"] } }],
+    });
+  } catch (e) {
+    dbg(`rescate: selector de guardado cerrado/fallido — ${e.name}: ${e.message}`);
+    return;
+  }
+  const btn = $("job-rescue-btn");
+  const text = $("job-rescue-text");
+  btn.disabled = true;
+  jobRunning = true; // closing the tab now would leave a truncated ZIP
+  const t0 = performance.now();
+  let writable;
+  const missing = [];
+  try {
+    writable = await fh.createWritable();
+    const zip = new ZipWriter(writable);
+    // No root folder: the entries mirror the output folder's own layout.
+    await zip.addFile(t("rescue_readme_name"), new TextEncoder().encode(t("rescue_readme", { folder })));
+    for (let i = 0; i < files.length; i++) {
+      text.textContent = t("rescue_progress", { done: i, n: files.length });
+      try {
+        await zip.addFile(files[i].target, await files[i].handle.getFile());
+      } catch (e) {
+        missing.push(files[i].target);
+        dbg(`rescate: NO añadido — ${files[i].target}: ${e.name}: ${e.message}`);
+      }
+    }
+    await zip.writeDirectory();
+    text.textContent = t("stage_zip_verify", { size: humanSize(zip.offset) });
+    await zip.close();
+    dbg(`rescate: ZIP guardado en ${((performance.now() - t0) / 1000).toFixed(1)}s — ` +
+        `${files.length - missing.length}/${files.length} archivos, ${humanSize(zip.offset)}`);
+    text.textContent = t("rescue_done", { folder }) +
+      (missing.length ? " " + t("rescue_partial", { n: missing.length, list: missing.join(", ") }) : "");
+    btn.textContent = t("rescue_btn_again");
+    btn.disabled = false;
+  } catch (e) {
+    dbg(`rescate: FALLÓ — ${e.name}: ${e.message}` + (e.stack ? `\n${e.stack}` : ""));
+    if (writable) { try { await writable.abort(); } catch (_) {} }
+    try { if (fh.remove) await fh.remove(); } catch (_) {}
+    text.textContent = t("rescue_failed", { err: pyError(e) });
+    btn.disabled = false;
+  } finally {
+    jobRunning = false;
   }
 }
 

@@ -25,7 +25,7 @@ Requires a Chromium-based browser (Chrome, Edge, Opera) because of the File Syst
 Before merging (or creating a copy, see below) the web version analyzes the exports and warns you about two things:
 
 - **If the result is over 4 GB**, it recommends the desktop version, which is faster and more direct with large exports; you can still carry on.
-- **If there are files Chrome may block** when writing them into a folder (executables, `.apk`, scripts… that someone sent in the chat), it offers to produce the result as a **ZIP**, which Chrome doesn't block. When merging you can also carry on without a ZIP, leaving those files out; when creating a copy you can't, because a copy with missing files isn't a copy. The ZIP is streamed straight to disk, so it works with exports of tens of GB.
+- **If there are files Chrome may block** when writing them into a folder (executables, `.apk`, scripts… that someone sent in the chat), it offers to produce the result as a **ZIP**, which Chrome doesn't block. When merging you can also carry on without a ZIP: any files Chrome blocks are listed in a collapsible panel and, once it finishes, you can download them in a **rescue ZIP** with the same folder layout; copying its contents into the merge folder leaves no broken links. Copies don't offer this, because a copy with missing files isn't a copy. The ZIP is streamed straight to disk, so it works with exports of tens of GB.
 
 Long operations can be **cancelled** from the progress card itself. While one is running, don't reload or close the tab or the browser: the operation would be cut off halfway (the browser asks you to confirm if you try).
 
