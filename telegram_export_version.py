@@ -6,4 +6,4 @@ versión, edita solo esta constante — build_aio.py, telegram_export_studio.py
 y el nombre de los artefactos de releases/ la leen de aquí.
 """
 
-VERSION = "1.4.1"
+VERSION = "1.4.2"
