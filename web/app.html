@@ -500,6 +500,7 @@ es: {
   stage_enhance: "Mejorando {name}…", stage_restore: "Restaurando {name}…",
   stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…",
   confirm_dangerous_zip: "Se han detectado archivos con extensiones que tu navegador puede bloquear al fusionar ({list}). Para completar la operación con seguridad, se puede generar un ZIP que podrás descargar bajo tu propio criterio. Si continúas sin ZIP, los archivos que el navegador bloquee se omitirán.",
+  warn_media_unreadable: "No se pudo leer {name} ({size}, {err}): se omite del ZIP y su enlace quedará roto. Suele deberse al antivirus o a un archivo demasiado grande para el navegador.",
   dangerous_h: "Archivos que el navegador puede bloquear",
   zip_btn: "Generar ZIP", nozip_btn: "Continuar sin ZIP",
   stage_listing: "Listando archivos de los exports · {n}…",
@@ -576,6 +577,7 @@ en: {
   stage_enhance: "Enhancing {name}…", stage_restore: "Restoring {name}…",
   stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…",
   confirm_dangerous_zip: "Files with extensions your browser may block during the merge were detected ({list}). To complete the operation safely, a ZIP can be generated for you to download at your own discretion. If you continue without a ZIP, any file the browser blocks will be skipped.",
+  warn_media_unreadable: "Could not read {name} ({size}, {err}): it is left out of the ZIP and its link will be broken. Usually caused by antivirus software or a file too large for the browser.",
   dangerous_h: "Files the browser may block",
   zip_btn: "Generate ZIP", nozip_btn: "Continue without ZIP",
   stage_listing: "Listing export files · {n}…",
@@ -1499,7 +1501,10 @@ async function scanExports(handles) {
       if (throttled()) setStage(t("stage_listing", { n: files.length }), null);
     }
   }
+  const tList = performance.now();
   for (const h of handles) await list(h, "");
+  dbg(`scanExports: ${files.length} archivos listados en ${((performance.now() - tList) / 1000).toFixed(1)}s ` +
+      `(concurrency=${SCAN_CONCURRENCY}, android=${isAndroid})`);
 
   const seen = new Set();
   let totalSize = 0, done = 0, next = 0;
@@ -1517,8 +1522,11 @@ async function scanExports(handles) {
       if (throttled()) paint();
     }
   }
+  const tSize = performance.now();
   await Promise.all(Array.from({ length: Math.min(SCAN_CONCURRENCY, files.length) }, worker));
   paint();
+  dbg(`scanExports: tamaños en ${((performance.now() - tSize) / 1000).toFixed(1)}s — ` +
+      `~${humanSize(totalSize)} tras deduplicar, peligrosas: ${[...dangerous].join(", ") || "ninguna"}`);
   return { dangerous, totalSize };
 }
 
@@ -1848,6 +1856,10 @@ function resolveTarget(written, renames, rel, name, size, isAsset) {
 // fallback: a ZipWriter has one growing byte sequence, so entries must be
 // added one at a time rather than with copyMediaTree's concurrent writes.
 async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAssets, rootPrefix) {
+  const skipped = [];
+  const t0 = performance.now();
+  let added = 0;
+  dbg(`zipMediaTree: arrancando con ${srcHandle.name} (includeAssets=${includeAssets})`);
   async function walk(src, rel) {
     for await (const [name, h] of src.entries()) {
       if (h.kind === "directory") {
@@ -1858,15 +1870,42 @@ async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAsset
       }
       if (rel === "") continue;
       const isAsset = ASSETS.includes(rel.split("/")[0]);
-      const f = await h.getFile();
-      const target = resolveTarget(written, renames, rel, name, f.size, isAsset);
-      if (target === null) continue;
-      await zipWriter.addFile(rootPrefix + target, f);
+      let size = null, target = null;
+      const tf0 = performance.now();
+      // A source file can be unreadable even though listing and getFile()
+      // (metadata only) succeeded — e.g. an antivirus denying the open of
+      // the very .exe that sent us down this path, or a file too large to
+      // read into one ArrayBuffer. addFile reads the whole file before
+      // writing any byte of the entry, so a failure here leaves the archive
+      // consistent: skip the file and warn, like copyOneFile does.
+      try {
+        const f = await h.getFile();
+        size = f.size;
+        target = resolveTarget(written, renames, rel, name, f.size, isAsset);
+        if (target === null) continue;
+        await zipWriter.addFile(rootPrefix + target, f);
+      } catch (e) {
+        if (target !== null) written.delete(target); // let an identical copy in a later export fill in
+        const where = target || rel + name;
+        skipped.push(where);
+        dbg(`zipMediaTree: NO añadido — ${where} (${size === null ? "?" : size + "B"}): ${e.name}: ${e.message}`);
+        pushWarn(t("warn_media_unreadable", {
+          name: where, size: size === null ? "?" : humanSize(size), err: e.name,
+        }));
+        continue;
+      }
+      const ms = performance.now() - tf0;
+      if (ms > 500) dbg(`zipMediaTree: archivo lento — ${target} (${size}B) = ${ms.toFixed(0)}ms`);
+      added++;
       mediaDone++;
       setStage(t("stage_media", { n: mediaDone }), null);
     }
   }
   await walk(srcHandle, "");
+  dbg(`zipMediaTree: terminado ${srcHandle.name} — ${added} archivos en ` +
+      `${((performance.now() - t0) / 1000).toFixed(1)}s, ${skipped.length} omitidos` +
+      (skipped.length ? `: ${skipped.join(", ")}` : ""));
+  if (skipped.length) pushWarn(t("warn_media_skipped_total", { n: skipped.length }));
 }
 
 async function zipBackPages(zipWriter, target, pageNames, rootPrefix) {
@@ -2024,6 +2063,7 @@ function onPyProgress(kind, payloadJson) {
            typeof p.frac === "number" ? p.frac : null);
 }
 function endJob(ok, res, errText, subText) {
+  if (!ok) dbg(`endJob: ERROR — ${errText}`);
   $("job-spin").style.display = "none";
   $("job-progress").classList.remove("indet");
   $("job-bar").style.width = "100%";
@@ -2157,6 +2197,7 @@ async function runFuse() {
       { id: "nozip", label: t("nozip_btn"), style: "tonal" },
       cancelOpt,
     ]);
+    dbg(`runFuse: extensiones peligrosas (${list}) → elección "${c}"`);
     if (c === "cancel") return;
     if (c === "zip") return runFuseAsZip();
     // "nozip": normal path below; copyOneFile still skips (and warns about)
@@ -2167,6 +2208,7 @@ async function runFuse() {
   // and no prompt above supplied a fresh one, ask for it explicitly rather
   // than letting showDirectoryPicker fail silently.
   if (navigator.userActivation && !navigator.userActivation.isActive) {
+    dbg("runFuse: activación de usuario caducada tras el análisis → pido clic");
     const c = await askChoice(t("ready_h"), t("ready_text", { size: humanSize(totalSize) }), [
       { id: "go", label: t("pick_out_btn"), style: "filled" },
       cancelOpt,
@@ -2177,7 +2219,10 @@ async function runFuse() {
   let out;
   try {
     out = await showDirectoryPicker({ id: "tgx-out", mode: "readwrite" });
-  } catch (e) { return; }
+  } catch (e) {
+    dbg(`runFuse: selector de carpeta cerrado/fallido — ${e.name}: ${e.message}`);
+    return;
+  }
   for (const e of state.exports) {
     if (await out.isSameEntry(e.handle)) return snack("⚠ output = input");
   }
@@ -2223,10 +2268,14 @@ async function runFuseAsZip() {
       suggestedName: safeName + ".zip",
       types: [{ description: "ZIP", accept: { "application/zip": [".zip"] } }],
     });
-  } catch (e) { return; }
+  } catch (e) {
+    dbg(`runFuseAsZip: selector de guardado cerrado/fallido — ${e.name}: ${e.message}`);
+    return;
+  }
 
   showJob(t("job_fusing"));
   let writable;
+  let phase = "createWritable";
   try {
     mediaDone = 0;
     const maps = {};
@@ -2234,26 +2283,34 @@ async function runFuseAsZip() {
     writable = await fh.createWritable();
     const zip = new ZipWriter(writable);
     const root = safeName + "/";
+    phase = "media";
     for (let i = 0; i < state.exports.length; i++) {
       const exRenames = {};
       await zipMediaTree(state.exports[i].handle, zip, written, exRenames, i === 0, root);
       maps["/work/ex" + i] = exRenames;
     }
+    phase = "leer HTML";
     setStage(t("stage_reading"), null);
     for (let i = 0; i < state.exports.length; i++) {
       await loadHtmlsToFS(state.exports[i].handle, "/work/ex" + i);
     }
+    phase = "fusión (Python)";
     try { pyodide.FS.mkdirTree("/out"); } catch (_) {}
     const paths = state.exports.map((_, i) => "/work/ex" + i);
     const res = JSON.parse(glue.run_fuse(
       JSON.stringify(paths), "/out",
       chipValue("fuse-chips", "fuse-custom-n", "fuse-custom-u"),
       state.forceMix, JSON.stringify(maps)));
+    phase = "páginas al ZIP";
     setStage(t("stage_zipping"), null);
     await zipBackPages(zip, "/out", res.pages, root);
+    phase = "cerrar ZIP";
     await zip.finish(); // writes the central directory and closes `writable`
+    dbg(`runFuseAsZip: ZIP cerrado — ${zip.entries.length} entradas, ${humanSize(zip.offset)}`);
     endJob(true, res, null, t("res_written_zip"));
   } catch (e) {
+    dbg(`runFuseAsZip: FALLÓ en fase "${phase}" — ${e.name}: ${e.message}` +
+        (e.stack ? `\n${e.stack}` : ""));
     if (writable) { try { await writable.abort(); } catch (_) {} }
     endJob(false, null, pyError(e));
   }
