@@ -182,6 +182,8 @@ select.unit { flex: none; width: 84px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .job-head b { flex: 1; font-size: 15px; font-weight: 600; }
 .job-head .pct { font-size: 13.5px; font-weight: 700; color: var(--primary-strong); }
+.job-head .btn { padding: 6px 14px; font-size: 13px; }
+.job-note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
 .progress { height: 6px; border-radius: 6px; overflow: hidden;
   background: var(--primary-soft); margin-bottom: 4px; }
 .progress i { display: block; height: 100%; width: 0%;
@@ -336,6 +338,14 @@ select.unit { flex: none; width: 84px; }
           </div>
         </div>
       </div>
+      <div class="card">
+        <h2 data-i18n="dest_h"></h2>
+        <div class="seg2" id="compact-dest">
+          <button data-dest="inplace" class="active" data-i18n="dest_inplace"></button>
+          <button data-dest="copy" data-i18n="dest_copy"></button>
+        </div>
+        <div class="hint" style="margin-top:12px" id="compact-dest-hint"></div>
+      </div>
       <button class="btn filled wide" id="compact-btn" onclick="runCompact()" disabled>
         <svg viewBox="0 0 24 24"><path d="M7.41 18.59 8.83 20 12 16.83 15.17 20l1.41-1.41L12 14l-4.59 4.59zm9.18-13.18L15.17 4 12 7.17 8.83 4 7.41 5.41 12 10l4.59-4.59z"/></svg>
         <span data-i18n="compact_btn"></span>
@@ -387,6 +397,14 @@ select.unit { flex: none; width: 84px; }
         <div class="switchrow"><div class="sw-txt"><b data-i18n="feat_note"></b><span data-i18n="feat_note_d"></span></div>
           <label class="switch"><input type="checkbox" id="opt-note" checked><i></i></label></div>
       </div>
+      <div class="card">
+        <h2 data-i18n="dest_h"></h2>
+        <div class="seg2" id="enhance-dest">
+          <button data-dest="inplace" class="active" data-i18n="dest_inplace"></button>
+          <button data-dest="copy" data-i18n="dest_copy"></button>
+        </div>
+        <div class="hint" style="margin-top:12px" id="enhance-dest-hint"></div>
+      </div>
       <div class="action-row">
         <button class="btn filled" id="enhance-btn" onclick="runEnhance()" disabled>
           <svg viewBox="0 0 24 24"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7z"/></svg>
@@ -413,8 +431,10 @@ select.unit { flex: none; width: 84px; }
         <div class="spinner" id="job-spin"></div>
         <b id="job-stage"></b>
         <span class="pct" id="job-pct"></span>
+        <button class="btn danger-tonal" id="job-cancel" style="display:none" onclick="cancelJob()"></button>
       </div>
       <div class="progress indet" id="job-progress"><i id="job-bar"></i></div>
+      <p class="job-note" id="job-note" style="display:none"></p>
       <div class="warns" id="job-warns"></div>
       <div class="result" id="job-result">
         <div class="ricon" id="job-ricon"></div>
@@ -500,18 +520,33 @@ es: {
   stage_enhance: "Mejorando {name}…", stage_restore: "Restaurando {name}…",
   stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…",
   confirm_dangerous_zip: "Se han detectado archivos con extensiones que tu navegador puede bloquear al fusionar ({list}). Para completar la operación con seguridad, se puede generar un ZIP que podrás descargar bajo tu propio criterio. Si continúas sin ZIP, los archivos que el navegador bloquee se omitirán.",
-  warn_media_unreadable: "No se pudo leer {name} ({size}, {err}): se omite del ZIP y su enlace quedará roto. Suele deberse al antivirus o a un archivo demasiado grande para el navegador.",
+  warn_media_unreadable: "No se pudo leer {name} ({size}, {err}): se omite del ZIP y su enlace quedará roto. Suele deberse a un antivirus que bloquea ese archivo.",
+  stage_zip_media: "Añadiendo media al ZIP · {n} archivos · {done} de ~{total}…",
+  job_cancel: "Cancelar", job_cancelling: "Cancelando…", job_cancelled: "Operación cancelada",
+  job_keep_open: "No recargues ni cierres esta pestaña ni el navegador hasta que termine: la operación se interrumpiría y el resultado quedaría incompleto.",
+  cancel_nothing_written: "No se ha escrito nada.",
+  cancel_partial_dir: "La carpeta de destino puede contener archivos a medio fusionar; bórrala o usa otra vacía al repetir la fusión.",
+  cancel_zip_removed: "El ZIP incompleto se ha descartado.",
+  dest_h: "Resultado", dest_inplace: "Modificar el original", dest_copy: "Crear una copia",
+  dest_inplace_hint: "Se reescriben los messages.html del propio export. Es rápido, pero la versión anterior no se conserva.",
+  dest_copy_hint: "Se crea una copia completa del export, con toda su media, y el cambio se aplica solo a la copia; el original no se toca. Si el export contiene archivos que el navegador bloquea al escribirlos en una carpeta, la copia se genera como ZIP para que salga completa. Tarda más cuanta más media tenga el chat.",
+  confirm_dangerous_zip_copy: "El export contiene archivos con extensiones que tu navegador bloquea al escribirlos en una carpeta ({list}). Para que la copia salga completa, se generará como un ZIP que podrás descomprimir después.",
+  res_written_zip_copy: "ZIP guardado. Descomprímelo para ver la copia; el export original no se ha modificado.",
+  copy_blocked_retry: "El navegador bloqueó {n} archivo(s) que no estaban previstos ({list}), así que la copia incompleta se ha eliminado. Vuelve a intentarlo: esta vez la copia se generará como ZIP.",
+  copy_inside_source: "Elige una carpeta que no esté dentro del propio export.",
+  res_written_copy: "Copia creada en la carpeta «{name}». El export original no se ha modificado.",
+  cancel_copy_removed: "La copia incompleta se ha eliminado; el export original no se ha modificado.",
   dangerous_h: "Archivos que el navegador puede bloquear",
   zip_btn: "Generar ZIP", nozip_btn: "Continuar sin ZIP",
   stage_listing: "Listando archivos de los exports · {n}…",
-  stage_analyze: "Analizando exports · {n}/{total} archivos · ~{size} tras la fusión…",
+  stage_analyze: "Analizando · {n}/{total} archivos · resultado ~{size}…",
   ready_h: "Análisis completado",
-  ready_text: "Tamaño estimado del resultado: ~{size}. Elige la carpeta de destino para empezar la fusión.",
+  ready_text: "Tamaño estimado del resultado: ~{size}. Elige la carpeta de destino para empezar.",
   pick_out_btn: "Elegir carpeta de destino",
   stage_zipping: "Generando el ZIP…",
   res_written_zip: "ZIP guardado. Descomprímelo para ver tu chat fusionado.",
   size_warn_h: "Export considerable",
-  size_warn_text: "El resultado de la fusión ocupará unos {size} (sin contar los archivos repetidos entre exports). En la web puede tardar un poco; para un resultado más rápido y directo se recomienda la versión de escritorio.",
+  size_warn_text: "El resultado ocupará unos {size} (sin contar archivos repetidos). En la web puede tardar un poco; para un resultado más rápido y directo se recomienda la versión de escritorio.",
   size_warn_continue: "Continuar de todas formas",
   size_warn_cancel: "Cancelar"
 },
@@ -577,18 +612,33 @@ en: {
   stage_enhance: "Enhancing {name}…", stage_restore: "Restoring {name}…",
   stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…",
   confirm_dangerous_zip: "Files with extensions your browser may block during the merge were detected ({list}). To complete the operation safely, a ZIP can be generated for you to download at your own discretion. If you continue without a ZIP, any file the browser blocks will be skipped.",
-  warn_media_unreadable: "Could not read {name} ({size}, {err}): it is left out of the ZIP and its link will be broken. Usually caused by antivirus software or a file too large for the browser.",
+  warn_media_unreadable: "Could not read {name} ({size}, {err}): it is left out of the ZIP and its link will be broken. Usually caused by antivirus software blocking that file.",
+  stage_zip_media: "Adding media to the ZIP · {n} files · {done} of ~{total}…",
+  job_cancel: "Cancel", job_cancelling: "Cancelling…", job_cancelled: "Operation cancelled",
+  job_keep_open: "Don't reload or close this tab or the browser until it finishes: the operation would be interrupted and the result left incomplete.",
+  cancel_nothing_written: "Nothing was written.",
+  cancel_partial_dir: "The destination folder may contain half-merged files; delete it or use another empty folder when merging again.",
+  cancel_zip_removed: "The incomplete ZIP was discarded.",
+  dest_h: "Result", dest_inplace: "Modify the original", dest_copy: "Create a copy",
+  dest_inplace_hint: "The export's own messages.html files are rewritten. Fast, but the previous version is not kept.",
+  dest_copy_hint: "A full copy of the export, with all its media, is created and the change is applied to the copy only; the original is left untouched. If the export holds files the browser blocks when writing them into a folder, the copy is generated as a ZIP so it comes out complete. The more media the chat has, the longer it takes.",
+  confirm_dangerous_zip_copy: "The export contains files with extensions your browser blocks when writing them into a folder ({list}). So that the copy comes out complete, it will be generated as a ZIP you can unzip afterwards.",
+  res_written_zip_copy: "ZIP saved. Unzip it to see the copy; the original export was not modified.",
+  copy_blocked_retry: "The browser blocked {n} unexpected file(s) ({list}), so the incomplete copy was removed. Try again: this time the copy will be generated as a ZIP.",
+  copy_inside_source: "Choose a folder that is not inside the export itself.",
+  res_written_copy: "Copy created in the “{name}” folder. The original export was not modified.",
+  cancel_copy_removed: "The incomplete copy was removed; the original export was not modified.",
   dangerous_h: "Files the browser may block",
   zip_btn: "Generate ZIP", nozip_btn: "Continue without ZIP",
   stage_listing: "Listing export files · {n}…",
-  stage_analyze: "Analyzing exports · {n}/{total} files · ~{size} after merging…",
+  stage_analyze: "Analyzing · {n}/{total} files · result ~{size}…",
   ready_h: "Analysis complete",
-  ready_text: "Estimated result size: ~{size}. Choose the destination folder to start merging.",
+  ready_text: "Estimated result size: ~{size}. Choose the destination folder to start.",
   pick_out_btn: "Choose destination folder",
   stage_zipping: "Building the ZIP…",
   res_written_zip: "ZIP saved. Unzip it to see your merged chat.",
   size_warn_h: "Large export",
-  size_warn_text: "The merged result will be about {size} (not counting files repeated across exports). On the web this may take a while; for a faster, more direct result the desktop version is recommended.",
+  size_warn_text: "The result will be about {size} (not counting repeated files). On the web this may take a while; for a faster, more direct result the desktop version is recommended.",
   size_warn_continue: "Continue anyway",
   size_warn_cancel: "Cancel"
 },
@@ -650,7 +700,44 @@ fr: {
   warn_media_skipped_total: "{n} fichier(s) n'ont pas été copiés, mais le reste de la fusion a abouti.",
   stage_media: "Copie des médias · {n} fichiers…", stage_write: "Écriture des pages…",
   stage_enhance: "Amélioration de {name}…", stage_restore: "Restauration de {name}…",
-  stage_working: "Traitement…", stage_reading: "Lecture des exports…", stage_saving: "Enregistrement dans votre dossier…"
+  stage_working: "Traitement…", stage_reading: "Lecture des exports…", stage_saving: "Enregistrement dans votre dossier…",
+  android_warn: "Vous êtes sur Android : ce processus est nettement lent à cause des limitations du système d'exploitation lui-même, pas de l'app. Pour les exports avec plusieurs fichiers, il est recommandé d'utiliser un ordinateur, même pour un petit chat.",
+  android_warn_link: "Plus de détails",
+  cancel_copy_removed: "La copie incomplète a été supprimée ; l'export d'origine n'a pas été modifié.",
+  cancel_nothing_written: "Rien n'a été écrit.",
+  cancel_partial_dir: "Le dossier de destination peut contenir des fichiers à moitié fusionnés ; supprimez-le ou utilisez un autre dossier vide pour relancer la fusion.",
+  cancel_zip_removed: "Le ZIP incomplet a été supprimé.",
+  confirm_dangerous_zip: "Des fichiers dont l'extension peut être bloquée par votre navigateur pendant la fusion ont été détectés ({list}). Pour terminer l'opération en toute sécurité, un ZIP peut être généré, à télécharger sous votre propre responsabilité. Si vous continuez sans ZIP, les fichiers bloqués par le navigateur seront ignorés.",
+  confirm_dangerous_zip_copy: "L'export contient des fichiers dont l'extension est bloquée par votre navigateur lors de l'écriture dans un dossier ({list}). Pour que la copie soit complète, elle sera générée sous forme de ZIP, à décompresser ensuite.",
+  copy_blocked_retry: "Le navigateur a bloqué {n} fichier(s) imprévu(s) ({list}), la copie incomplète a donc été supprimée. Réessayez : cette fois, la copie sera générée sous forme de ZIP.",
+  copy_inside_source: "Choisissez un dossier qui ne se trouve pas dans l'export lui-même.",
+  dangerous_h: "Fichiers que le navigateur peut bloquer",
+  dest_copy: "Créer une copie",
+  dest_copy_hint: "Une copie complète de l'export, avec tous ses médias, est créée et la modification ne s'applique qu'à la copie ; l'original reste intact. Si l'export contient des fichiers que le navigateur bloque lors de l'écriture dans un dossier, la copie est générée sous forme de ZIP pour être complète. Plus le chat contient de médias, plus cela prend de temps.",
+  dest_h: "Résultat",
+  dest_inplace: "Modifier l'original",
+  dest_inplace_hint: "Les fichiers messages.html de l'export lui-même sont réécrits. C'est rapide, mais la version précédente n'est pas conservée.",
+  job_cancel: "Annuler",
+  job_cancelled: "Opération annulée",
+  job_cancelling: "Annulation…",
+  job_keep_open: "Ne rechargez pas et ne fermez ni cet onglet ni le navigateur avant la fin : l'opération serait interrompue et le résultat incomplet.",
+  nozip_btn: "Continuer sans ZIP",
+  pick_out_btn: "Choisir le dossier de destination",
+  ready_h: "Analyse terminée",
+  ready_text: "Taille estimée du résultat : ~{size}. Choisissez le dossier de destination pour commencer.",
+  res_written_copy: "Copie créée dans le dossier « {name} ». L'export d'origine n'a pas été modifié.",
+  res_written_zip: "ZIP enregistré. Décompressez-le pour voir votre chat fusionné.",
+  res_written_zip_copy: "ZIP enregistré. Décompressez-le pour voir la copie ; l'export d'origine n'a pas été modifié.",
+  size_warn_cancel: "Annuler",
+  size_warn_continue: "Continuer quand même",
+  size_warn_h: "Export volumineux",
+  size_warn_text: "Le résultat fera environ {size} (sans compter les fichiers répétés). Sur le web, cela peut prendre du temps ; pour un résultat plus rapide et plus direct, la version de bureau est recommandée.",
+  stage_analyze: "Analyse · {n}/{total} fichiers · résultat ~{size}…",
+  stage_listing: "Liste des fichiers des exports · {n}…",
+  stage_zip_media: "Ajout des médias au ZIP · {n} fichiers · {done} sur ~{total}…",
+  stage_zipping: "Création du ZIP…",
+  warn_media_unreadable: "Impossible de lire {name} ({size}, {err}) : il est exclu du ZIP et son lien sera rompu. C'est généralement dû à un antivirus qui bloque ce fichier.",
+  zip_btn: "Générer le ZIP"
 },
 de: {
   cta_download: "Desktop-Version",
@@ -710,7 +797,44 @@ de: {
   warn_media_skipped_total: "{n} Datei(en) wurden nicht kopiert, der Rest der Zusammenführung war aber erfolgreich.",
   stage_media: "Medien werden kopiert · {n} Dateien…", stage_write: "Seiten werden geschrieben…",
   stage_enhance: "{name} wird verbessert…", stage_restore: "{name} wird wiederhergestellt…",
-  stage_working: "Verarbeitung…", stage_reading: "Exporte werden gelesen…", stage_saving: "Wird in deinem Ordner gespeichert…"
+  stage_working: "Verarbeitung…", stage_reading: "Exporte werden gelesen…", stage_saving: "Wird in deinem Ordner gespeichert…",
+  android_warn: "Du bist auf Android: Dieser Vorgang ist merklich langsam, wegen Einschränkungen des Betriebssystems selbst, nicht der App. Für Exporte mit mehreren Dateien wird ein Computer empfohlen, selbst bei kleinen Chats.",
+  android_warn_link: "Mehr Details",
+  cancel_copy_removed: "Die unvollständige Kopie wurde entfernt; der ursprüngliche Export wurde nicht verändert.",
+  cancel_nothing_written: "Es wurde nichts geschrieben.",
+  cancel_partial_dir: "Der Zielordner kann halb zusammengeführte Dateien enthalten; lösche ihn oder verwende beim erneuten Zusammenführen einen anderen leeren Ordner.",
+  cancel_zip_removed: "Das unvollständige ZIP wurde verworfen.",
+  confirm_dangerous_zip: "Es wurden Dateien mit Endungen gefunden, die dein Browser beim Zusammenführen blockieren kann ({list}). Um den Vorgang sicher abzuschließen, kann ein ZIP erstellt werden, das du auf eigene Verantwortung herunterlädst. Wenn du ohne ZIP fortfährst, werden vom Browser blockierte Dateien übersprungen.",
+  confirm_dangerous_zip_copy: "Der Export enthält Dateien mit Endungen, die dein Browser beim Schreiben in einen Ordner blockiert ({list}). Damit die Kopie vollständig ist, wird sie als ZIP erstellt, das du danach entpacken kannst.",
+  copy_blocked_retry: "Der Browser hat {n} unerwartete Datei(en) blockiert ({list}), daher wurde die unvollständige Kopie entfernt. Versuche es erneut: Diesmal wird die Kopie als ZIP erstellt.",
+  copy_inside_source: "Wähle einen Ordner, der nicht im Export selbst liegt.",
+  dangerous_h: "Dateien, die der Browser blockieren kann",
+  dest_copy: "Kopie erstellen",
+  dest_copy_hint: "Es wird eine vollständige Kopie des Exports mit allen Medien erstellt, und die Änderung wird nur auf die Kopie angewendet; das Original bleibt unverändert. Enthält der Export Dateien, die der Browser beim Schreiben in einen Ordner blockiert, wird die Kopie als ZIP erstellt, damit sie vollständig ist. Je mehr Medien der Chat hat, desto länger dauert es.",
+  dest_h: "Ergebnis",
+  dest_inplace: "Original ändern",
+  dest_inplace_hint: "Die messages.html-Dateien des Exports selbst werden neu geschrieben. Schnell, aber die vorherige Version wird nicht aufbewahrt.",
+  job_cancel: "Abbrechen",
+  job_cancelled: "Vorgang abgebrochen",
+  job_cancelling: "Wird abgebrochen…",
+  job_keep_open: "Lade diesen Tab nicht neu und schließe weder ihn noch den Browser, bis der Vorgang fertig ist: Er würde unterbrochen und das Ergebnis bliebe unvollständig.",
+  nozip_btn: "Ohne ZIP fortfahren",
+  pick_out_btn: "Zielordner wählen",
+  ready_h: "Analyse abgeschlossen",
+  ready_text: "Geschätzte Größe des Ergebnisses: ~{size}. Wähle den Zielordner, um zu beginnen.",
+  res_written_copy: "Kopie im Ordner „{name}“ erstellt. Der ursprüngliche Export wurde nicht verändert.",
+  res_written_zip: "ZIP gespeichert. Entpacke es, um deinen zusammengeführten Chat zu sehen.",
+  res_written_zip_copy: "ZIP gespeichert. Entpacke es, um die Kopie zu sehen; der ursprüngliche Export wurde nicht verändert.",
+  size_warn_cancel: "Abbrechen",
+  size_warn_continue: "Trotzdem fortfahren",
+  size_warn_h: "Großer Export",
+  size_warn_text: "Das Ergebnis wird etwa {size} groß (ohne wiederholte Dateien). Im Web kann das eine Weile dauern; für ein schnelleres, direkteres Ergebnis wird die Desktop-Version empfohlen.",
+  stage_analyze: "Analyse · {n}/{total} Dateien · Ergebnis ~{size}…",
+  stage_listing: "Dateien der Exporte werden aufgelistet · {n}…",
+  stage_zip_media: "Medien werden zum ZIP hinzugefügt · {n} Dateien · {done} von ~{total}…",
+  stage_zipping: "ZIP wird erstellt…",
+  warn_media_unreadable: "{name} ({size}, {err}) konnte nicht gelesen werden: Die Datei fehlt im ZIP und ihr Link wird nicht funktionieren. Meist blockiert eine Antivirensoftware diese Datei.",
+  zip_btn: "ZIP erstellen"
 },
 pt: {
   cta_download: "Versão para computador",
@@ -770,7 +894,44 @@ pt: {
   warn_media_skipped_total: "{n} arquivo(s) não foram copiados, mas o restante da fusão foi concluído.",
   stage_media: "Copiando mídia · {n} arquivos…", stage_write: "Gravando páginas…",
   stage_enhance: "Melhorando {name}…", stage_restore: "Restaurando {name}…",
-  stage_working: "Processando…", stage_reading: "Lendo exports…", stage_saving: "Salvando na sua pasta…"
+  stage_working: "Processando…", stage_reading: "Lendo exports…", stage_saving: "Salvando na sua pasta…",
+  android_warn: "Você está no Android: este processo é bem lento por limitações do próprio sistema operacional, não do app. Para exports com vários arquivos, recomenda-se usar um computador mesmo que o chat seja pequeno.",
+  android_warn_link: "Mais detalhes",
+  cancel_copy_removed: "A cópia incompleta foi removida; o export original não foi modificado.",
+  cancel_nothing_written: "Nada foi gravado.",
+  cancel_partial_dir: "A pasta de destino pode conter arquivos mesclados pela metade; apague-a ou use outra pasta vazia ao mesclar novamente.",
+  cancel_zip_removed: "O ZIP incompleto foi descartado.",
+  confirm_dangerous_zip: "Foram detectados arquivos com extensões que o seu navegador pode bloquear durante a mesclagem ({list}). Para concluir a operação com segurança, é possível gerar um ZIP para você baixar por sua conta e risco. Se continuar sem ZIP, os arquivos que o navegador bloquear serão ignorados.",
+  confirm_dangerous_zip_copy: "O export contém arquivos com extensões que o seu navegador bloqueia ao gravá-los numa pasta ({list}). Para que a cópia fique completa, ela será gerada como um ZIP que você poderá descompactar depois.",
+  copy_blocked_retry: "O navegador bloqueou {n} arquivo(s) não previsto(s) ({list}), então a cópia incompleta foi removida. Tente de novo: desta vez a cópia será gerada como ZIP.",
+  copy_inside_source: "Escolha uma pasta que não esteja dentro do próprio export.",
+  dangerous_h: "Arquivos que o navegador pode bloquear",
+  dest_copy: "Criar uma cópia",
+  dest_copy_hint: "É criada uma cópia completa do export, com toda a sua mídia, e a alteração é aplicada só à cópia; o original não é tocado. Se o export contiver arquivos que o navegador bloqueia ao gravá-los numa pasta, a cópia é gerada como ZIP para ficar completa. Quanto mais mídia o chat tiver, mais demora.",
+  dest_h: "Resultado",
+  dest_inplace: "Modificar o original",
+  dest_inplace_hint: "Os messages.html do próprio export são reescritos. É rápido, mas a versão anterior não é mantida.",
+  job_cancel: "Cancelar",
+  job_cancelled: "Operação cancelada",
+  job_cancelling: "Cancelando…",
+  job_keep_open: "Não recarregue nem feche esta aba ou o navegador até terminar: a operação seria interrompida e o resultado ficaria incompleto.",
+  nozip_btn: "Continuar sem ZIP",
+  pick_out_btn: "Escolher pasta de destino",
+  ready_h: "Análise concluída",
+  ready_text: "Tamanho estimado do resultado: ~{size}. Escolha a pasta de destino para começar.",
+  res_written_copy: "Cópia criada na pasta “{name}”. O export original não foi modificado.",
+  res_written_zip: "ZIP salvo. Descompacte-o para ver seu chat mesclado.",
+  res_written_zip_copy: "ZIP salvo. Descompacte-o para ver a cópia; o export original não foi modificado.",
+  size_warn_cancel: "Cancelar",
+  size_warn_continue: "Continuar mesmo assim",
+  size_warn_h: "Export grande",
+  size_warn_text: "O resultado terá cerca de {size} (sem contar arquivos repetidos). Na web isso pode demorar um pouco; para um resultado mais rápido e direto, recomenda-se a versão para computador.",
+  stage_analyze: "Analisando · {n}/{total} arquivos · resultado ~{size}…",
+  stage_listing: "Listando arquivos dos exports · {n}…",
+  stage_zip_media: "Adicionando mídia ao ZIP · {n} arquivos · {done} de ~{total}…",
+  stage_zipping: "Gerando o ZIP…",
+  warn_media_unreadable: "Não foi possível ler {name} ({size}, {err}): ele fica fora do ZIP e seu link ficará quebrado. Costuma ser causado por um antivírus que bloqueia esse arquivo.",
+  zip_btn: "Gerar ZIP"
 },
 it: {
   cta_download: "Versione desktop",
@@ -830,7 +991,44 @@ it: {
   warn_media_skipped_total: "{n} file non sono stati copiati, ma il resto della fusione è stato completato.",
   stage_media: "Copia dei media · {n} file…", stage_write: "Scrittura delle pagine…",
   stage_enhance: "Miglioramento di {name}…", stage_restore: "Ripristino di {name}…",
-  stage_working: "Elaborazione…", stage_reading: "Lettura degli export…", stage_saving: "Salvataggio nella tua cartella…"
+  stage_working: "Elaborazione…", stage_reading: "Lettura degli export…", stage_saving: "Salvataggio nella tua cartella…",
+  android_warn: "Sei su Android: questo processo è notevolmente lento per limiti del sistema operativo stesso, non dell'app. Per export con più file è consigliato usare un computer anche se la chat è piccola.",
+  android_warn_link: "Più dettagli",
+  cancel_copy_removed: "La copia incompleta è stata eliminata; l'export originale non è stato modificato.",
+  cancel_nothing_written: "Non è stato scritto nulla.",
+  cancel_partial_dir: "La cartella di destinazione può contenere file uniti a metà; eliminala o usa un'altra cartella vuota quando ripeti l'unione.",
+  cancel_zip_removed: "Lo ZIP incompleto è stato scartato.",
+  confirm_dangerous_zip: "Sono stati rilevati file con estensioni che il tuo browser può bloccare durante l'unione ({list}). Per completare l'operazione in sicurezza si può generare uno ZIP da scaricare a tua discrezione. Se continui senza ZIP, i file bloccati dal browser verranno saltati.",
+  confirm_dangerous_zip_copy: "L'export contiene file con estensioni che il tuo browser blocca quando li scrive in una cartella ({list}). Perché la copia sia completa, verrà generata come ZIP da decomprimere in seguito.",
+  copy_blocked_retry: "Il browser ha bloccato {n} file non previsti ({list}), quindi la copia incompleta è stata eliminata. Riprova: questa volta la copia verrà generata come ZIP.",
+  copy_inside_source: "Scegli una cartella che non si trovi dentro l'export stesso.",
+  dangerous_h: "File che il browser può bloccare",
+  dest_copy: "Crea una copia",
+  dest_copy_hint: "Viene creata una copia completa dell'export, con tutti i suoi media, e la modifica si applica solo alla copia; l'originale non viene toccato. Se l'export contiene file che il browser blocca quando li scrive in una cartella, la copia viene generata come ZIP per essere completa. Più media ha la chat, più tempo ci vuole.",
+  dest_h: "Risultato",
+  dest_inplace: "Modifica l'originale",
+  dest_inplace_hint: "Vengono riscritti i messages.html dell'export stesso. È veloce, ma la versione precedente non viene conservata.",
+  job_cancel: "Annulla",
+  job_cancelled: "Operazione annullata",
+  job_cancelling: "Annullamento…",
+  job_keep_open: "Non ricaricare né chiudere questa scheda o il browser finché non termina: l'operazione verrebbe interrotta e il risultato resterebbe incompleto.",
+  nozip_btn: "Continua senza ZIP",
+  pick_out_btn: "Scegli la cartella di destinazione",
+  ready_h: "Analisi completata",
+  ready_text: "Dimensione stimata del risultato: ~{size}. Scegli la cartella di destinazione per iniziare.",
+  res_written_copy: "Copia creata nella cartella «{name}». L'export originale non è stato modificato.",
+  res_written_zip: "ZIP salvato. Decomprimilo per vedere la chat unita.",
+  res_written_zip_copy: "ZIP salvato. Decomprimilo per vedere la copia; l'export originale non è stato modificato.",
+  size_warn_cancel: "Annulla",
+  size_warn_continue: "Continua comunque",
+  size_warn_h: "Export di grandi dimensioni",
+  size_warn_text: "Il risultato occuperà circa {size} (senza contare i file ripetuti). Sul web può richiedere un po' di tempo; per un risultato più rapido e diretto è consigliata la versione desktop.",
+  stage_analyze: "Analisi · {n}/{total} file · risultato ~{size}…",
+  stage_listing: "Elenco dei file degli export · {n}…",
+  stage_zip_media: "Aggiunta dei media allo ZIP · {n} file · {done} di ~{total}…",
+  stage_zipping: "Creazione dello ZIP…",
+  warn_media_unreadable: "Impossibile leggere {name} ({size}, {err}): resta fuori dallo ZIP e il suo link sarà interrotto. Di solito è causato da un antivirus che blocca quel file.",
+  zip_btn: "Genera ZIP"
 },
 ru: {
   cta_download: "Настольная версия",
@@ -890,7 +1088,44 @@ ru: {
   warn_media_skipped_total: "Файлов не скопировано: {n}, но остальная часть объединения завершена.",
   stage_media: "Копирование медиа · {n} файлов…", stage_write: "Запись страниц…",
   stage_enhance: "Улучшение {name}…", stage_restore: "Восстановление {name}…",
-  stage_working: "Обработка…", stage_reading: "Чтение экспортов…", stage_saving: "Сохранение в вашу папку…"
+  stage_working: "Обработка…", stage_reading: "Чтение экспортов…", stage_saving: "Сохранение в вашу папку…",
+  android_warn: "Вы на Android: этот процесс заметно медленный из-за ограничений самой операционной системы, а не приложения. Для экспортов с несколькими файлами рекомендуется использовать компьютер, даже если чат небольшой.",
+  android_warn_link: "Подробнее",
+  cancel_copy_removed: "Неполная копия удалена; исходный экспорт не изменён.",
+  cancel_nothing_written: "Ничего не записано.",
+  cancel_partial_dir: "Папка назначения может содержать частично объединённые файлы; удалите её или используйте другую пустую папку при повторном объединении.",
+  cancel_zip_removed: "Неполный ZIP удалён.",
+  confirm_dangerous_zip: "Обнаружены файлы с расширениями, которые браузер может заблокировать при объединении ({list}). Чтобы безопасно завершить операцию, можно создать ZIP и скачать его под свою ответственность. Если продолжить без ZIP, заблокированные браузером файлы будут пропущены.",
+  confirm_dangerous_zip_copy: "Экспорт содержит файлы с расширениями, которые браузер блокирует при записи в папку ({list}). Чтобы копия была полной, она будет создана в виде ZIP, который потом можно распаковать.",
+  copy_blocked_retry: "Браузер заблокировал непредвиденные файлы: {n} ({list}), поэтому неполная копия удалена. Попробуйте ещё раз: на этот раз копия будет создана в виде ZIP.",
+  copy_inside_source: "Выберите папку, которая не находится внутри самого экспорта.",
+  dangerous_h: "Файлы, которые браузер может заблокировать",
+  dest_copy: "Создать копию",
+  dest_copy_hint: "Создаётся полная копия экспорта со всеми медиафайлами, и изменение применяется только к копии; оригинал не затрагивается. Если в экспорте есть файлы, которые браузер блокирует при записи в папку, копия создаётся в виде ZIP, чтобы она была полной. Чем больше медиа в чате, тем дольше.",
+  dest_h: "Результат",
+  dest_inplace: "Изменить оригинал",
+  dest_inplace_hint: "Перезаписываются файлы messages.html самого экспорта. Быстро, но предыдущая версия не сохраняется.",
+  job_cancel: "Отмена",
+  job_cancelled: "Операция отменена",
+  job_cancelling: "Отмена…",
+  job_keep_open: "Не перезагружайте и не закрывайте эту вкладку или браузер до завершения: операция прервётся, а результат останется неполным.",
+  nozip_btn: "Продолжить без ZIP",
+  pick_out_btn: "Выбрать папку назначения",
+  ready_h: "Анализ завершён",
+  ready_text: "Примерный размер результата: ~{size}. Выберите папку назначения, чтобы начать.",
+  res_written_copy: "Копия создана в папке «{name}». Исходный экспорт не изменён.",
+  res_written_zip: "ZIP сохранён. Распакуйте его, чтобы увидеть объединённый чат.",
+  res_written_zip_copy: "ZIP сохранён. Распакуйте его, чтобы увидеть копию; исходный экспорт не изменён.",
+  size_warn_cancel: "Отмена",
+  size_warn_continue: "Всё равно продолжить",
+  size_warn_h: "Большой экспорт",
+  size_warn_text: "Результат займёт около {size} (без учёта повторяющихся файлов). В веб-версии это может занять время; для более быстрого и прямого результата рекомендуется настольная версия.",
+  stage_analyze: "Анализ · {n}/{total} файлов · результат ~{size}…",
+  stage_listing: "Составление списка файлов экспортов · {n}…",
+  stage_zip_media: "Добавление медиа в ZIP · файлов: {n} · {done} из ~{total}…",
+  stage_zipping: "Создание ZIP…",
+  warn_media_unreadable: "Не удалось прочитать {name} ({size}, {err}): файл не попадёт в ZIP, и ссылка на него будет нерабочей. Обычно причина — антивирус, блокирующий этот файл.",
+  zip_btn: "Создать ZIP"
 },
 zh: {
   cta_download: "桌面版",
@@ -950,7 +1185,44 @@ zh: {
   warn_media_skipped_total: "有 {n} 个文件未被复制，但合并的其余部分已完成。",
   stage_media: "正在复制媒体 · {n} 个文件…", stage_write: "正在写入页面…",
   stage_enhance: "正在美化 {name}…", stage_restore: "正在恢复 {name}…",
-  stage_working: "处理中…", stage_reading: "正在读取导出…", stage_saving: "正在保存到你的文件夹…"
+  stage_working: "处理中…", stage_reading: "正在读取导出…", stage_saving: "正在保存到你的文件夹…",
+  android_warn: "你正在使用 Android：由于操作系统本身而非本应用的限制，此过程会明显变慢。对于包含多个文件的导出，即使聊天很小也建议使用电脑。",
+  android_warn_link: "更多详情",
+  cancel_copy_removed: "不完整的副本已删除；原始导出未被修改。",
+  cancel_nothing_written: "未写入任何内容。",
+  cancel_partial_dir: "目标文件夹可能包含合并了一半的文件；重新合并时请删除它或使用另一个空文件夹。",
+  cancel_zip_removed: "不完整的 ZIP 已丢弃。",
+  confirm_dangerous_zip: "检测到浏览器在合并时可能拦截的扩展名文件（{list}）。为安全完成操作，可以生成一个 ZIP，由你自行决定是否下载。如果不使用 ZIP 继续，被浏览器拦截的文件将被跳过。",
+  confirm_dangerous_zip_copy: "该导出包含浏览器在写入文件夹时会拦截的扩展名文件（{list}）。为保证副本完整，将以 ZIP 形式生成，之后可以解压。",
+  copy_blocked_retry: "浏览器拦截了 {n} 个未预料的文件（{list}），因此已删除不完整的副本。请重试：这次副本将以 ZIP 形式生成。",
+  copy_inside_source: "请选择不在该导出内部的文件夹。",
+  dangerous_h: "浏览器可能拦截的文件",
+  dest_copy: "创建副本",
+  dest_copy_hint: "会创建导出的完整副本（含全部媒体），更改只应用于副本；原始导出保持不变。如果导出中有浏览器写入文件夹时会拦截的文件，副本会以 ZIP 形式生成以保证完整。聊天中的媒体越多，耗时越长。",
+  dest_h: "结果",
+  dest_inplace: "修改原始导出",
+  dest_inplace_hint: "直接重写该导出自身的 messages.html。速度快，但不会保留之前的版本。",
+  job_cancel: "取消",
+  job_cancelled: "操作已取消",
+  job_cancelling: "正在取消…",
+  job_keep_open: "在完成之前，请不要刷新或关闭此标签页或浏览器：否则操作会中断，结果将不完整。",
+  nozip_btn: "不使用 ZIP 继续",
+  pick_out_btn: "选择目标文件夹",
+  ready_h: "分析完成",
+  ready_text: "结果预计大小：约 {size}。请选择目标文件夹开始。",
+  res_written_copy: "副本已创建在“{name}”文件夹中。原始导出未被修改。",
+  res_written_zip: "ZIP 已保存。解压即可查看合并后的聊天。",
+  res_written_zip_copy: "ZIP 已保存。解压即可查看副本；原始导出未被修改。",
+  size_warn_cancel: "取消",
+  size_warn_continue: "仍然继续",
+  size_warn_h: "导出较大",
+  size_warn_text: "结果约为 {size}（不含重复文件）。在网页版中可能需要一些时间；如需更快、更直接的结果，建议使用桌面版。",
+  stage_analyze: "正在分析 · {n}/{total} 个文件 · 结果约 {size}…",
+  stage_listing: "正在列出导出中的文件 · {n}…",
+  stage_zip_media: "正在将媒体添加到 ZIP · {n} 个文件 · {done} / 约 {total}…",
+  stage_zipping: "正在生成 ZIP…",
+  warn_media_unreadable: "无法读取 {name}（{size}，{err}）：它不会被放入 ZIP，其链接将失效。通常是杀毒软件拦截了该文件。",
+  zip_btn: "生成 ZIP"
 },
 ja: {
   cta_download: "デスクトップ版",
@@ -1010,7 +1282,44 @@ ja: {
   warn_media_skipped_total: "{n} 個のファイルがコピーされませんでしたが、統合の残りは完了しました。",
   stage_media: "メディアをコピー中 · {n} ファイル…", stage_write: "ページを書き込み中…",
   stage_enhance: "{name} を強化中…", stage_restore: "{name} を復元中…",
-  stage_working: "処理中…", stage_reading: "エクスポートを読み込み中…", stage_saving: "フォルダに保存中…"
+  stage_working: "処理中…", stage_reading: "エクスポートを読み込み中…", stage_saving: "フォルダに保存中…",
+  android_warn: "Android をお使いです：アプリではなく OS 自体の制限により、この処理はかなり遅くなります。複数のファイルを含むエクスポートでは、チャットが小さくてもパソコンの使用をおすすめします。",
+  android_warn_link: "詳細",
+  cancel_copy_removed: "不完全なコピーは削除されました。元のエクスポートは変更されていません。",
+  cancel_nothing_written: "何も書き込まれていません。",
+  cancel_partial_dir: "保存先フォルダーに統合途中のファイルが残っている可能性があります。もう一度統合するときは、そのフォルダーを削除するか別の空のフォルダーを使ってください。",
+  cancel_zip_removed: "不完全な ZIP は破棄されました。",
+  confirm_dangerous_zip: "統合中にブラウザーがブロックする可能性のある拡張子のファイルが見つかりました（{list}）。安全に完了させるため、自己判断でダウンロードできる ZIP を作成できます。ZIP なしで続けると、ブラウザーがブロックしたファイルはスキップされます。",
+  confirm_dangerous_zip_copy: "このエクスポートには、フォルダーへの書き込み時にブラウザーがブロックする拡張子のファイルが含まれています（{list}）。コピーを完全なものにするため、あとで展開できる ZIP として作成します。",
+  copy_blocked_retry: "ブラウザーが想定外のファイルを {n} 個ブロックしました（{list}）。そのため不完全なコピーは削除されました。もう一度お試しください。今回はコピーが ZIP として作成されます。",
+  copy_inside_source: "エクスポート自体の中にないフォルダーを選んでください。",
+  dangerous_h: "ブラウザーがブロックする可能性のあるファイル",
+  dest_copy: "コピーを作成",
+  dest_copy_hint: "すべてのメディアを含むエクスポートの完全なコピーを作成し、変更はコピーにのみ適用します。元のエクスポートには手を加えません。フォルダーへの書き込み時にブラウザーがブロックするファイルがある場合は、完全なコピーにするため ZIP として作成します。メディアが多いほど時間がかかります。",
+  dest_h: "結果",
+  dest_inplace: "元のエクスポートを変更",
+  dest_inplace_hint: "エクスポート自体の messages.html を書き換えます。高速ですが、以前のバージョンは残りません。",
+  job_cancel: "キャンセル",
+  job_cancelled: "操作をキャンセルしました",
+  job_cancelling: "キャンセル中…",
+  job_keep_open: "完了するまで、このタブやブラウザーを再読み込みしたり閉じたりしないでください。操作が中断され、結果が不完全になります。",
+  nozip_btn: "ZIP なしで続ける",
+  pick_out_btn: "保存先フォルダーを選択",
+  ready_h: "分析が完了しました",
+  ready_text: "結果の推定サイズ：約 {size}。保存先フォルダーを選んで開始してください。",
+  res_written_copy: "「{name}」フォルダーにコピーを作成しました。元のエクスポートは変更されていません。",
+  res_written_zip: "ZIP を保存しました。展開すると統合したチャットを見られます。",
+  res_written_zip_copy: "ZIP を保存しました。展開するとコピーを見られます。元のエクスポートは変更されていません。",
+  size_warn_cancel: "キャンセル",
+  size_warn_continue: "このまま続ける",
+  size_warn_h: "大きなエクスポート",
+  size_warn_text: "結果は約 {size} になります（重複ファイルを除く）。ウェブ版では時間がかかることがあります。より速く直接的な結果を得るにはデスクトップ版をおすすめします。",
+  stage_analyze: "分析中 · {n}/{total} ファイル · 結果 約 {size}…",
+  stage_listing: "エクスポートのファイルを一覧化中 · {n}…",
+  stage_zip_media: "メディアを ZIP に追加中 · {n} ファイル · {done} / 約 {total}…",
+  stage_zipping: "ZIP を作成中…",
+  warn_media_unreadable: "{name} を読み込めませんでした（{size}、{err}）。ZIP には含まれず、リンクは切れた状態になります。通常はウイルス対策ソフトがそのファイルをブロックしていることが原因です。",
+  zip_btn: "ZIP を作成"
 },
 hi: {
   cta_download: "डेस्कटॉप संस्करण",
@@ -1070,7 +1379,44 @@ hi: {
   warn_media_skipped_total: "{n} फ़ाइलें कॉपी नहीं हुईं, लेकिन बाकी विलय पूरा हो गया।",
   stage_media: "मीडिया कॉपी हो रहा है · {n} फ़ाइलें…", stage_write: "पेज लिखे जा रहे हैं…",
   stage_enhance: "{name} बेहतर बनाया जा रहा है…", stage_restore: "{name} बहाल हो रहा है…",
-  stage_working: "प्रोसेस हो रहा है…", stage_reading: "एक्सपोर्ट पढ़े जा रहे हैं…", stage_saving: "आपके फ़ोल्डर में सहेजा जा रहा है…"
+  stage_working: "प्रोसेस हो रहा है…", stage_reading: "एक्सपोर्ट पढ़े जा रहे हैं…", stage_saving: "आपके फ़ोल्डर में सहेजा जा रहा है…",
+  android_warn: "आप Android पर हैं: यह प्रक्रिया ऐप की नहीं, बल्कि ऑपरेटिंग सिस्टम की अपनी सीमाओं के कारण काफ़ी धीमी है। कई फ़ाइलों वाले एक्सपोर्ट के लिए, छोटी चैट होने पर भी कंप्यूटर इस्तेमाल करने की सलाह दी जाती है।",
+  android_warn_link: "अधिक जानकारी",
+  cancel_copy_removed: "अधूरी कॉपी हटा दी गई; मूल एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
+  cancel_nothing_written: "कुछ भी नहीं लिखा गया।",
+  cancel_partial_dir: "गंतव्य फ़ोल्डर में आधी विलय हुई फ़ाइलें हो सकती हैं; दोबारा विलय करते समय इसे हटा दें या कोई दूसरा खाली फ़ोल्डर इस्तेमाल करें।",
+  cancel_zip_removed: "अधूरी ZIP फ़ाइल हटा दी गई।",
+  confirm_dangerous_zip: "ऐसे एक्सटेंशन वाली फ़ाइलें मिली हैं जिन्हें आपका ब्राउज़र विलय के दौरान ब्लॉक कर सकता है ({list})। ऑपरेशन को सुरक्षित रूप से पूरा करने के लिए एक ZIP बनाई जा सकती है, जिसे आप अपनी ज़िम्मेदारी पर डाउनलोड करें। ZIP के बिना जारी रखने पर ब्राउज़र द्वारा ब्लॉक की गई फ़ाइलें छोड़ दी जाएँगी।",
+  confirm_dangerous_zip_copy: "इस एक्सपोर्ट में ऐसे एक्सटेंशन वाली फ़ाइलें हैं जिन्हें आपका ब्राउज़र किसी फ़ोल्डर में लिखते समय ब्लॉक करता है ({list})। कॉपी पूरी बने, इसके लिए इसे ZIP के रूप में बनाया जाएगा, जिसे आप बाद में अनज़िप कर सकते हैं।",
+  copy_blocked_retry: "ब्राउज़र ने {n} अप्रत्याशित फ़ाइल(ें) ब्लॉक कीं ({list}), इसलिए अधूरी कॉपी हटा दी गई। फिर से कोशिश करें: इस बार कॉपी ZIP के रूप में बनेगी।",
+  copy_inside_source: "ऐसा फ़ोल्डर चुनें जो एक्सपोर्ट के अंदर न हो।",
+  dangerous_h: "फ़ाइलें जिन्हें ब्राउज़र ब्लॉक कर सकता है",
+  dest_copy: "कॉपी बनाएँ",
+  dest_copy_hint: "एक्सपोर्ट की पूरी कॉपी उसके सभी मीडिया के साथ बनाई जाती है और बदलाव सिर्फ़ कॉपी पर लागू होता है; मूल को छुआ नहीं जाता। अगर एक्सपोर्ट में ऐसी फ़ाइलें हैं जिन्हें ब्राउज़र फ़ोल्डर में लिखते समय ब्लॉक करता है, तो कॉपी पूरी बने इसके लिए उसे ZIP के रूप में बनाया जाता है। चैट में जितना ज़्यादा मीडिया, उतना ज़्यादा समय लगता है।",
+  dest_h: "परिणाम",
+  dest_inplace: "मूल को बदलें",
+  dest_inplace_hint: "एक्सपोर्ट की अपनी messages.html फ़ाइलें दोबारा लिखी जाती हैं। तेज़ है, पर पिछला संस्करण नहीं रखा जाता।",
+  job_cancel: "रद्द करें",
+  job_cancelled: "ऑपरेशन रद्द किया गया",
+  job_cancelling: "रद्द किया जा रहा है…",
+  job_keep_open: "पूरा होने तक इस टैब या ब्राउज़र को रीलोड या बंद न करें: ऑपरेशन बीच में रुक जाएगा और परिणाम अधूरा रहेगा।",
+  nozip_btn: "ZIP के बिना जारी रखें",
+  pick_out_btn: "गंतव्य फ़ोल्डर चुनें",
+  ready_h: "विश्लेषण पूरा हुआ",
+  ready_text: "परिणाम का अनुमानित आकार: ~{size}। शुरू करने के लिए गंतव्य फ़ोल्डर चुनें।",
+  res_written_copy: "“{name}” फ़ोल्डर में कॉपी बनाई गई। मूल एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
+  res_written_zip: "ZIP सहेजी गई। विलय हुई चैट देखने के लिए इसे अनज़िप करें।",
+  res_written_zip_copy: "ZIP सहेजी गई। कॉपी देखने के लिए इसे अनज़िप करें; मूल एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
+  size_warn_cancel: "रद्द करें",
+  size_warn_continue: "फिर भी जारी रखें",
+  size_warn_h: "बड़ा एक्सपोर्ट",
+  size_warn_text: "परिणाम लगभग {size} का होगा (दोहराई गई फ़ाइलों को छोड़कर)। वेब पर इसमें कुछ समय लग सकता है; तेज़ और सीधे परिणाम के लिए डेस्कटॉप संस्करण की सलाह दी जाती है।",
+  stage_analyze: "विश्लेषण · {n}/{total} फ़ाइलें · परिणाम ~{size}…",
+  stage_listing: "एक्सपोर्ट की फ़ाइलों की सूची बन रही है · {n}…",
+  stage_zip_media: "ZIP में मीडिया जोड़ा जा रहा है · {n} फ़ाइलें · ~{total} में से {done}…",
+  stage_zipping: "ZIP बनाई जा रही है…",
+  warn_media_unreadable: "{name} ({size}, {err}) पढ़ी नहीं जा सकी: यह ZIP में शामिल नहीं होगी और इसका लिंक टूट जाएगा। आमतौर पर इसकी वजह कोई एंटीवायरस होता है जो उस फ़ाइल को ब्लॉक करता है।",
+  zip_btn: "ZIP बनाएँ"
 },
 ar: {
   cta_download: "نسخة سطح المكتب",
@@ -1130,7 +1476,44 @@ ar: {
   warn_media_skipped_total: "لم يُنسخ {n} من الملفات، لكن بقية عملية الدمج اكتملت.",
   stage_media: "جارٍ نسخ الوسائط · {n} ملفًا…", stage_write: "جارٍ كتابة الصفحات…",
   stage_enhance: "جارٍ تحسين {name}…", stage_restore: "جارٍ استعادة {name}…",
-  stage_working: "جارٍ المعالجة…", stage_reading: "جارٍ قراءة التصديرات…", stage_saving: "جارٍ الحفظ في مجلدك…"
+  stage_working: "جارٍ المعالجة…", stage_reading: "جارٍ قراءة التصديرات…", stage_saving: "جارٍ الحفظ في مجلدك…",
+  android_warn: "أنت تستخدم Android: هذه العملية بطيئة بشكل ملحوظ بسبب قيود نظام التشغيل نفسه، لا التطبيق. للتصديرات التي تحتوي على عدة ملفات، يُنصح باستخدام حاسوب حتى لو كانت المحادثة صغيرة.",
+  android_warn_link: "مزيد من التفاصيل",
+  cancel_copy_removed: "حُذفت النسخة غير المكتملة؛ ولم يُعدَّل التصدير الأصلي.",
+  cancel_nothing_written: "لم يُكتب أي شيء.",
+  cancel_partial_dir: "قد يحتوي مجلد الوجهة على ملفات مدموجة جزئيًا؛ احذفه أو استخدم مجلدًا فارغًا آخر عند إعادة الدمج.",
+  cancel_zip_removed: "تم تجاهل ملف ZIP غير المكتمل.",
+  confirm_dangerous_zip: "عُثر على ملفات بامتدادات قد يحظرها متصفحك أثناء الدمج ({list}). لإتمام العملية بأمان، يمكن إنشاء ملف ZIP لتنزيله على مسؤوليتك. إذا تابعت دون ZIP، فسيتم تخطي الملفات التي يحظرها المتصفح.",
+  confirm_dangerous_zip_copy: "يحتوي التصدير على ملفات بامتدادات يحظرها متصفحك عند كتابتها في مجلد ({list}). لكي تكون النسخة كاملة، ستُنشأ كملف ZIP يمكنك فك ضغطه لاحقًا.",
+  copy_blocked_retry: "حظر المتصفح {n} ملف/ملفات غير متوقعة ({list})، لذا حُذفت النسخة غير المكتملة. حاول مرة أخرى: هذه المرة ستُنشأ النسخة كملف ZIP.",
+  copy_inside_source: "اختر مجلدًا لا يقع داخل التصدير نفسه.",
+  dangerous_h: "ملفات قد يحظرها المتصفح",
+  dest_copy: "إنشاء نسخة",
+  dest_copy_hint: "تُنشأ نسخة كاملة من التصدير بكل وسائطه، ويُطبَّق التغيير على النسخة فقط؛ ولا يُمَس الأصل. إذا احتوى التصدير على ملفات يحظرها المتصفح عند كتابتها في مجلد، تُنشأ النسخة كملف ZIP لتكون كاملة. كلما زادت الوسائط في المحادثة، طال الوقت.",
+  dest_h: "النتيجة",
+  dest_inplace: "تعديل الأصل",
+  dest_inplace_hint: "تُعاد كتابة ملفات messages.html الخاصة بالتصدير نفسه. سريع، لكن النسخة السابقة لا تُحفظ.",
+  job_cancel: "إلغاء",
+  job_cancelled: "أُلغيت العملية",
+  job_cancelling: "جارٍ الإلغاء…",
+  job_keep_open: "لا تُعِد تحميل هذه العلامة أو تغلقها ولا تغلق المتصفح حتى تنتهي العملية: وإلا ستنقطع وتبقى النتيجة غير مكتملة.",
+  nozip_btn: "المتابعة دون ZIP",
+  pick_out_btn: "اختيار مجلد الوجهة",
+  ready_h: "اكتمل التحليل",
+  ready_text: "الحجم التقديري للنتيجة: ~{size}. اختر مجلد الوجهة للبدء.",
+  res_written_copy: "أُنشئت النسخة في المجلد «{name}». لم يُعدَّل التصدير الأصلي.",
+  res_written_zip: "حُفظ ملف ZIP. فك ضغطه لرؤية المحادثة المدموجة.",
+  res_written_zip_copy: "حُفظ ملف ZIP. فك ضغطه لرؤية النسخة؛ لم يُعدَّل التصدير الأصلي.",
+  size_warn_cancel: "إلغاء",
+  size_warn_continue: "المتابعة على أي حال",
+  size_warn_h: "تصدير كبير",
+  size_warn_text: "سيبلغ حجم النتيجة نحو {size} (دون احتساب الملفات المكررة). قد يستغرق ذلك بعض الوقت على الويب؛ للحصول على نتيجة أسرع وأكثر مباشرة يُنصح بنسخة سطح المكتب.",
+  stage_analyze: "جارٍ التحليل · {n}/{total} ملف · النتيجة ~{size}…",
+  stage_listing: "جارٍ سرد ملفات التصديرات · {n}…",
+  stage_zip_media: "جارٍ إضافة الوسائط إلى ZIP · {n} ملف · {done} من ~{total}…",
+  stage_zipping: "جارٍ إنشاء ZIP…",
+  warn_media_unreadable: "تعذّرت قراءة {name} ({size}، {err}): لن يُضمَّن في ZIP وسيتعطل رابطه. يحدث هذا عادةً بسبب برنامج مكافحة فيروسات يحظر ذلك الملف.",
+  zip_btn: "إنشاء ZIP"
 }
 };
 document.querySelectorAll(".srclink").forEach(a => { a.href = REPO_URL; });
@@ -1154,6 +1537,7 @@ function applyLang() {
   $("lang").value = LANG;
   updateGoalHint();
   updateLayoutHint();
+  updateDestHints();
   renderExports();
   renderMeOptions();
   requestAnimationFrame(movePill);
@@ -1183,15 +1567,20 @@ $("lang").onchange = () => {
 
 /* ================= helpers ================= */
 function snack(msg) {
+  dbg(`mensaje al usuario: ${msg}`);
   const s = $("snack");
   s.textContent = msg;
   s.classList.add("show");
   clearTimeout(s._t);
   s._t = setTimeout(() => s.classList.remove("show"), 4000);
 }
+// The UI only shows the last line; the debug log gets the whole thing (a
+// Python traceback, or the JS stack).
 function pyError(e) {
   const m = String(e.message || e);
   const lines = m.trim().split("\n");
+  if (lines.length > 1) dbg(`error completo:\n${m.trim()}`);
+  else if (e && e.stack) dbg(`error: ${e.name}: ${m}\n${e.stack}`);
   return lines[lines.length - 1].replace(/^\w+Error: /, "");
 }
 function movePill() {
@@ -1253,6 +1642,26 @@ $("opt-bubbles").onchange = () => {
   $("bubbles-sub").classList.toggle("off", !$("opt-bubbles").checked);
 };
 
+// Compact/enhance destination: rewrite the export in place, or work on a
+// fresh copy and leave the original untouched.
+const DEST_SEGS = ["compact-dest", "enhance-dest"];
+function destIsCopy(id) {
+  return $(id).querySelector("button.active").dataset.dest === "copy";
+}
+function updateDestHints() {
+  for (const id of DEST_SEGS) {
+    $(id + "-hint").textContent = t(destIsCopy(id) ? "dest_copy_hint" : "dest_inplace_hint");
+  }
+}
+for (const id of DEST_SEGS) {
+  $(id).querySelectorAll("button").forEach(b => {
+    b.onclick = () => {
+      $(id).querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
+      updateDestHints();
+    };
+  });
+}
+
 /* ================= debug oculto (?debug=1) ================= */
 // Off by default, invisible in the UI, and safe to leave in the code that
 // ships to GitHub Pages: nobody sees it without deliberately adding the
@@ -1263,24 +1672,59 @@ const DEBUG = new URLSearchParams(location.search).has("debug");
 let dbgPanel = null, dbgLog = null, dbgCopyBtn = null;
 let dbgStick = true; // auto-scroll to bottom only while the user hasn't scrolled up to read
 
+// The panel gets its own reserved space (a right-hand column on wide
+// screens, a bottom strip on narrow ones) and the page is inset by the same
+// amount, so it never covers the app. Fixed size from the start; it can be
+// minimised to its title bar.
+const DBG_CSS = `
+:root { --dbg-h: 35vh; --dbg-w: min(40vw, 560px); }
+html.dbg-on body { padding-bottom: calc(var(--dbg-h) + 70px); }
+#dbg-panel { position: fixed; left: 0; right: 0; bottom: 0; height: var(--dbg-h);
+  display: flex; flex-direction: column; background: #0a0d0a; color: #0f0;
+  font: 11px/1.4 monospace; z-index: 99999; border-top: 1px solid #0f04;
+  box-sizing: border-box; }
+#dbg-panel .dbg-bar { display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+  border-bottom: 1px solid #0f04; flex: none; }
+#dbg-panel .dbg-bar span { flex: 1; opacity: .7; }
+#dbg-panel button { background: #0f02; color: #0f0; border: 1px solid #0f05;
+  border-radius: 4px; padding: 2px 10px; font: 11px monospace; cursor: pointer; }
+#dbg-panel .dbg-log { overflow-y: auto; padding: 6px 8px; flex: 1;
+  white-space: pre-wrap; word-break: break-all; }
+@media (min-width: 1000px) {
+  html.dbg-on body { padding-bottom: 70px; margin-right: var(--dbg-w); }
+  #dbg-panel { left: auto; top: 0; width: var(--dbg-w); height: auto;
+    border-top: 0; border-left: 1px solid #0f04; }
+}
+html.dbg-on.dbg-min body { padding-bottom: 70px; margin-right: 0; }
+html.dbg-min #dbg-panel { top: auto; left: auto; width: auto; height: auto;
+  border: 1px solid #0f04; border-radius: 6px 0 0 0; }
+html.dbg-min #dbg-panel .dbg-log { display: none; }
+html.dbg-min #dbg-panel .dbg-bar { border-bottom: 0; }
+`;
+
 function ensureDbgPanel() {
   if (dbgPanel) return;
+  const style = document.createElement("style");
+  style.textContent = DBG_CSS;
+  document.head.appendChild(style);
+  document.documentElement.classList.add("dbg-on");
+
   dbgPanel = document.createElement("div");
   dbgPanel.id = "dbg-panel";
-  dbgPanel.style.cssText = "position:fixed;left:0;right:0;bottom:0;max-height:40vh;" +
-    "display:flex;flex-direction:column;background:#000c;color:#0f0;" +
-    "font:11px/1.4 monospace;z-index:99999;";
 
   const bar = document.createElement("div");
-  bar.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 8px;" +
-    "border-bottom:1px solid #0f04;flex:none;";
+  bar.className = "dbg-bar";
   const label = document.createElement("span");
   label.textContent = "debug";
-  label.style.cssText = "flex:1;opacity:.7;";
+  const minBtn = document.createElement("button");
+  minBtn.textContent = "Minimizar";
+  minBtn.onclick = () => {
+    const min = document.documentElement.classList.toggle("dbg-min");
+    minBtn.textContent = min ? "Expandir" : "Minimizar";
+    if (!min && dbgStick) dbgLog.scrollTop = dbgLog.scrollHeight;
+  };
   dbgCopyBtn = document.createElement("button");
   dbgCopyBtn.textContent = "Copiar";
-  dbgCopyBtn.style.cssText = "background:#0f02;color:#0f0;border:1px solid #0f05;" +
-    "border-radius:4px;padding:2px 10px;font:11px monospace;cursor:pointer;";
   dbgCopyBtn.onclick = async () => {
     const text = Array.from(dbgLog.children).map(d => d.textContent).join("\n");
     try {
@@ -1293,10 +1737,10 @@ function ensureDbgPanel() {
   };
   bar.appendChild(label);
   bar.appendChild(dbgCopyBtn);
+  bar.appendChild(minBtn);
 
   dbgLog = document.createElement("div");
-  dbgLog.style.cssText = "overflow-y:auto;padding:6px 8px;flex:1;" +
-    "white-space:pre-wrap;word-break:break-all;";
+  dbgLog.className = "dbg-log";
   // If the user scrolls up to read past entries, stop yanking them back
   // down on every new line; resume auto-scroll once they're back near
   // the bottom.
@@ -1318,6 +1762,17 @@ function dbg(msg) {
   p.textContent = line;
   dbgLog.appendChild(p);
   if (dbgStick) dbgLog.scrollTop = dbgLog.scrollHeight;
+}
+if (DEBUG) {
+  window.addEventListener("error", (e) => {
+    dbg(`ERROR JS no capturado: ${e.message} (${e.filename}:${e.lineno}:${e.colno})` +
+        (e.error && e.error.stack ? `\n${e.error.stack}` : ""));
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const r = e.reason;
+    dbg(`PROMESA rechazada sin capturar: ${r && r.name ? r.name + ": " : ""}${r && r.message ? r.message : r}` +
+        (r && r.stack ? `\n${r.stack}` : ""));
+  });
 }
 
 /* ================= boot (automático) ================= */
@@ -1401,8 +1856,10 @@ async function boot() {
     dbg(`secureContext=${window.isSecureContext}, showDirectoryPicker=${!!window.showDirectoryPicker}`);
   }
   $("boot-status").textContent = t("boot_loading");
+  const t0 = performance.now();
   try {
     pyodide = await loadPyodide();
+    dbg(`boot: pyodide ${pyodide.version} cargado en ${((performance.now() - t0) / 1000).toFixed(1)}s`);
     $("boot-status").textContent = t("boot_engine");
     for (const f of ENGINE) {
       const r = await fetch(f);
@@ -1415,7 +1872,12 @@ async function boot() {
     $("loader").style.display = "none";
     $("studio").style.display = "";
     applyLang();
+    dbg(`boot: motor listo en ${((performance.now() - t0) / 1000).toFixed(1)}s ` +
+        `(idioma=${LANG}, android=${isAndroid}, deviceMemory=${navigator.deviceMemory || "?"}GB, ` +
+        `núcleos=${navigator.hardwareConcurrency || "?"})`);
   } catch (e) {
+    dbg(`boot: FALLÓ tras ${((performance.now() - t0) / 1000).toFixed(1)}s — ${e.name}: ${e.message}` +
+        (e.stack ? `\n${e.stack}` : ""));
     $("boot-status").textContent = String(e);
   }
 }
@@ -1489,6 +1951,7 @@ async function scanExports(handles) {
   }
   async function list(dir, rel) {
     for await (const [name, h] of dir.entries()) {
+      checkCancel();
       if (h.kind === "directory") {
         if (rel === "" && ASSETS.includes(name)) continue;
         await list(h, rel + name + "/");
@@ -1514,6 +1977,7 @@ async function scanExports(handles) {
   }
   async function worker() {
     while (next < files.length) {
+      checkCancel();
       const f = files[next++];
       const size = (await f.h.getFile()).size;
       const key = f.path + "\0" + size;
@@ -1557,11 +2021,17 @@ function askChoice(title, text, options) {
     for (const o of options) {
       const el = document.createElement(o.href ? "a" : "button");
       el.className = "btn" + (o.style ? " " + o.style : "");
+      el.dataset.choice = o.id;
       el.textContent = o.label;
       if (o.href) { el.href = o.href; el.target = "_blank"; el.rel = "noopener"; }
-      el.onclick = () => { panel.style.display = "none"; resolve(o.id); };
+      el.onclick = () => {
+        dbg(`elección «${title}» → ${o.id}`);
+        panel.style.display = "none";
+        resolve(o.id);
+      };
       box.appendChild(el);
     }
+    dbg(`pregunta «${title}»: opciones ${options.map(o => o.id).join(" / ")}`);
     panel.style.display = "";
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   });
@@ -1589,39 +2059,62 @@ function wireDrop(el, onHandle) {
     e.preventDefault();
     el.classList.remove("dropping");
     if (!glue) return;
-    for (const h of await dirFromDrop(e)) {
+    const dirs = await dirFromDrop(e);
+    dbg(`arrastre sobre «${el.id}»: ${dirs.length} carpeta(s)`);
+    for (const h of dirs) {
       try { await onHandle(h); } catch (err) { snack(pyError(err)); }
     }
   });
 }
 
 /* ================= minimal ZIP writer (safe-browsing fallback) =========
- * Streams a ZIP straight to an open FileSystemWritableFileStream as entries
- * are added — STORE-only (no compression — chat media is already
- * compressed), no external dependency, peak memory is one file at a time
- * rather than the whole export. Used only for the rare case where the fuse
- * source contains an extension Chrome's Safe Browsing may block (see
- * DANGEROUS_EXTENSIONS): the resulting .zip itself is not a dangerous
- * extension, so it can be written normally instead of losing the whole
- * merge to a silent AbortError.
+ * Streams a ZIP straight to an open FileSystemWritableFileStream — STORE-only
+ * (no compression — chat media is already compressed), no external
+ * dependency. Used only for the rare case where the fuse source contains an
+ * extension Chrome's Safe Browsing may block (see DANGEROUS_EXTENSIONS): the
+ * resulting .zip itself is not a dangerous extension, so it can be written
+ * normally instead of losing the whole merge to a silent AbortError.
  *
- * Known limits (acceptable for this fallback path): no Zip64, so a single
- * file or the archive as a whole over 4 GiB, or more than 65535 entries,
- * will produce a corrupt archive. Chat exports practically never hit this.
+ * Sources are read in chunks, never as one ArrayBuffer: Chrome cannot read a
+ * file of 2 GiB or more in one go, and real chat exports carry such videos.
+ * Peak memory is one ZIP_CHUNK regardless of file or archive size. Zip64
+ * records are emitted whenever a size, offset or entry count outgrows the
+ * classic 32/16-bit fields — merged exports easily reach tens of GB.
  * ======================================================================= */
+const ZIP64_LIMIT = 0xFFFFFFFF;
+const ZIP_CHUNK = 8 * 1024 * 1024;
+
+// Slicing-by-8 CRC32: ~1.7x the byte-at-a-time table loop in V8, which
+// matters when tens of GB go through it.
 const CRC_TABLE = (() => {
-  const t = new Uint32Array(256);
+  const t = new Uint32Array(256 * 8);
   for (let n = 0; n < 256; n++) {
     let c = n;
     for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
     t[n] = c >>> 0;
   }
+  for (let n = 0; n < 256; n++) {
+    for (let s = 1; s < 8; s++) {
+      const prev = t[(s - 1) * 256 + n];
+      t[s * 256 + n] = (prev >>> 8) ^ t[prev & 0xFF];
+    }
+  }
   return t;
 })();
-function crc32(bytes) {
-  let c = 0xFFFFFFFF;
-  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
-  return (c ^ 0xFFFFFFFF) >>> 0;
+// Takes and returns the running (pre-inversion) CRC state: start with
+// 0xFFFFFFFF, finish with (state ^ 0xFFFFFFFF) >>> 0.
+function crc32Update(c, b) {
+  const T = CRC_TABLE;
+  let i = 0;
+  const end8 = b.length - 8;
+  for (; i <= end8; i += 8) {
+    const a = (c ^ (b[i] | (b[i + 1] << 8) | (b[i + 2] << 16) | (b[i + 3] << 24))) >>> 0;
+    c = T[1792 + (a & 0xFF)] ^ T[1536 + ((a >>> 8) & 0xFF)]
+      ^ T[1280 + ((a >>> 16) & 0xFF)] ^ T[1024 + (a >>> 24)]
+      ^ T[768 + b[i + 4]] ^ T[512 + b[i + 5]] ^ T[256 + b[i + 6]] ^ T[b[i + 7]];
+  }
+  for (; i < b.length; i++) c = T[(c ^ b[i]) & 0xFF] ^ (c >>> 8);
+  return c >>> 0;
 }
 function dosDateTime(date) {
   const time = ((date.getHours() & 0x1f) << 11) | ((date.getMinutes() & 0x3f) << 5)
@@ -1631,8 +2124,8 @@ function dosDateTime(date) {
   return { time, day };
 }
 class ZipWriter {
-  // writable: an open FileSystemWritableFileStream. Every entry is written
-  // straight to it and never retained, so peak memory is one file at a time.
+  // writable: an open FileSystemWritableFileStream. Entries are written
+  // straight to it; only per-entry metadata is kept for the central directory.
   constructor(writable) {
     this.writable = writable;
     this.offset = 0;
@@ -1642,68 +2135,155 @@ class ZipWriter {
     await this.writable.write(bytes);
     this.offset += bytes.length;
   }
-  async addFile(name, source) {
-    const bytes = source instanceof Uint8Array
-      ? source : new Uint8Array(await source.arrayBuffer());
+  // source: Uint8Array or Blob/File. onChunk(nBytes) runs after each chunk
+  // is written (progress; it may throw to cancel). The CRC is only known
+  // after the data, so it's patched into the local header with a positional
+  // write. If anything fails midway, the partial entry is truncated away so
+  // the archive stays consistent and the caller can skip the file.
+  async addFile(name, source, onChunk) {
+    const blob = source instanceof Uint8Array ? new Blob([source]) : source;
+    const size = blob.size;
     const nameBytes = new TextEncoder().encode(name);
     const mtime = (source instanceof File && source.lastModified)
       ? new Date(source.lastModified) : new Date();
     const { time, day } = dosDateTime(mtime);
-    const crc = crc32(bytes);
     const offset = this.offset;
+    const big = size >= ZIP64_LIMIT;
 
-    const header = new DataView(new ArrayBuffer(30));
+    const header = new DataView(new ArrayBuffer(30 + nameBytes.length + (big ? 20 : 0)));
     header.setUint32(0, 0x04034b50, true);
-    header.setUint16(4, 20, true);        // version needed
-    header.setUint16(6, 0x0800, true);    // general flags: UTF-8 names
-    header.setUint16(8, 0, true);         // method: store
+    header.setUint16(4, big ? 45 : 20, true); // version needed
+    header.setUint16(6, 0x0800, true);        // general flags: UTF-8 names
+    header.setUint16(8, 0, true);             // method: store
     header.setUint16(10, time, true);
     header.setUint16(12, day, true);
-    header.setUint32(14, crc, true);
-    header.setUint32(18, bytes.length, true);
-    header.setUint32(22, bytes.length, true);
+    header.setUint32(14, 0, true);            // crc32, patched below
+    header.setUint32(18, big ? 0xFFFFFFFF : size, true);
+    header.setUint32(22, big ? 0xFFFFFFFF : size, true);
     header.setUint16(26, nameBytes.length, true);
-    header.setUint16(28, 0, true);        // extra field length
-    await this._push(new Uint8Array(header.buffer));
-    await this._push(nameBytes);
-    await this._push(bytes);
+    header.setUint16(28, big ? 20 : 0, true); // extra field length
+    new Uint8Array(header.buffer).set(nameBytes, 30);
+    if (big) {
+      const x = 30 + nameBytes.length;
+      header.setUint16(x, 0x0001, true);      // Zip64 extended information
+      header.setUint16(x + 2, 16, true);
+      header.setBigUint64(x + 4, BigInt(size), true);
+      header.setBigUint64(x + 12, BigInt(size), true);
+    }
 
-    this.entries.push({ name: nameBytes, crc, size: bytes.length, offset, time, day });
+    try {
+      await this._push(new Uint8Array(header.buffer));
+      let crc = 0xFFFFFFFF, read = 0;
+      let buf = new Uint8Array(ZIP_CHUNK), fill = 0;
+      const flush = async () => {
+        if (!fill) return;
+        await this._push(fill === buf.length ? buf : buf.subarray(0, fill));
+        if (onChunk) onChunk(fill);
+        buf = new Uint8Array(ZIP_CHUNK);
+        fill = 0;
+      };
+      const reader = blob.stream().getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        crc = crc32Update(crc, value);
+        read += value.length;
+        let pos = 0;
+        while (pos < value.length) {
+          const n = Math.min(value.length - pos, buf.length - fill);
+          buf.set(value.subarray(pos, pos + n), fill);
+          fill += n;
+          pos += n;
+          if (fill === buf.length) await flush();
+        }
+      }
+      await flush();
+      if (read !== size) throw new Error(`size changed while reading (${read} != ${size})`);
+      crc = (crc ^ 0xFFFFFFFF) >>> 0;
+      const c = new DataView(new ArrayBuffer(4));
+      c.setUint32(0, crc, true);
+      await this.writable.write({ type: "write", position: offset + 14, data: new Uint8Array(c.buffer) });
+      await this.writable.seek(this.offset);
+      this.entries.push({ name: nameBytes, crc, size, offset, time, day });
+    } catch (e) {
+      try {
+        await this.writable.truncate(offset); // also pulls the cursor back
+        this.offset = offset;
+      } catch (_) {}
+      throw e;
+    }
   }
   async finish() {
     const cdStart = this.offset;
     for (const e of this.entries) {
-      const rec = new DataView(new ArrayBuffer(46));
+      const bigSize = e.size >= ZIP64_LIMIT;
+      const bigOff = e.offset >= ZIP64_LIMIT;
+      const extraLen = (bigSize || bigOff) ? 4 + (bigSize ? 16 : 0) + (bigOff ? 8 : 0) : 0;
+      const rec = new DataView(new ArrayBuffer(46 + e.name.length + extraLen));
       rec.setUint32(0, 0x02014b50, true);
-      rec.setUint16(4, 20, true);         // version made by
-      rec.setUint16(6, 20, true);         // version needed
+      rec.setUint16(4, 45, true);             // version made by
+      rec.setUint16(6, extraLen ? 45 : 20, true);
       rec.setUint16(8, 0x0800, true);
-      rec.setUint16(10, 0, true);         // store
+      rec.setUint16(10, 0, true);             // store
       rec.setUint16(12, e.time, true);
       rec.setUint16(14, e.day, true);
       rec.setUint32(16, e.crc, true);
-      rec.setUint32(20, e.size, true);
-      rec.setUint32(24, e.size, true);
+      rec.setUint32(20, bigSize ? 0xFFFFFFFF : e.size, true);
+      rec.setUint32(24, bigSize ? 0xFFFFFFFF : e.size, true);
       rec.setUint16(28, e.name.length, true);
-      rec.setUint16(30, 0, true);         // extra length
-      rec.setUint16(32, 0, true);         // comment length
-      rec.setUint16(34, 0, true);         // disk number
-      rec.setUint16(36, 0, true);         // internal attrs
-      rec.setUint32(38, 0, true);         // external attrs
-      rec.setUint32(42, e.offset, true);
+      rec.setUint16(30, extraLen, true);
+      rec.setUint16(32, 0, true);             // comment length
+      rec.setUint16(34, 0, true);             // disk number
+      rec.setUint16(36, 0, true);             // internal attrs
+      rec.setUint32(38, 0, true);             // external attrs
+      rec.setUint32(42, bigOff ? 0xFFFFFFFF : e.offset, true);
+      new Uint8Array(rec.buffer).set(e.name, 46);
+      if (extraLen) {
+        // Zip64 extra: only the fields saturated above, in spec order.
+        let x = 46 + e.name.length;
+        rec.setUint16(x, 0x0001, true);
+        rec.setUint16(x + 2, extraLen - 4, true);
+        x += 4;
+        if (bigSize) {
+          rec.setBigUint64(x, BigInt(e.size), true);
+          rec.setBigUint64(x + 8, BigInt(e.size), true);
+          x += 16;
+        }
+        if (bigOff) rec.setBigUint64(x, BigInt(e.offset), true);
+      }
       await this._push(new Uint8Array(rec.buffer));
-      await this._push(e.name);
     }
     const cdSize = this.offset - cdStart;
+    const n = this.entries.length;
+    const need64 = n >= 0xFFFF || cdSize >= ZIP64_LIMIT || cdStart >= ZIP64_LIMIT;
+    if (need64) {
+      const z64Start = this.offset;
+      const r = new DataView(new ArrayBuffer(56 + 20));
+      r.setUint32(0, 0x06064b50, true);       // Zip64 end of central directory
+      r.setBigUint64(4, 44n, true);
+      r.setUint16(12, 45, true);
+      r.setUint16(14, 45, true);
+      r.setUint32(16, 0, true);
+      r.setUint32(20, 0, true);
+      r.setBigUint64(24, BigInt(n), true);
+      r.setBigUint64(32, BigInt(n), true);
+      r.setBigUint64(40, BigInt(cdSize), true);
+      r.setBigUint64(48, BigInt(cdStart), true);
+      r.setUint32(56, 0x07064b50, true);      // Zip64 end of central directory locator
+      r.setUint32(60, 0, true);
+      r.setBigUint64(64, BigInt(z64Start), true);
+      r.setUint32(72, 1, true);
+      await this._push(new Uint8Array(r.buffer));
+    }
     const eocd = new DataView(new ArrayBuffer(22));
     eocd.setUint32(0, 0x06054b50, true);
     eocd.setUint16(4, 0, true);
     eocd.setUint16(6, 0, true);
-    eocd.setUint16(8, this.entries.length, true);
-    eocd.setUint16(10, this.entries.length, true);
-    eocd.setUint32(12, cdSize, true);
-    eocd.setUint32(16, cdStart, true);
-    eocd.setUint16(20, 0, true);          // comment length
+    eocd.setUint16(8, Math.min(n, 0xFFFF), true);
+    eocd.setUint16(10, Math.min(n, 0xFFFF), true);
+    eocd.setUint32(12, cdSize >= ZIP64_LIMIT ? 0xFFFFFFFF : cdSize, true);
+    eocd.setUint32(16, cdStart >= ZIP64_LIMIT ? 0xFFFFFFFF : cdStart, true);
+    eocd.setUint16(20, 0, true);              // comment length
     await this._push(new Uint8Array(eocd.buffer));
     await this.writable.close();
   }
@@ -1714,14 +2294,18 @@ async function loadHtmlsToFS(handle, target) {
   for (const n of pyodide.FS.readdir(target)) {
     if (HTML_RE.test(n)) pyodide.FS.unlink(target + "/" + n);
   }
-  let found = false;
+  let found = 0, bytes = 0;
+  const t0 = performance.now();
   for await (const [name, h] of handle.entries()) {
     if (h.kind === "file" && HTML_RE.test(name)) {
       const buf = new Uint8Array(await (await h.getFile()).arrayBuffer());
       pyodide.FS.writeFile(target + "/" + name, buf);
-      found = true;
+      found++;
+      bytes += buf.length;
     }
   }
+  dbg(`loadHtmlsToFS: «${handle.name}» → ${found} página(s), ${humanSize(bytes)} en ` +
+      `${((performance.now() - t0) / 1000).toFixed(1)}s`);
   if (!found) throw new Error(t("drop_no_messages", { name: handle.name }));
 }
 
@@ -1739,6 +2323,7 @@ async function writeBackPages(target, handle, pageNames) {
     if (h.kind === "file" && HTML_RE.test(name) && !keep.has(name)) stale.push(name);
   }
   for (const name of stale) await handle.removeEntry(name);
+  dbg(`writeBackPages: «${handle.name}» → ${pageNames.length} página(s) escritas, ${stale.length} antiguas eliminadas`);
 }
 
 let cachedConcurrency = null;
@@ -1855,36 +2440,55 @@ function resolveTarget(written, renames, rel, name, size, isAsset) {
 // Sequential counterpart to copyMediaTree, for the Safe-Browsing ZIP
 // fallback: a ZipWriter has one growing byte sequence, so entries must be
 // added one at a time rather than with copyMediaTree's concurrent writes.
-async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAssets, rootPrefix) {
+// opts.topLevel: also take top-level non-page files (e.g. result.json) — for
+// a whole-export copy; the fuse leaves those out. opts.skip: relative paths
+// to leave out because the job writes or removes them itself.
+async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAssets, rootPrefix, progress, opts = {}) {
   const skipped = [];
   const t0 = performance.now();
-  let added = 0;
+  let added = 0, lastPaint = 0;
   dbg(`zipMediaTree: arrancando con ${srcHandle.name} (includeAssets=${includeAssets})`);
+  function paint(force) {
+    const now = performance.now();
+    if (!force && now - lastPaint < 150) return;
+    lastPaint = now;
+    setStage(t("stage_zip_media", {
+      n: mediaDone, done: humanSize(progress.done), total: humanSize(progress.total),
+    }), progress.total ? Math.min(progress.done / progress.total, 0.99) : null);
+  }
+  function onChunk(n) {
+    progress.done += n;
+    paint(false);
+    checkCancel();
+  }
   async function walk(src, rel) {
     for await (const [name, h] of src.entries()) {
+      checkCancel();
       if (h.kind === "directory") {
         const isAsset = rel === "" && ASSETS.includes(name);
         if (isAsset && !includeAssets) continue;
         await walk(h, rel + name + "/");
         continue;
       }
-      if (rel === "") continue;
+      if (rel === "" && (!opts.topLevel || HTML_RE.test(name))) continue;
+      if (opts.skip && opts.skip.has(rel + name)) continue;
       const isAsset = ASSETS.includes(rel.split("/")[0]);
       let size = null, target = null;
       const tf0 = performance.now();
+      const before = progress.done;
       // A source file can be unreadable even though listing and getFile()
-      // (metadata only) succeeded — e.g. an antivirus denying the open of
-      // the very .exe that sent us down this path, or a file too large to
-      // read into one ArrayBuffer. addFile reads the whole file before
-      // writing any byte of the entry, so a failure here leaves the archive
-      // consistent: skip the file and warn, like copyOneFile does.
+      // (metadata only) succeeded — e.g. an antivirus denying the open of a
+      // flagged file. addFile rolls a failed entry back out of the archive,
+      // so the file can be skipped with a warning, like copyOneFile does.
       try {
         const f = await h.getFile();
         size = f.size;
         target = resolveTarget(written, renames, rel, name, f.size, isAsset);
         if (target === null) continue;
-        await zipWriter.addFile(rootPrefix + target, f);
+        await zipWriter.addFile(rootPrefix + target, f, onChunk);
       } catch (e) {
+        progress.done = before;
+        if (e instanceof JobCancelled) throw e;
         if (target !== null) written.delete(target); // let an identical copy in a later export fill in
         const where = target || rel + name;
         skipped.push(where);
@@ -1894,28 +2498,36 @@ async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAsset
         }));
         continue;
       }
+      // Big videos legitimately take seconds; flag only poor throughput.
       const ms = performance.now() - tf0;
-      if (ms > 500) dbg(`zipMediaTree: archivo lento — ${target} (${size}B) = ${ms.toFixed(0)}ms`);
+      const mbps = size / 1e3 / ms;
+      if (ms > 1000 && mbps < 50) {
+        dbg(`zipMediaTree: archivo lento — ${target} (${humanSize(size)}) = ${ms.toFixed(0)}ms, ${mbps.toFixed(0)} MB/s`);
+      }
       added++;
       mediaDone++;
-      setStage(t("stage_media", { n: mediaDone }), null);
+      paint(false);
     }
   }
   await walk(srcHandle, "");
-  dbg(`zipMediaTree: terminado ${srcHandle.name} — ${added} archivos en ` +
-      `${((performance.now() - t0) / 1000).toFixed(1)}s, ${skipped.length} omitidos` +
-      (skipped.length ? `: ${skipped.join(", ")}` : ""));
+  paint(true);
+  const secs = (performance.now() - t0) / 1000;
+  dbg(`zipMediaTree: terminado ${srcHandle.name} — ${added} archivos en ${secs.toFixed(1)}s, ` +
+      `${skipped.length} omitidos` + (skipped.length ? `: ${skipped.join(", ")}` : ""));
   if (skipped.length) pushWarn(t("warn_media_skipped_total", { n: skipped.length }));
 }
 
 async function zipBackPages(zipWriter, target, pageNames, rootPrefix) {
   for (const name of pageNames) {
+    checkCancel();
     const data = pyodide.FS.readFile(target + "/" + name);
     await zipWriter.addFile(rootPrefix + name, data);
   }
 }
 
-async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency) {
+// blockedSink (optional array) receives the target path of every file whose
+// write failed, so a caller that can't accept gaps (copy mode) can fail.
+async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency, blockedSink) {
   const renames = {};
   const blocked = [];
 
@@ -1955,6 +2567,7 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
   }
 
   async function copyOneFile(h, dst, rel, name) {
+    checkCancel();
     const isAsset = ASSETS.includes(rel.split("/")[0]);
     const f = await h.getFile();
     const target = await withLock(() => resolveTarget(written, renames, rel, name, f.size, isAsset));
@@ -1973,11 +2586,15 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
       await f.stream().pipeTo(await fh.createWritable());
     } catch (e) {
       blocked.push(target);
+      if (blockedSink) blockedSink.push(target);
+      // An AbortError at close() is Safe Browsing's verdict: remember the
+      // extension for this session so the next preflight catches it.
+      if (e.name === "AbortError" && fileExt(name)) DANGEROUS_EXTENSIONS.add(fileExt(name));
       dbg(`copyMediaTree: NO copiado — ${target} (${f.size}B): ${e.name}: ${e.message}`);
       // getFileHandle already created the entry; a failed write leaves a
       // 0-byte file behind that looks like a corrupt media file.
       try { await dst.removeEntry(tName); } catch (_) {}
-      pushWarn(t("warn_media_skipped", { name: target }));
+      if (!blockedSink) pushWarn(t("warn_media_skipped", { name: target }));
       return;
     }
     if (DEBUG) {
@@ -2011,13 +2628,55 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
       `(${(filesCopied / elapsed || 0).toFixed(1)} archivos/s, concurrency=${CONCURRENCY})`);
   if (blocked.length) {
     dbg(`copyMediaTree: ${blocked.length} archivos no copiados: ${blocked.join(", ")}`);
-    pushWarn(t("warn_media_skipped_total", { n: blocked.length }));
+    if (!blockedSink) pushWarn(t("warn_media_skipped_total", { n: blocked.length }));
   }
   return renames;
 }
 
 /* ================= job UI ================= */
-function showJob(title) {
+// A running job lives only in this tab: reloading or closing it kills the
+// operation midway (a partial output folder or a truncated ZIP, and for
+// compact/enhance an export rewritten halfway), so the browser is asked to
+// confirm leaving while one runs. Browsers show their own generic text.
+let jobRunning = false;
+window.addEventListener("beforeunload", (e) => {
+  if (!jobRunning) return;
+  dbg("intento de recargar/cerrar la pestaña con un trabajo en marcha → se pide confirmación");
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+// Cooperative cancellation: long loops call checkCancel() between files or
+// chunks. Only jobs that write to a separate output (fuse) are cancellable —
+// compact/enhance rewrite the export in place, where stopping halfway would
+// leave it inconsistent.
+class JobCancelled extends Error {
+  constructor() { super("cancelled"); this.name = "JobCancelled"; }
+}
+let jobCancel = null;
+function checkCancel() {
+  if (jobCancel && jobCancel.requested) throw new JobCancelled();
+}
+function cancelJob() {
+  if (!jobCancel || jobCancel.requested) return;
+  jobCancel.requested = true;
+  dbg("cancelación solicitada por el usuario");
+  $("job-cancel").disabled = true;
+  $("job-cancel").textContent = t("job_cancelling");
+}
+
+let jobT0 = 0;
+function showJob(title, cancellable) {
+  dbg(`trabajo iniciado: «${title}»${cancellable ? " (cancelable)" : ""}`);
+  jobT0 = performance.now();
+  jobRunning = true;
+  jobCancel = cancellable ? { requested: false } : null;
+  const cancelBtn = $("job-cancel");
+  cancelBtn.style.display = cancellable ? "" : "none";
+  cancelBtn.disabled = false;
+  cancelBtn.textContent = t("job_cancel");
+  $("job-note").textContent = t("job_keep_open");
+  $("job-note").style.display = "";
   $("job").classList.add("show");
   $("job-stage").textContent = title;
   $("job-pct").textContent = "";
@@ -2031,7 +2690,15 @@ function showJob(title) {
 }
 // Dismisses the job card without a result (e.g. after the pre-fuse scan,
 // before a prompt), restoring buttons the way endJob does.
+function stopJobUi() {
+  jobRunning = false;
+  jobCancel = null;
+  $("job-cancel").style.display = "none";
+  $("job-note").style.display = "none";
+}
 function hideJob() {
+  dbg(`trabajo cerrado sin resultado tras ${((performance.now() - jobT0) / 1000).toFixed(1)}s`);
+  stopJobUi();
   $("job").classList.remove("show");
   document.querySelectorAll(".btn.filled").forEach(b => b.disabled = false);
   renderExports();
@@ -2050,6 +2717,7 @@ function setStage(text, frac) {
   }
 }
 function pushWarn(text) {
+  dbg(`aviso: ${text}`);
   const div = document.createElement("div");
   div.className = "warn-item";
   div.innerHTML = '<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg><span></span>';
@@ -2062,8 +2730,12 @@ function onPyProgress(kind, payloadJson) {
   setStage(t("stage_" + p.key, { name: p.name || "", n: p.copied || 0 }),
            typeof p.frac === "number" ? p.frac : null);
 }
-function endJob(ok, res, errText, subText) {
-  if (!ok) dbg(`endJob: ERROR — ${errText}`);
+function endJob(ok, res, errText, subText, cancelled) {
+  const secs = ((performance.now() - jobT0) / 1000).toFixed(1);
+  if (ok) dbg(`trabajo terminado en ${secs}s — ${res.messages} mensajes, ${res.pages.length} página(s)`);
+  else if (cancelled) dbg(`trabajo CANCELADO tras ${secs}s — ${errText}`);
+  else dbg(`trabajo FALLIDO tras ${secs}s — ${errText}`);
+  stopJobUi();
   $("job-spin").style.display = "none";
   $("job-progress").classList.remove("indet");
   $("job-bar").style.width = "100%";
@@ -2088,6 +2760,11 @@ function endJob(ok, res, errText, subText) {
     $("job-rtitle").textContent = t("job_failed");
     $("job-rsub").textContent = errText || "";
   }
+}
+function endCancelled(subText) {
+  endJob(false, null, subText, undefined, true);
+  $("job-stage").textContent = t("job_cancelled");
+  $("job-rtitle").textContent = t("job_cancelled");
 }
 
 /* ================= fuse ================= */
@@ -2131,6 +2808,10 @@ async function inspectHandle(handle, target) {
   const info = JSON.parse(glue.inspect(target));
   info.handle = handle;
   info.target = target;
+  // Names of the carpeta/participants stay out: logs get shared.
+  dbg(`inspección «${handle.name}»: ${info.messages} mensajes, ${info.pages.length} página(s), ` +
+      `${info.kind === "group" ? "grupo" : "privado"} (${info.senders.length} remitentes), ` +
+      `${info.first || "?"} → ${info.last || "?"}, mejorado=${!!info.enhanced}`);
   return info;
 }
 
@@ -2142,14 +2823,19 @@ async function addExportHandle(handle) {
   if (state.exports.length) {
     const first = state.exports[0];
     if (first.title && info.title && first.title !== info.title) {
-      if (!confirm(t("confirm_mix", { a: info.title, b: first.title }))) return;
+      const ok = confirm(t("confirm_mix", { a: info.title, b: first.title }));
+      dbg(`añadir export: títulos distintos → ${ok ? "añadido igualmente" : "descartado"}`);
+      if (!ok) return;
       state.forceMix = true;
     } else if (first.kind !== info.kind) {
-      if (!confirm(t("confirm_kind"))) return;
+      const ok = confirm(t("confirm_kind"));
+      dbg(`añadir export: mezcla grupo/privado → ${ok ? "añadido igualmente" : "descartado"}`);
+      if (!ok) return;
       state.forceMix = true;
     }
   }
   state.exports.push(info);
+  dbg(`añadir export: ahora hay ${state.exports.length} en la lista`);
   renderExports();
 }
 async function addExport() {
@@ -2165,17 +2851,22 @@ function fuseZipName() {
   return title.replace(/[\\/:*?"<>|]+/g, "_").trim() || "export";
 }
 
-async function runFuse() {
-  // Read-only pass first: the estimated merged size decides the size
-  // warning, and a dangerous extension offers the Safe-Browsing ZIP
-  // fallback — both before asking for an output folder.
-  showJob(t("stage_listing", { n: 0 }));
+// Pre-write pass shared by the fuse and the compact/enhance copy mode, all
+// before any output is picked: scans the sources (progress + cancel), warns
+// when the result is large, and settles how to write. A dangerous extension
+// means Chrome may refuse to write that file into a folder: allowSkip offers
+// to go on without it (fuse); otherwise (copy) the only way on is a ZIP,
+// since a copy with files silently missing isn't a copy. Returns
+// { mode: "dir" | "zip", totalSize }, or null if cancelled.
+async function preflight(handles, { allowSkip }) {
+  showJob(t("stage_listing", { n: 0 }), true);
   let scan;
   try {
-    scan = await scanExports(state.exports.map(e => e.handle));
+    scan = await scanExports(handles);
   } catch (e) {
-    endJob(false, null, pyError(e));
-    return;
+    if (e instanceof JobCancelled) endCancelled(t("cancel_nothing_written"));
+    else endJob(false, null, pyError(e));
+    return null;
   }
   hideJob();
   const { dangerous, totalSize } = scan;
@@ -2187,34 +2878,84 @@ async function runFuse() {
       { id: "continue", label: t("size_warn_continue"), style: "filled" },
       cancelOpt,
     ]);
-    if (c !== "continue") return; // "desktop" already opened the releases page
+    if (c !== "continue") return null; // "desktop" already opened the releases page
   }
 
   if (dangerous.size) {
     const list = [...dangerous].sort().map(x => "." + x).join(", ");
-    const c = await askChoice(t("dangerous_h"), t("confirm_dangerous_zip", { list }), [
-      { id: "zip", label: t("zip_btn"), style: "filled" },
-      { id: "nozip", label: t("nozip_btn"), style: "tonal" },
-      cancelOpt,
-    ]);
-    dbg(`runFuse: extensiones peligrosas (${list}) → elección "${c}"`);
-    if (c === "cancel") return;
-    if (c === "zip") return runFuseAsZip();
-    // "nozip": normal path below; copyOneFile still skips (and warns about)
-    // any file Chrome actually blocks.
+    const opts = [{ id: "zip", label: t("zip_btn"), style: "filled" }];
+    if (allowSkip) opts.push({ id: "nozip", label: t("nozip_btn"), style: "tonal" });
+    opts.push(cancelOpt);
+    dbg(`preflight: extensiones que Chrome puede bloquear: ${list}`);
+    const c = await askChoice(t("dangerous_h"),
+      t(allowSkip ? "confirm_dangerous_zip" : "confirm_dangerous_zip_copy", { list }), opts);
+    if (c === "cancel") return null;
+    if (c === "zip") return { mode: "zip", totalSize };
+    // "nozip" (fuse only): copyOneFile skips and warns about blocked files.
   }
 
   // The folder picker needs a recent user click. If the scan took a while
   // and no prompt above supplied a fresh one, ask for it explicitly rather
   // than letting showDirectoryPicker fail silently.
   if (navigator.userActivation && !navigator.userActivation.isActive) {
-    dbg("runFuse: activación de usuario caducada tras el análisis → pido clic");
+    dbg("preflight: activación de usuario caducada tras el análisis → pido clic");
     const c = await askChoice(t("ready_h"), t("ready_text", { size: humanSize(totalSize) }), [
       { id: "go", label: t("pick_out_btn"), style: "filled" },
       cancelOpt,
     ]);
-    if (c !== "go") return;
+    if (c !== "go") return null;
   }
+  return { mode: "dir", totalSize };
+}
+
+// Streams a job's output into a .zip the user picks. The .zip extension
+// itself is not on Chrome's dangerous-file list, so this write goes through
+// even when files inside it would be refused in a folder. build(zip, root,
+// setPhase) adds the entries under the "<name>/" root folder and returns the
+// job result. On failure or cancel the partial file is discarded.
+async function runZipJob({ name, title, doneText, build }) {
+  let fh;
+  try {
+    fh = await showSaveFilePicker({
+      suggestedName: name + ".zip",
+      types: [{ description: "ZIP", accept: { "application/zip": [".zip"] } }],
+    });
+  } catch (e) {
+    dbg(`runZipJob: selector de guardado cerrado/fallido — ${e.name}: ${e.message}`);
+    return false;
+  }
+
+  showJob(title, true);
+  let writable;
+  let phase = "createWritable";
+  try {
+    writable = await fh.createWritable();
+    const zip = new ZipWriter(writable);
+    const res = await build(zip, name + "/", p => { phase = p; });
+    checkCancel();
+    phase = "cerrar ZIP";
+    await zip.finish(); // writes the central directory and closes `writable`
+    dbg(`runZipJob: ZIP cerrado — ${zip.entries.length} entradas, ${humanSize(zip.offset)}`);
+    endJob(true, res, null, doneText);
+    return true;
+  } catch (e) {
+    const cancelled = e instanceof JobCancelled;
+    dbg(`runZipJob: ${cancelled ? "CANCELADO" : "FALLÓ"} en fase "${phase}" — ${e.name}: ${e.message}` +
+        (!cancelled && e.stack ? `\n${e.stack}` : ""));
+    // abort() discards everything written; remove() then drops the empty
+    // file the save picker left behind, so no broken .zip stays around.
+    if (writable) { try { await writable.abort(); } catch (_) {} }
+    try { if (fh.remove) await fh.remove(); } catch (_) {}
+    if (cancelled) endCancelled(t("cancel_zip_removed"));
+    else endJob(false, null, pyError(e));
+    return false;
+  }
+}
+
+async function runFuse() {
+  const pre = await preflight(state.exports.map(e => e.handle), { allowSkip: true });
+  if (!pre) return;
+  if (pre.mode === "zip") return runFuseAsZip(pre.totalSize);
 
   let out;
   try {
@@ -2226,7 +2967,7 @@ async function runFuse() {
   for (const e of state.exports) {
     if (await out.isSameEntry(e.handle)) return snack("⚠ output = input");
   }
-  showJob(t("job_fusing"));
+  showJob(t("job_fusing"), true);
   try {
     mediaDone = 0;
     const maps = {};
@@ -2238,82 +2979,64 @@ async function runFuse() {
     }
     setStage(t("stage_reading"), null);
     for (let i = 0; i < state.exports.length; i++) {
+      checkCancel();
       await loadHtmlsToFS(state.exports[i].handle, "/work/ex" + i);
     }
+    checkCancel();
     try { pyodide.FS.mkdirTree("/out"); } catch (_) {}
     const paths = state.exports.map((_, i) => "/work/ex" + i);
     const res = JSON.parse(glue.run_fuse(
       JSON.stringify(paths), "/out",
       chipValue("fuse-chips", "fuse-custom-n", "fuse-custom-u"),
       state.forceMix, JSON.stringify(maps)));
+    checkCancel();
     setStage(t("stage_saving"), null);
     await writeBackPages("/out", out, res.pages);
     endJob(true, res);
   } catch (e) {
-    endJob(false, null, pyError(e));
+    if (e instanceof JobCancelled) endCancelled(t("cancel_partial_dir"));
+    else endJob(false, null, pyError(e));
   }
 }
 
-// Safe-Browsing fallback: build the fused export as a single ZIP instead of
-// writing media straight into the output folder. The .zip extension itself
-// is not on Chrome's dangerous-file list, so this write should go through
-// even when the individual files inside it would have been blocked.
-// ZipWriter streams every entry straight to the picked file as it's
-// produced, so peak memory is one file at a time, never the whole export.
-async function runFuseAsZip() {
-  const safeName = fuseZipName();
-  let fh;
-  try {
-    fh = await showSaveFilePicker({
-      suggestedName: safeName + ".zip",
-      types: [{ description: "ZIP", accept: { "application/zip": [".zip"] } }],
-    });
-  } catch (e) {
-    dbg(`runFuseAsZip: selector de guardado cerrado/fallido — ${e.name}: ${e.message}`);
-    return;
-  }
-
-  showJob(t("job_fusing"));
-  let writable;
-  let phase = "createWritable";
-  try {
-    mediaDone = 0;
-    const maps = {};
-    const written = new Map();
-    writable = await fh.createWritable();
-    const zip = new ZipWriter(writable);
-    const root = safeName + "/";
-    phase = "media";
-    for (let i = 0; i < state.exports.length; i++) {
-      const exRenames = {};
-      await zipMediaTree(state.exports[i].handle, zip, written, exRenames, i === 0, root);
-      maps["/work/ex" + i] = exRenames;
-    }
-    phase = "leer HTML";
-    setStage(t("stage_reading"), null);
-    for (let i = 0; i < state.exports.length; i++) {
-      await loadHtmlsToFS(state.exports[i].handle, "/work/ex" + i);
-    }
-    phase = "fusión (Python)";
-    try { pyodide.FS.mkdirTree("/out"); } catch (_) {}
-    const paths = state.exports.map((_, i) => "/work/ex" + i);
-    const res = JSON.parse(glue.run_fuse(
-      JSON.stringify(paths), "/out",
-      chipValue("fuse-chips", "fuse-custom-n", "fuse-custom-u"),
-      state.forceMix, JSON.stringify(maps)));
-    phase = "páginas al ZIP";
-    setStage(t("stage_zipping"), null);
-    await zipBackPages(zip, "/out", res.pages, root);
-    phase = "cerrar ZIP";
-    await zip.finish(); // writes the central directory and closes `writable`
-    dbg(`runFuseAsZip: ZIP cerrado — ${zip.entries.length} entradas, ${humanSize(zip.offset)}`);
-    endJob(true, res, null, t("res_written_zip"));
-  } catch (e) {
-    dbg(`runFuseAsZip: FALLÓ en fase "${phase}" — ${e.name}: ${e.message}` +
-        (e.stack ? `\n${e.stack}` : ""));
-    if (writable) { try { await writable.abort(); } catch (_) {} }
-    endJob(false, null, pyError(e));
-  }
+// estimatedSize (from the preflight scan) drives a byte-based progress bar.
+async function runFuseAsZip(estimatedSize) {
+  await runZipJob({
+    name: fuseZipName(),
+    title: t("job_fusing"),
+    doneText: t("res_written_zip"),
+    build: async (zip, root, setPhase) => {
+      mediaDone = 0;
+      const maps = {};
+      const written = new Map();
+      const progress = { done: 0, total: estimatedSize || 0 };
+      setPhase("media");
+      for (let i = 0; i < state.exports.length; i++) {
+        const exRenames = {};
+        await zipMediaTree(state.exports[i].handle, zip, written, exRenames, i === 0, root, progress);
+        maps["/work/ex" + i] = exRenames;
+      }
+      setPhase("leer HTML");
+      setStage(t("stage_reading"), null);
+      for (let i = 0; i < state.exports.length; i++) {
+        checkCancel();
+        await loadHtmlsToFS(state.exports[i].handle, "/work/ex" + i);
+      }
+      checkCancel();
+      setPhase("fusión (Python)");
+      try { pyodide.FS.mkdirTree("/out"); } catch (_) {}
+      const paths = state.exports.map((_, i) => "/work/ex" + i);
+      const res = JSON.parse(glue.run_fuse(
+        JSON.stringify(paths), "/out",
+        chipValue("fuse-chips", "fuse-custom-n", "fuse-custom-u"),
+        state.forceMix, JSON.stringify(maps)));
+      checkCancel();
+      setPhase("páginas al ZIP");
+      setStage(t("stage_zipping"), null);
+      await zipBackPages(zip, "/out", res.pages, root);
+      return res;
+    },
+  });
 }
 
 /* ================= compact ================= */
@@ -2339,20 +3062,189 @@ function clearCompact() {
   $("compact-info").style.display = "none";
   $("compact-btn").disabled = true;
 }
+/* ---- copy mode shared by compact / enhance / restore ---- */
+
+// Asks for a folder and creates a fresh "<export><suffix>" subfolder in it
+// (numbered if taken). Returns { parent, name, handle }, or null if the
+// picker was dismissed. Refuses the export itself or any folder inside it:
+// copying into your own tree would make the copy walk into itself.
+async function pickCopyTarget(src, suffix) {
+  let parent;
+  try {
+    parent = await showDirectoryPicker({ id: "tgx-out", mode: "readwrite" });
+  } catch (e) {
+    dbg(`pickCopyTarget: selector cerrado/fallido — ${e.name}: ${e.message}`);
+    return null;
+  }
+  if ((await src.resolve(parent)) !== null) {
+    snack(t("copy_inside_source"));
+    return null;
+  }
+  const base = src.name + suffix;
+  let name = base;
+  for (let n = 2; ; n++) {
+    try { await parent.getDirectoryHandle(name); } catch (_) { break; }
+    name = `${base} (${n})`;
+  }
+  const handle = await parent.getDirectoryHandle(name, { create: true });
+  dbg(`pickCopyTarget: copia en «${parent.name}/${name}»`);
+  return { parent, name, handle };
+}
+
+// Copies everything except the messages*.html pages (the job writes those)
+// from src into dst. A copy with holes isn't a copy: if Chrome refuses any
+// file (one the preflight's extension list didn't foresee), the whole copy
+// fails. Its extension is learnt, so a retry goes the ZIP way.
+async function copyExport(src, dst) {
+  const t0 = performance.now();
+  const concurrency = await benchmarkConcurrency(dst);
+  mediaDone = 0;
+  const blocked = [];
+  await copyMediaTree(src, dst, new Map(), true, concurrency, blocked);
+  for await (const [name, h] of src.entries()) {
+    checkCancel();
+    if (h.kind !== "file" || HTML_RE.test(name)) continue;
+    const f = await h.getFile();
+    try {
+      const fh = await dst.getFileHandle(name, { create: true });
+      await f.stream().pipeTo(await fh.createWritable());
+    } catch (e) {
+      if (e.name !== "AbortError") throw e;
+      if (fileExt(name)) DANGEROUS_EXTENSIONS.add(fileExt(name));
+      dbg(`copyExport: NO copiado — ${name}: ${e.name}: ${e.message}`);
+      blocked.push(name);
+    }
+  }
+  dbg(`copyExport: «${src.name}» → «${dst.name}» en ${((performance.now() - t0) / 1000).toFixed(1)}s, ` +
+      `${blocked.length} bloqueados`);
+  if (blocked.length) {
+    dbg(`copyExport: extensiones añadidas a la lista para esta sesión: ` +
+        [...new Set(blocked.map(fileExt).filter(Boolean))].join(", "));
+    throw new Error(t("copy_blocked_retry", { n: blocked.length, list: blocked.slice(0, 3).join(", ") }));
+  }
+}
+
+async function discardCopy(dest) {
+  try {
+    await dest.parent.removeEntry(dest.name, { recursive: true });
+    dbg(`discardCopy: eliminada «${dest.name}»`);
+  } catch (e) {
+    dbg(`discardCopy: no se pudo eliminar «${dest.name}» — ${e.name}: ${e.message}`);
+  }
+}
+
+// What a compact/enhance/restore job produces, independent of where it goes:
+// { work: pyodide dir holding the new pages, pages: [...],
+//   add: [["css/enhanced.css", fsPath], ...], remove: ["js/enhanced.js", ...] }.
+async function applyOutputs(target, o) {
+  dbg(`applyOutputs: «${target.name}» — añadir: ${o.add.map(a => a[0]).join(", ") || "nada"}, ` +
+      `quitar: ${o.remove.join(", ") || "nada"}`);
+  await writeBackPages(o.work, target, o.pages);
+  for (const [path, fsPath] of o.add) {
+    const [dir, name] = path.split("/");
+    await writeAsset(target, dir, name, fsPath);
+  }
+  for (const path of o.remove) {
+    const [dir, name] = path.split("/");
+    await removeAsset(target, dir, name);
+  }
+}
+
+// Runs a compact/enhance/restore job. compute() loads the pages and runs the
+// Python step (fast, HTML only); outputs(res) describes the result.
+//  - In place: rewrites the export itself. Not cancellable — stopping halfway
+//    would leave the export inconsistent.
+//  - Copy: goes through the same preflight as the fuse, and a copy must be
+//    complete: if the export holds files Chrome would refuse to write into a
+//    folder, the copy is made as a ZIP instead (no "skip them" option).
+//    Python runs before any media is copied, so its errors show up first.
+// Returns true on success.
+async function runExportJob({ src, copy, suffix, title, compute, outputs }) {
+  dbg(`«${title}» sobre «${src.name}» — resultado: ${copy ? "copia" : "modificar el original"}`);
+  if (!copy) {
+    showJob(title);
+    try {
+      const res = await compute();
+      setStage(t("stage_saving"), null);
+      await applyOutputs(src, outputs(res));
+      endJob(true, res);
+      return true;
+    } catch (e) {
+      endJob(false, null, pyError(e));
+      return false;
+    }
+  }
+
+  const pre = await preflight([src], { allowSkip: false });
+  if (!pre) return false;
+  dbg(`copia: se escribirá ${pre.mode === "zip" ? "como ZIP" : "en una carpeta"}`);
+
+  if (pre.mode === "zip") {
+    return runZipJob({
+      name: src.name + suffix,
+      title,
+      doneText: t("res_written_zip_copy"),
+      build: async (zip, root, setPhase) => {
+        setPhase("Python");
+        const res = await compute();
+        const o = outputs(res);
+        checkCancel();
+        setPhase("media");
+        mediaDone = 0;
+        const skip = new Set([...o.add.map(a => a[0]), ...o.remove]);
+        const progress = { done: 0, total: pre.totalSize };
+        await zipMediaTree(src, zip, new Map(), {}, true, root, progress, { topLevel: true, skip });
+        setPhase("páginas al ZIP");
+        setStage(t("stage_zipping"), null);
+        await zipBackPages(zip, o.work, o.pages, root);
+        for (const [path, fsPath] of o.add) {
+          checkCancel();
+          await zip.addFile(root + path, pyodide.FS.readFile(fsPath));
+        }
+        return res;
+      },
+    });
+  }
+
+  const dest = await pickCopyTarget(src, suffix);
+  if (!dest) return false;
+  showJob(title, true);
+  try {
+    const res = await compute();
+    checkCancel();
+    await copyExport(src, dest.handle);
+    checkCancel();
+    setStage(t("stage_saving"), null);
+    await applyOutputs(dest.handle, outputs(res));
+    endJob(true, res, null, t("res_written_copy", { name: dest.name }));
+    return true;
+  } catch (e) {
+    await discardCopy(dest);
+    if (e instanceof JobCancelled) endCancelled(t("cancel_copy_removed"));
+    else endJob(false, null, pyError(e));
+    return false;
+  }
+}
+
 async function runCompact() {
   if (!state.compact) return;
-  showJob(t("job_compacting"));
-  try {
-    await loadHtmlsToFS(state.compact.handle, "/work/c");
-    const mode = document.querySelector("#compact-mode button.active").dataset.mode;
-    const res = JSON.parse(mode === "files"
-      ? glue.run_compact("/work/c", $("files-n").value || "1", null)
-      : glue.run_compact("/work/c", null,
-          chipValue("compact-chips", "compact-custom-n", "compact-custom-u")));
-    setStage(t("stage_saving"), null);
-    await writeBackPages("/work/c", state.compact.handle, res.pages);
-    endJob(true, res);
-  } catch (e) { endJob(false, null, pyError(e)); }
+  const mode = document.querySelector("#compact-mode button.active").dataset.mode;
+  const files = $("files-n").value || "1";
+  const size = chipValue("compact-chips", "compact-custom-n", "compact-custom-u");
+  dbg(`compactar: objetivo ${mode === "files" ? files + " archivo(s)" : size + " por página"}`);
+  await runExportJob({
+    src: state.compact.handle,
+    copy: destIsCopy("compact-dest"),
+    suffix: "_compacted",
+    title: t("job_compacting"),
+    compute: async () => {
+      await loadHtmlsToFS(state.compact.handle, "/work/c");
+      return JSON.parse(mode === "files"
+        ? glue.run_compact("/work/c", files, null)
+        : glue.run_compact("/work/c", null, size));
+    },
+    outputs: res => ({ work: "/work/c", pages: res.pages, add: [], remove: [] }),
+  });
 }
 
 /* ================= enhance / restore ================= */
@@ -2422,32 +3314,45 @@ async function runEnhance() {
   const layout = $("layout-chips").querySelector(".chip.sel").dataset.layout;
   const me = $("me-select").value;
   if (f.bubbles && !me && layout !== "original") return snack(t("need_me"));
-  showJob(t("job_enhancing"));
-  try {
-    await loadHtmlsToFS(state.enhance.handle, "/work/e");
-    const res = JSON.parse(glue.run_enhance(
-      "/work/e", me, layout, JSON.stringify(f), $("opt-fullwidth").checked));
-    setStage(t("stage_saving"), null);
-    await writeBackPages("/work/e", state.enhance.handle, res.pages);
-    await writeAsset(state.enhance.handle, "css", "enhanced.css", "/work/e/css/enhanced.css");
-    await writeAsset(state.enhance.handle, "js", "enhanced.js", "/work/e/js/enhanced.js");
-    endJob(true, res);
-    await setEnhanceHandle(state.enhance.handle);
-  } catch (e) { endJob(false, null, pyError(e)); }
+  const fullwidth = $("opt-fullwidth").checked;
+  dbg(`mejorar: disposición=${layout}, ancho completo=${fullwidth}, remitente propio=${me ? "sí" : "no"}, ` +
+      `opciones=${Object.keys(f).filter(k => f[k]).join(",") || "ninguna"}`);
+  const copy = destIsCopy("enhance-dest");
+  const src = state.enhance.handle;
+  const ok = await runExportJob({
+    src, copy,
+    suffix: "_enhanced",
+    title: t("job_enhancing"),
+    compute: async () => {
+      await loadHtmlsToFS(src, "/work/e");
+      return JSON.parse(glue.run_enhance("/work/e", me, layout, JSON.stringify(f), fullwidth));
+    },
+    outputs: res => ({
+      work: "/work/e", pages: res.pages, remove: [],
+      add: [["css/enhanced.css", "/work/e/css/enhanced.css"],
+            ["js/enhanced.js", "/work/e/js/enhanced.js"]],
+    }),
+  });
+  if (ok && !copy) await setEnhanceHandle(src);
 }
 async function runRestore() {
   if (!state.enhance) return;
-  showJob(t("job_restoring"));
-  try {
-    await loadHtmlsToFS(state.enhance.handle, "/work/e");
-    const res = JSON.parse(glue.run_restore("/work/e"));
-    setStage(t("stage_saving"), null);
-    await writeBackPages("/work/e", state.enhance.handle, res.pages);
-    await removeAsset(state.enhance.handle, "css", "enhanced.css");
-    await removeAsset(state.enhance.handle, "js", "enhanced.js");
-    endJob(true, res);
-    await setEnhanceHandle(state.enhance.handle);
-  } catch (e) { endJob(false, null, pyError(e)); }
+  const copy = destIsCopy("enhance-dest");
+  const src = state.enhance.handle;
+  const ok = await runExportJob({
+    src, copy,
+    suffix: "_restored",
+    title: t("job_restoring"),
+    compute: async () => {
+      await loadHtmlsToFS(src, "/work/e");
+      return JSON.parse(glue.run_restore("/work/e"));
+    },
+    outputs: res => ({
+      work: "/work/e", pages: res.pages, add: [],
+      remove: ["css/enhanced.css", "js/enhanced.js"],
+    }),
+  });
+  if (ok && !copy) await setEnhanceHandle(src);
 }
 
 /* ================= init ================= */

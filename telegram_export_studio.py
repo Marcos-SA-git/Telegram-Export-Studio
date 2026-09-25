@@ -19,10 +19,12 @@ import io
 import json
 import os
 import re
+import shutil
 import socket
 import string
 import threading
 import time
+import traceback
 import webbrowser
 from collections import Counter, deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -65,14 +67,30 @@ VERBOSE = {"on": False}
 _stage_timing = {"key": None, "t0": 0.0, "last_log": 0.0}
 
 
+def vlog(msg):
+    if VERBOSE["on"]:
+        print(f"[verbose] {msg}")
+
+
 def _progress(kind, payload):
     with JOB_LOCK:
         if kind == "stage":
             JOB["stage"] = payload
         else:
             JOB["warnings"].append(payload)
-    if VERBOSE["on"] and kind == "stage":
-        _log_verbose_stage(payload)
+    if kind == "stage":
+        if VERBOSE["on"]:
+            _log_verbose_stage(payload)
+    else:
+        vlog(f"aviso: {payload}")
+
+
+def _end_verbose_stage():
+    if VERBOSE["on"] and _stage_timing["key"] is not None:
+        elapsed = time.perf_counter() - _stage_timing["t0"]
+        print(f"[verbose] etapa '{_stage_timing['key']}' terminada "
+              f"en {elapsed:.2f}s")
+    _stage_timing.update(key=None, t0=0.0, last_log=0.0)
 
 
 def _log_verbose_stage(payload):
@@ -377,25 +395,35 @@ def inspect_export(path: str) -> dict:
     }
 
 
-def start_job(fn):
+def start_job(fn, label="operación"):
     with JOB_LOCK:
         if JOB["state"] == "running":
             raise RuntimeError("Ya hay una operación en curso")
         buf = io.StringIO()
         JOB.update(state="running", buf=buf, result=None, error=None,
                    stage=None, warnings=[])
+    _stage_timing.update(key=None, t0=0.0, last_log=0.0)
 
     def target():
-        try:
-            with contextlib.redirect_stdout(buf), \
-                    contextlib.redirect_stderr(buf):
+        t0 = time.perf_counter()
+        with contextlib.redirect_stdout(buf), \
+                contextlib.redirect_stderr(buf):
+            vlog(f"inicio: {label}")
+            try:
                 result = fn()
-            with JOB_LOCK:
-                JOB.update(state="done", result=result)
-        except (Exception, SystemExit) as e:
-            with JOB_LOCK:
-                JOB.update(state="error",
-                           error=str(e) or e.__class__.__name__)
+            except (Exception, SystemExit) as e:
+                _end_verbose_stage()
+                vlog(f"{label}: FALLÓ tras {time.perf_counter() - t0:.1f}s")
+                if VERBOSE["on"]:
+                    traceback.print_exc()
+                with JOB_LOCK:
+                    JOB.update(state="error",
+                               error=str(e) or e.__class__.__name__)
+                return
+            _end_verbose_stage()
+            vlog(f"{label}: terminado en {time.perf_counter() - t0:.1f}s")
+        with JOB_LOCK:
+            JOB.update(state="done", result=result)
 
     threading.Thread(target=target, daemon=True).start()
 
@@ -424,19 +452,70 @@ def do_fuse(exports, output, page_size, force=False):
                 force=force)
 
 
-def do_compact(export, mode, value):
-    d = Path(export).resolve()
+def copy_export(src: Path, out: Path):
+    t0 = time.perf_counter()
+    files = [p for p in src.rglob("*") if p.is_file()]
+    total = sum(p.stat().st_size for p in files) or 1
+    vlog(f"copia: {len(files)} archivos, {human_size(total)} → {out}")
+    done = 0
+    for i, p in enumerate(files, 1):
+        dst = out / p.relative_to(src)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(p, dst)
+        done += p.stat().st_size
+        tef.report_stage("copy", frac=done / total, copied=i)
+    secs = time.perf_counter() - t0
+    vlog(f"copia terminada en {secs:.1f}s "
+         f"({human_size(total / secs if secs else total)}/s)")
+
+
+def on_export(export, output, job):
+    """Run job(path) on the export itself, or — when `output` is given — on
+    a full copy made there first, leaving the original untouched. A copy
+    that fails halfway is removed rather than left half-written."""
+    src = Path(export).resolve()
+    if not output:
+        return job(src)
+    out = Path(output).resolve()
+    if out == src or src in out.parents:
+        raise ValueError("La copia no puede ir en el propio export ni "
+                         "dentro de él")
+    if out.exists() and any(out.iterdir()):
+        raise ValueError(f"La carpeta de la copia ya existe y no está "
+                         f"vacía: {out}")
+    created = not out.exists()
+    try:
+        copy_export(src, out)
+        return job(out)
+    except BaseException:
+        if created:
+            shutil.rmtree(out, ignore_errors=True)
+            vlog(f"copia incompleta eliminada: {out}")
+        raise
+
+
+def do_compact(export, mode, value, output=None):
     if mode == "files":
         n = int(value)
         if n < 1:
             raise ValueError("El número de archivos debe ser al menos 1")
-        return compact(d, n, None)
-    return compact(d, None, parse_size(str(value)))
+        return on_export(export, output, lambda d: compact(d, n, None))
+    size = parse_size(str(value))
+    return on_export(export, output, lambda d: compact(d, None, size))
 
 
-def do_enhance(export, me, layout, features=None, fullwidth=True):
-    return enhance(Path(export).resolve(), me or None, layout, features,
-                   fullwidth=fullwidth)
+def do_enhance(export, me, layout, features=None, fullwidth=True,
+               output=None):
+    return on_export(export, output, lambda d: enhance(
+        d, me or None, layout, features, fullwidth=fullwidth))
+
+
+def do_restore(export, output=None):
+    return on_export(export, output, restore)
+
+
+def _dest_label(body):
+    return f" → copia en {body['output']}" if body.get("output") else " (original)"
 
 
 def inspect_convert(path: str) -> dict:
@@ -1027,7 +1106,21 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
         <select class="unit" id="compact-custom-u"><option>MB</option><option>KB</option></select>
       </div>
     </div>
-    <div class="hint" style="margin-top:14px" data-i18n="inplace_hint"></div>
+  </div>
+
+  <div class="card">
+    <h2 data-i18n="dest_h"></h2>
+    <div class="seg2" id="compact-dest">
+      <button data-dest="inplace" class="active" data-i18n="dest_inplace"></button>
+      <button data-dest="copy" data-i18n="dest_copy"></button>
+    </div>
+    <div class="field" id="compact-dest-field" style="display:none;margin-top:16px">
+      <input type="text" id="compact-dest-out" spellcheck="false">
+      <button class="browse" onclick="browseCopyOut('compact')">
+        <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="margin-top:12px" id="compact-dest-hint"></div>
   </div>
 
   <button class="btn filled" id="compact-btn" onclick="runCompact()" disabled>
@@ -1096,6 +1189,21 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
       <label class="switch"><input type="checkbox" id="opt-note" checked><i></i></label>
     </div>
     <div class="hint" data-i18n="enhance_hint"></div>
+  </div>
+
+  <div class="card">
+    <h2 data-i18n="dest_h"></h2>
+    <div class="seg2" id="enhance-dest">
+      <button data-dest="inplace" class="active" data-i18n="dest_inplace"></button>
+      <button data-dest="copy" data-i18n="dest_copy"></button>
+    </div>
+    <div class="field" id="enhance-dest-field" style="display:none;margin-top:16px">
+      <input type="text" id="enhance-dest-out" spellcheck="false">
+      <button class="browse" onclick="browseCopyOut('enhance')">
+        <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="margin-top:12px" id="enhance-dest-hint"></div>
   </div>
 
   <div class="action-row">
@@ -1258,6 +1366,12 @@ es: {
   goal_hint_size: "Fijas el tamaño máximo de cada messages.html y la cantidad de archivos resulta del total del historial.",
   srclink: "Código abierto · ver en GitHub",
   inplace_hint: "Se repagina en el sitio: solo se reescriben los messages*.html; fotos, vídeos y audios no se tocan.",
+  dest_h: "Resultado", dest_inplace: "Modificar el original", dest_copy: "Crear una copia",
+  dest_inplace_hint: "Se modifica el propio export (puedes revertirlo después con «Desmejorar»).",
+  dest_copy_hint: "Se crea una copia completa del export, con toda su media, en la carpeta indicada (que debe no existir o estar vacía), y el cambio se aplica solo a la copia. El original no se toca.",
+  pick_copy_parent: "Elige dónde crear la copia",
+  snack_need_copy_out: "Indica la carpeta donde crear la copia",
+  stage_copy: "Copiando el export · {copied} archivos…",
   compact_btn: "Compactar",
   enhance_source: "Export a mejorar",
   enhance_pick: "Elige o arrastra aquí la carpeta del export<br>(original, fusionado o compactado)",
@@ -1384,6 +1498,12 @@ en: {
   goal_hint_size: "You set the maximum size of each messages.html and the number of files follows from the total history.",
   srclink: "Open source · view on GitHub",
   inplace_hint: "Repaginated in place: only messages*.html files are rewritten; photos, videos and audio are untouched.",
+  dest_h: "Result", dest_inplace: "Modify the original", dest_copy: "Create a copy",
+  dest_inplace_hint: "The export itself is modified (you can revert it later with “Un-enhance”).",
+  dest_copy_hint: "A full copy of the export, with all its media, is created in the given folder (which must not exist or must be empty), and the change is applied to the copy only. The original is left untouched.",
+  pick_copy_parent: "Choose where to create the copy",
+  snack_need_copy_out: "Enter the folder where the copy should be created",
+  stage_copy: "Copying the export · {copied} files…",
   compact_btn: "Compact",
   enhance_source: "Export to enhance",
   enhance_pick: "Choose or drag the export folder here<br>(original, merged or compacted)",
@@ -1614,7 +1734,15 @@ fr: {
   res_enriched: "{msgs} messages · {n} champs ajoutés depuis le HTML",
   pick_convert: "Choisissez le dossier de l'export à convertir",
   open_json: "Ouvrir le JSON",
-  footer: "Telegram Export Studio · s'exécute entièrement sur votre machine"
+  footer: "Telegram Export Studio · s'exécute entièrement sur votre machine",
+  dest_copy: "Créer une copie",
+  dest_copy_hint: "Une copie complète de l'export, avec tous ses médias, est créée dans le dossier indiqué (qui ne doit pas exister ou doit être vide), et la modification ne s'applique qu'à la copie. L'original reste intact.",
+  dest_h: "Résultat",
+  dest_inplace: "Modifier l'original",
+  dest_inplace_hint: "L'export lui-même est modifié (vous pourrez l'annuler ensuite avec « Rétablir l'original »).",
+  pick_copy_parent: "Choisissez où créer la copie",
+  snack_need_copy_out: "Indiquez le dossier où créer la copie",
+  stage_copy: "Copie de l'export · {copied} fichiers…"
 },
 de: {
   subtitle: "Chat-Exporte zusammenführen, kompaktieren und verbessern — 100 % lokal",
@@ -1740,7 +1868,15 @@ de: {
   res_enriched: "{msgs} Nachrichten · {n} Felder aus dem HTML ergänzt",
   pick_convert: "Wähle den zu konvertierenden Export-Ordner",
   open_json: "JSON öffnen",
-  footer: "Telegram Export Studio · läuft vollständig auf deinem Rechner"
+  footer: "Telegram Export Studio · läuft vollständig auf deinem Rechner",
+  dest_copy: "Kopie erstellen",
+  dest_copy_hint: "Im angegebenen Ordner (der nicht existieren oder leer sein muss) wird eine vollständige Kopie des Exports mit allen Medien erstellt, und die Änderung wird nur auf die Kopie angewendet. Das Original bleibt unverändert.",
+  dest_h: "Ergebnis",
+  dest_inplace: "Original ändern",
+  dest_inplace_hint: "Der Export selbst wird verändert (du kannst das später mit „Zurücksetzen“ rückgängig machen).",
+  pick_copy_parent: "Wähle, wo die Kopie erstellt werden soll",
+  snack_need_copy_out: "Gib den Ordner an, in dem die Kopie erstellt werden soll",
+  stage_copy: "Export wird kopiert · {copied} Dateien…"
 },
 pt: {
   subtitle: "Mescle, compacte e melhore exports de chats — 100% local",
@@ -1866,7 +2002,15 @@ pt: {
   res_enriched: "{msgs} mensagens · {n} campos adicionados do HTML",
   pick_convert: "Escolha a pasta do export a converter",
   open_json: "Abrir JSON",
-  footer: "Telegram Export Studio · roda inteiramente no seu computador"
+  footer: "Telegram Export Studio · roda inteiramente no seu computador",
+  dest_copy: "Criar uma cópia",
+  dest_copy_hint: "É criada uma cópia completa do export, com toda a sua mídia, na pasta indicada (que não deve existir ou deve estar vazia), e a alteração é aplicada só à cópia. O original não é tocado.",
+  dest_h: "Resultado",
+  dest_inplace: "Modificar o original",
+  dest_inplace_hint: "O próprio export é modificado (você pode reverter depois com “Reverter melhorias”).",
+  pick_copy_parent: "Escolha onde criar a cópia",
+  snack_need_copy_out: "Indique a pasta onde criar a cópia",
+  stage_copy: "Copiando o export · {copied} arquivos…"
 },
 it: {
   subtitle: "Unisci, compatta e migliora gli export delle chat — 100% locale",
@@ -1992,7 +2136,15 @@ it: {
   res_enriched: "{msgs} messaggi · {n} campi aggiunti dall'HTML",
   pick_convert: "Scegli la cartella dell'export da convertire",
   open_json: "Apri JSON",
-  footer: "Telegram Export Studio · gira interamente sul tuo computer"
+  footer: "Telegram Export Studio · gira interamente sul tuo computer",
+  dest_copy: "Crea una copia",
+  dest_copy_hint: "Nella cartella indicata (che non deve esistere o deve essere vuota) viene creata una copia completa dell'export, con tutti i suoi media, e la modifica si applica solo alla copia. L'originale non viene toccato.",
+  dest_h: "Risultato",
+  dest_inplace: "Modifica l'originale",
+  dest_inplace_hint: "Viene modificato l'export stesso (potrai annullare in seguito con «Ripristina originale»).",
+  pick_copy_parent: "Scegli dove creare la copia",
+  snack_need_copy_out: "Indica la cartella in cui creare la copia",
+  stage_copy: "Copia dell'export · {copied} file…"
 },
 ru: {
   subtitle: "Объединяйте, сжимайте и улучшайте экспорты чатов — 100% локально",
@@ -2118,7 +2270,15 @@ ru: {
   res_enriched: "{msgs} сообщений · {n} полей добавлено из HTML",
   pick_convert: "Выберите папку экспорта для конвертации",
   open_json: "Открыть JSON",
-  footer: "Telegram Export Studio · работает полностью на вашем компьютере"
+  footer: "Telegram Export Studio · работает полностью на вашем компьютере",
+  dest_copy: "Создать копию",
+  dest_copy_hint: "В указанной папке (она не должна существовать или должна быть пустой) создаётся полная копия экспорта со всеми медиафайлами, и изменение применяется только к копии. Оригинал не затрагивается.",
+  dest_h: "Результат",
+  dest_inplace: "Изменить оригинал",
+  dest_inplace_hint: "Изменяется сам экспорт (позже это можно отменить кнопкой «Вернуть оригинал»).",
+  pick_copy_parent: "Выберите, где создать копию",
+  snack_need_copy_out: "Укажите папку, в которой создать копию",
+  stage_copy: "Копирование экспорта · файлов: {copied}…"
 },
 zh: {
   subtitle: "合并、压缩并美化聊天导出 — 100% 本地运行",
@@ -2244,7 +2404,15 @@ zh: {
   res_enriched: "{msgs} 条消息 · 从 HTML 添加了 {n} 个字段",
   pick_convert: "选择要转换的导出文件夹",
   open_json: "打开 JSON",
-  footer: "Telegram Export Studio · 完全在你的设备上运行"
+  footer: "Telegram Export Studio · 完全在你的设备上运行",
+  dest_copy: "创建副本",
+  dest_copy_hint: "会在指定文件夹（该文件夹必须不存在或为空）中创建导出的完整副本（含全部媒体），更改只应用于副本。原始导出保持不变。",
+  dest_h: "结果",
+  dest_inplace: "修改原始导出",
+  dest_inplace_hint: "直接修改该导出本身（之后可以用“撤销美化”恢复）。",
+  pick_copy_parent: "选择创建副本的位置",
+  snack_need_copy_out: "请指定要创建副本的文件夹",
+  stage_copy: "正在复制导出 · {copied} 个文件…"
 },
 ja: {
   subtitle: "チャットのエクスポートを結合・圧縮・強化 — 100% ローカル",
@@ -2370,7 +2538,15 @@ ja: {
   res_enriched: "{msgs} 件のメッセージ · HTML から {n} 個のフィールドを追加",
   pick_convert: "変換するエクスポートフォルダーを選択",
   open_json: "JSON を開く",
-  footer: "Telegram Export Studio · すべてあなたの端末上で動作します"
+  footer: "Telegram Export Studio · すべてあなたの端末上で動作します",
+  dest_copy: "コピーを作成",
+  dest_copy_hint: "指定したフォルダー（存在しないか空である必要があります）に、すべてのメディアを含むエクスポートの完全なコピーを作成し、変更はコピーにのみ適用します。元のエクスポートには手を加えません。",
+  dest_h: "結果",
+  dest_inplace: "元のエクスポートを変更",
+  dest_inplace_hint: "エクスポート自体を変更します（あとで「元に戻す」で戻せます）。",
+  pick_copy_parent: "コピーを作成する場所を選択",
+  snack_need_copy_out: "コピーを作成するフォルダーを指定してください",
+  stage_copy: "エクスポートをコピー中 · {copied} ファイル…"
 },
 hi: {
   subtitle: "चैट एक्सपोर्ट को मिलाएँ, संक्षिप्त करें और बेहतर बनाएँ — 100% लोकल",
@@ -2496,7 +2672,15 @@ hi: {
   res_enriched: "{msgs} संदेश · HTML से {n} फ़ील्ड जोड़े गए",
   pick_convert: "कन्वर्ट करने के लिए एक्सपोर्ट फ़ोल्डर चुनें",
   open_json: "JSON खोलें",
-  footer: "Telegram Export Studio · पूरी तरह आपके कंप्यूटर पर चलता है"
+  footer: "Telegram Export Studio · पूरी तरह आपके कंप्यूटर पर चलता है",
+  dest_copy: "कॉपी बनाएँ",
+  dest_copy_hint: "बताए गए फ़ोल्डर में (जो मौजूद न हो या खाली हो) एक्सपोर्ट की पूरी कॉपी उसके सभी मीडिया के साथ बनाई जाती है, और बदलाव सिर्फ़ कॉपी पर लागू होता है। मूल को छुआ नहीं जाता।",
+  dest_h: "परिणाम",
+  dest_inplace: "मूल को बदलें",
+  dest_inplace_hint: "एक्सपोर्ट को ही बदला जाता है (बाद में “मूल रूप लौटाएँ” से वापस कर सकते हैं)।",
+  pick_copy_parent: "चुनें कि कॉपी कहाँ बनानी है",
+  snack_need_copy_out: "वह फ़ोल्डर बताएँ जहाँ कॉपी बनानी है",
+  stage_copy: "एक्सपोर्ट कॉपी हो रहा है · {copied} फ़ाइलें…"
 },
 ar: {
   subtitle: "ادمج وضغّط وحسّن تصديرات المحادثات — 100% محليًا",
@@ -2622,7 +2806,15 @@ ar: {
   res_enriched: "{msgs} رسالة · أُضيف {n} حقلًا من HTML",
   pick_convert: "اختر مجلد التصدير المراد تحويله",
   open_json: "فتح JSON",
-  footer: "Telegram Export Studio · يعمل بالكامل على جهازك"
+  footer: "Telegram Export Studio · يعمل بالكامل على جهازك",
+  dest_copy: "إنشاء نسخة",
+  dest_copy_hint: "تُنشأ في المجلد المحدد (الذي يجب ألا يكون موجودًا أو أن يكون فارغًا) نسخة كاملة من التصدير بكل وسائطه، ويُطبَّق التغيير على النسخة فقط. لا يُمَس الأصل.",
+  dest_h: "النتيجة",
+  dest_inplace: "تعديل الأصل",
+  dest_inplace_hint: "يُعدَّل التصدير نفسه (يمكنك التراجع لاحقًا عبر «إزالة التحسين»).",
+  pick_copy_parent: "اختر مكان إنشاء النسخة",
+  snack_need_copy_out: "حدِّد المجلد الذي تُنشأ فيه النسخة",
+  stage_copy: "جارٍ نسخ التصدير · {copied} ملف…"
 }
 };
 
@@ -2651,6 +2843,7 @@ function applyLang() {
   $("shutdown-btn").title = t("shutdown_tooltip");
   updateGoalHint();
   updateLayoutHint();
+  updateDestHints();
   renderExports();
   renderMeOptions();
   if (state.compact) renderCompactInfo();
@@ -2939,6 +3132,59 @@ document.querySelectorAll("#compact-mode button").forEach(b => {
   };
 });
 
+/* ---- compact/enhance destination: in place, or on a copy ---- */
+function destIsCopy(kind) {
+  return $(kind + "-dest").querySelector("button.active").dataset.dest === "copy";
+}
+function updateDestHints() {
+  $("compact-dest-hint").textContent = t(destIsCopy("compact") ? "dest_copy_hint" : "inplace_hint");
+  $("enhance-dest-hint").textContent = t(destIsCopy("enhance") ? "dest_copy_hint" : "dest_inplace_hint");
+  for (const k of ["compact", "enhance"]) {
+    $(k + "-dest-field").style.display = destIsCopy(k) ? "" : "none";
+  }
+}
+["compact", "enhance"].forEach(k => {
+  $(k + "-dest").querySelectorAll("button").forEach(b => {
+    b.onclick = () => {
+      $(k + "-dest").querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
+      updateDestHints();
+    };
+  });
+});
+function copyOutFor(srcPath, suffix) {
+  return srcPath.replace(/[\\/]+$/, "") + suffix;
+}
+// Suggests "<export>_compacted" / "_enhanced" next to the export, without
+// overwriting a path the user typed or browsed to themselves.
+function autoFillCopyOut(kind, srcPath) {
+  const inp = $(kind + "-dest-out");
+  const auto = copyOutFor(srcPath, kind === "compact" ? "_compacted" : "_enhanced");
+  if (!inp.value || inp.value === inp.dataset.auto) inp.value = auto;
+  inp.dataset.auto = auto;
+}
+async function browseCopyOut(kind) {
+  try {
+    const { path } = await api("/api/pick-folder", { title: t("pick_copy_parent") });
+    if (!path) return;
+    const src = state[kind];
+    const sep = path.includes("\\") ? "\\" : "/";
+    const name = src ? src.path.split(/[\\/]/).filter(Boolean).pop()
+      + (kind === "compact" ? "_compacted" : "_enhanced") : "";
+    $(kind + "-dest-out").value = name ? path.replace(/[\\/]+$/, "") + sep + name : path;
+  } catch (e) { snack(e.message); }
+}
+// null = in place; otherwise the copy's path (restore swaps the untouched
+// "_enhanced" suggestion for "_restored").
+function copyOutput(kind, restoring) {
+  if (!destIsCopy(kind)) return null;
+  const inp = $(kind + "-dest-out");
+  let out = inp.value.trim();
+  if (restoring && state.enhance && out === inp.dataset.auto) {
+    out = copyOutFor(state.enhance.path, "_restored");
+  }
+  return out;
+}
+
 function renderCompactInfo() {
   const info = state.compact;
   if (!info) return;
@@ -2961,6 +3207,7 @@ function renderCompactInfo() {
 
 async function loadCompactPath(path) {
   state.compact = await api("/api/inspect", { path });
+  autoFillCopyOut("compact", state.compact.path);
   renderCompactInfo();
   $("compact-sel").style.display = "none";
   $("compact-info").style.display = "";
@@ -2987,8 +3234,10 @@ function runCompact() {
   const value = mode === "files"
     ? ($("files-n").value || "1")
     : chipValue("compact-chips", "compact-custom-n", "compact-custom-u");
+  const output = copyOutput("compact");
+  if (output === "") return snack(t("snack_need_copy_out"));
   startJob("/api/compact",
-    { export: state.compact.path, mode, value }, t("job_compacting"));
+    { export: state.compact.path, mode, value, output }, t("job_compacting"));
 }
 
 /* =============== enhance =============== */
@@ -3011,6 +3260,7 @@ function renderMeOptions() {
 
 function applyEnhanceState(info) {
   state.enhance = info;
+  autoFillCopyOut("enhance", info.path);
   $("ei-name").textContent = info.name + (info.title ? " — " + info.title : "");
   $("ei-name").title = info.path;
   $("ei-sub").textContent = itemSub(info);
@@ -3062,15 +3312,19 @@ function runEnhance() {
   const layout = $("layout-chips").querySelector(".chip.sel").dataset.layout;
   const me = $("me-select").value;
   if (f.bubbles && !me && layout !== "original") return snack(t("need_me"));
+  const output = copyOutput("enhance");
+  if (output === "") return snack(t("snack_need_copy_out"));
   startJob("/api/enhance",
     { export: state.enhance.path, me, layout, features: f,
-      fullwidth: $("opt-fullwidth").checked },
+      fullwidth: $("opt-fullwidth").checked, output },
     t("job_enhancing"));
 }
 
 function runRestore() {
   if (!state.enhance) return;
-  startJob("/api/restore", { export: state.enhance.path }, t("job_restoring"));
+  const output = copyOutput("enhance", true);
+  if (output === "") return snack(t("snack_need_copy_out"));
+  startJob("/api/restore", { export: state.enhance.path, output }, t("job_restoring"));
 }
 
 /* =============== convert =============== */
@@ -3368,25 +3622,36 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/convert":
                 start_job(lambda: do_convert(
                     body["export"], body["mode"],
-                    body.get("faithful", False)))
+                    body.get("faithful", False)),
+                    f"convertir ({body['mode']}) {body['export']}")
                 self._json({"ok": True})
             elif self.path == "/api/fuse":
                 start_job(lambda: do_fuse(
                     body["exports"], body["output"], body["page_size"],
-                    body.get("force", False)))
+                    body.get("force", False)),
+                    f"fusionar {len(body['exports'])} exports → "
+                    f"{body['output']} (páginas {body['page_size']})")
                 self._json({"ok": True})
             elif self.path == "/api/compact":
                 start_job(lambda: do_compact(
-                    body["export"], body["mode"], body["value"]))
+                    body["export"], body["mode"], body["value"],
+                    body.get("output")),
+                    f"compactar ({body['mode']}={body['value']}) "
+                    f"{body['export']}{_dest_label(body)}")
                 self._json({"ok": True})
             elif self.path == "/api/enhance":
                 start_job(lambda: do_enhance(
                     body["export"], body.get("me"),
                     body.get("layout", "both"), body.get("features"),
-                    body.get("fullwidth", True)))
+                    body.get("fullwidth", True), body.get("output")),
+                    f"mejorar (disposición={body.get('layout', 'both')}, "
+                    f"remitente propio={'sí' if body.get('me') else 'no'}) "
+                    f"{body['export']}{_dest_label(body)}")
                 self._json({"ok": True})
             elif self.path == "/api/restore":
-                start_job(lambda: restore(Path(body["export"]).resolve()))
+                start_job(lambda: do_restore(
+                    body["export"], body.get("output")),
+                    f"desmejorar {body['export']}{_dest_label(body)}")
                 self._json({"ok": True})
             elif self.path == "/api/verbose":
                 VERBOSE["on"] = bool(body.get("on"))

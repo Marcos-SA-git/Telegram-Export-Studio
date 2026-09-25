@@ -18,9 +18,18 @@ Telegram Desktop exports chats as HTML, but each export is a snapshot: if you ex
 
 ### Option 1 · Web version — nothing to install
 
-Open the [published page](https://marcos-sa-git.github.io/Telegram-Export-Studio/), click *Start*, and pick your export folders. All processing runs entirely in your browser; nothing is sent to any server.
+Open the [published page](https://marcos-sa-git.github.io/Telegram-Export-Studio/), wait for the engine to load (only the first time takes a bit longer; after that it's cached), and pick your export folders. All processing runs entirely in your browser; nothing is sent to any server.
 
 Requires a Chromium-based browser (Chrome, Edge, Opera) because of the File System Access API.
+
+Before merging (or creating a copy, see below) the web version analyzes the exports and warns you about two things:
+
+- **If the result is over 4 GB**, it recommends the desktop version, which is faster and more direct with large exports; you can still carry on.
+- **If there are files Chrome may block** when writing them into a folder (executables, `.apk`, scripts… that someone sent in the chat), it offers to produce the result as a **ZIP**, which Chrome doesn't block. When merging you can also carry on without a ZIP, leaving those files out; when creating a copy you can't, because a copy with missing files isn't a copy. The ZIP is streamed straight to disk, so it works with exports of tens of GB.
+
+Long operations can be **cancelled** from the progress card itself. While one is running, don't reload or close the tab or the browser: the operation would be cut off halfway (the browser asks you to confirm if you try).
+
+**Compact and enhance** let you choose the result: **modify the original** (fast, only rewrites the `messages*.html` files) or **create a full copy** of the export with the change applied, leaving the original untouched. On the web the copy goes into a new subfolder (`<export>_compacted`, `_enhanced` or `_restored`) of the folder you pick, or into a ZIP if there are files Chrome blocks; in the desktop version you give the copy's path, which must not exist or must be empty.
 
 ### Option 2 · Desktop app — a single file, no code involved
 
@@ -77,7 +86,7 @@ python telegram_export_studio_aio_vX.Y.Z.py compact folder [--files N | --size S
 - `-s, --size SIZE`: instead of a page count, set an approximate page size, e.g. `5MB`.
 - `--files` and `--size` are mutually exclusive: use one or the other, never both at once.
 
-This operation rewrites the `messages*.html` files in place; it doesn't touch photos, videos, or audio.
+This operation rewrites the `messages*.html` files in place; it doesn't touch photos, videos, or audio. (The option to create a copy instead of modifying the original is in the graphical interface, web and desktop.)
 
 ### `enhance` — apply (or revert) the enhanced view
 
@@ -154,7 +163,7 @@ The files in `releases/` (`telegram_export_studio_aio_vX.Y.Z.py`, `.pyw`, `.exe`
 python build_aio.py
 ```
 
-The web version has its own generator, `build_pages.py`, which reuses the same three modules (without `telegram_export_studio.py`, since there's no server in the browser). A GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) runs it automatically on every push that touches a module or the `web/` folder, and publishes the result to GitHub Pages — no manual "publish" step needed.
+The web version has its own generator, `build_pages.py`, which reuses the same three modules (without `telegram_export_studio.py`, since there's no server in the browser). A GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) runs it automatically on every push that touches a module, the `web/` folder or `telegram_export_version.py`, and publishes the result to GitHub Pages — no manual "publish" step needed.
 
 ### `tools/` — maintenance utilities
 
@@ -184,10 +193,10 @@ Always review the result before sharing it.
 
 ### Debug mode
 
-Both interfaces have a hidden diagnostic mode, meant for investigating performance issues (e.g. on mobile) without having to instrument the code by hand:
+Both interfaces have a hidden diagnostic mode, meant for investigating problems (errors, performance, files the browser refuses…) without having to instrument the code by hand:
 
-- **Web** (`web/app.html`): add `?debug=1` to the URL. Opens a log panel at the bottom of the screen (useful on a phone, where remote DevTools isn't always handy) showing the detail of every media-copy concurrency benchmark attempt, any individual file copy that takes longer than 500ms, and a final summary (files copied, total time, files/s). The panel only auto-scrolls while you're at the bottom of the log; scroll up to read an older line and it stops following. It has a "Copy" button to dump the whole log to the clipboard. The flag is off by default and has zero effect on anyone not using it — it's safe to leave in the code published to GitHub Pages.
-- **Desktop / AIO** (`telegram_export_studio.py`): an icon button next to the shutdown button (top right). Turning it on makes the running job print stage timing to the job log (the existing "Show full log" disclosure in the interface) — when each stage starts, how long it takes, and, while there's measurable progress, a periodic update with % complete and ETA. The setting is remembered across sessions (`localStorage`).
+- **Web** (`web/app.html`): add `?debug=1` to the URL. Opens a log panel with its own space — a right-hand column on wide screens, a bottom strip on narrow ones and on phones — so it never covers the app; it can be minimised to its title bar. It logs: engine startup (timings, Pyodide version), every inspected export (messages, pages, chat type — no people's names), the pre-scan (files, estimated size, extensions Chrome may block), every prompt shown and the option picked, the start, duration and end of every job (done, failed or cancelled), pages read and written, the copy and the ZIP (skipped or slow files, final size), every warning and message shown to the user, the full trace of Python and JavaScript errors (the interface only shows the last line), and uncaught errors. The panel only auto-scrolls while you're at the bottom of the log, and has a "Copy" button to dump everything to the clipboard. The log contains folder and file names: review it before sharing. The flag is off by default and has zero effect on anyone not using it — it's safe to leave in the code published to GitHub Pages.
+- **Desktop / AIO** (`telegram_export_studio.py`): an icon button next to the shutdown button (top right). Turning it on makes every job write to its log (the "Show full log" disclosure in the interface): which operation starts and with what parameters (no people's names), each stage's timing (start, duration and, while there's measurable progress, % complete and ETA), a summary of the copy when compacting or enhancing onto a copy, every warning, the total duration and, if it fails, the full error trace. The setting is remembered across sessions (`localStorage`).
 
 ## License
 
