@@ -522,6 +522,8 @@ es: {
   confirm_dangerous_zip: "Se han detectado archivos con extensiones que tu navegador puede bloquear al fusionar ({list}). Para completar la operación con seguridad, se puede generar un ZIP que podrás descargar bajo tu propio criterio. Si continúas sin ZIP, los archivos que el navegador bloquee se omitirán.",
   warn_media_unreadable: "No se pudo leer {name} ({size}, {err}): se omite del ZIP y su enlace quedará roto. Suele deberse a un antivirus que bloquea ese archivo.",
   stage_zip_media: "Añadiendo media al ZIP · {n} archivos · {done} de ~{total}…",
+  stage_zip_index: "Escribiendo el índice del ZIP ({n} archivos)…",
+  stage_zip_verify: "Chrome está verificando el ZIP ({size}) antes de guardarlo. Con archivos grandes puede tardar varios minutos; no cierres la pestaña.",
   job_cancel: "Cancelar", job_cancelling: "Cancelando…", job_cancelled: "Operación cancelada",
   job_keep_open: "No recargues ni cierres esta pestaña ni el navegador hasta que termine: la operación se interrumpiría y el resultado quedaría incompleto.",
   cancel_nothing_written: "No se ha escrito nada.",
@@ -614,6 +616,8 @@ en: {
   confirm_dangerous_zip: "Files with extensions your browser may block during the merge were detected ({list}). To complete the operation safely, a ZIP can be generated for you to download at your own discretion. If you continue without a ZIP, any file the browser blocks will be skipped.",
   warn_media_unreadable: "Could not read {name} ({size}, {err}): it is left out of the ZIP and its link will be broken. Usually caused by antivirus software blocking that file.",
   stage_zip_media: "Adding media to the ZIP · {n} files · {done} of ~{total}…",
+  stage_zip_index: "Writing the ZIP index ({n} files)…",
+  stage_zip_verify: "Chrome is verifying the ZIP ({size}) before saving it. With large files this can take several minutes — don't close the tab.",
   job_cancel: "Cancel", job_cancelling: "Cancelling…", job_cancelled: "Operation cancelled",
   job_keep_open: "Don't reload or close this tab or the browser until it finishes: the operation would be interrupted and the result left incomplete.",
   cancel_nothing_written: "Nothing was written.",
@@ -735,6 +739,8 @@ fr: {
   stage_analyze: "Analyse · {n}/{total} fichiers · résultat ~{size}…",
   stage_listing: "Liste des fichiers des exports · {n}…",
   stage_zip_media: "Ajout des médias au ZIP · {n} fichiers · {done} sur ~{total}…",
+  stage_zip_index: "Écriture de l'index du ZIP ({n} fichiers)…",
+  stage_zip_verify: "Chrome vérifie le ZIP ({size}) avant de l'enregistrer. Avec de gros fichiers, cela peut prendre plusieurs minutes ; ne fermez pas l'onglet.",
   stage_zipping: "Création du ZIP…",
   warn_media_unreadable: "Impossible de lire {name} ({size}, {err}) : il est exclu du ZIP et son lien sera rompu. C'est généralement dû à un antivirus qui bloque ce fichier.",
   zip_btn: "Générer le ZIP"
@@ -832,6 +838,8 @@ de: {
   stage_analyze: "Analyse · {n}/{total} Dateien · Ergebnis ~{size}…",
   stage_listing: "Dateien der Exporte werden aufgelistet · {n}…",
   stage_zip_media: "Medien werden zum ZIP hinzugefügt · {n} Dateien · {done} von ~{total}…",
+  stage_zip_index: "ZIP-Verzeichnis wird geschrieben ({n} Dateien)…",
+  stage_zip_verify: "Chrome überprüft das ZIP ({size}) vor dem Speichern. Bei großen Dateien kann das mehrere Minuten dauern – Tab nicht schließen.",
   stage_zipping: "ZIP wird erstellt…",
   warn_media_unreadable: "{name} ({size}, {err}) konnte nicht gelesen werden: Die Datei fehlt im ZIP und ihr Link wird nicht funktionieren. Meist blockiert eine Antivirensoftware diese Datei.",
   zip_btn: "ZIP erstellen"
@@ -929,6 +937,8 @@ pt: {
   stage_analyze: "Analisando · {n}/{total} arquivos · resultado ~{size}…",
   stage_listing: "Listando arquivos dos exports · {n}…",
   stage_zip_media: "Adicionando mídia ao ZIP · {n} arquivos · {done} de ~{total}…",
+  stage_zip_index: "Escrevendo o índice do ZIP ({n} arquivos)…",
+  stage_zip_verify: "O Chrome está verificando o ZIP ({size}) antes de salvá-lo. Com arquivos grandes, isso pode levar vários minutos; não feche a aba.",
   stage_zipping: "Gerando o ZIP…",
   warn_media_unreadable: "Não foi possível ler {name} ({size}, {err}): ele fica fora do ZIP e seu link ficará quebrado. Costuma ser causado por um antivírus que bloqueia esse arquivo.",
   zip_btn: "Gerar ZIP"
@@ -1026,6 +1036,8 @@ it: {
   stage_analyze: "Analisi · {n}/{total} file · risultato ~{size}…",
   stage_listing: "Elenco dei file degli export · {n}…",
   stage_zip_media: "Aggiunta dei media allo ZIP · {n} file · {done} di ~{total}…",
+  stage_zip_index: "Scrittura dell'indice dello ZIP ({n} file)…",
+  stage_zip_verify: "Chrome sta verificando lo ZIP ({size}) prima di salvarlo. Con file grandi può richiedere diversi minuti; non chiudere la scheda.",
   stage_zipping: "Creazione dello ZIP…",
   warn_media_unreadable: "Impossibile leggere {name} ({size}, {err}): resta fuori dallo ZIP e il suo link sarà interrotto. Di solito è causato da un antivirus che blocca quel file.",
   zip_btn: "Genera ZIP"
@@ -1123,6 +1135,8 @@ ru: {
   stage_analyze: "Анализ · {n}/{total} файлов · результат ~{size}…",
   stage_listing: "Составление списка файлов экспортов · {n}…",
   stage_zip_media: "Добавление медиа в ZIP · файлов: {n} · {done} из ~{total}…",
+  stage_zip_index: "Запись оглавления ZIP (файлов: {n})…",
+  stage_zip_verify: "Chrome проверяет ZIP ({size}) перед сохранением. Для больших файлов это может занять несколько минут — не закрывайте вкладку.",
   stage_zipping: "Создание ZIP…",
   warn_media_unreadable: "Не удалось прочитать {name} ({size}, {err}): файл не попадёт в ZIP, и ссылка на него будет нерабочей. Обычно причина — антивирус, блокирующий этот файл.",
   zip_btn: "Создать ZIP"
@@ -1220,6 +1234,8 @@ zh: {
   stage_analyze: "正在分析 · {n}/{total} 个文件 · 结果约 {size}…",
   stage_listing: "正在列出导出中的文件 · {n}…",
   stage_zip_media: "正在将媒体添加到 ZIP · {n} 个文件 · {done} / 约 {total}…",
+  stage_zip_index: "正在写入 ZIP 索引（{n} 个文件）…",
+  stage_zip_verify: "Chrome 正在保存前校验 ZIP（{size}）。文件较大时可能需要几分钟，请勿关闭标签页。",
   stage_zipping: "正在生成 ZIP…",
   warn_media_unreadable: "无法读取 {name}（{size}，{err}）：它不会被放入 ZIP，其链接将失效。通常是杀毒软件拦截了该文件。",
   zip_btn: "生成 ZIP"
@@ -1317,6 +1333,8 @@ ja: {
   stage_analyze: "分析中 · {n}/{total} ファイル · 結果 約 {size}…",
   stage_listing: "エクスポートのファイルを一覧化中 · {n}…",
   stage_zip_media: "メディアを ZIP に追加中 · {n} ファイル · {done} / 約 {total}…",
+  stage_zip_index: "ZIP のインデックスを書き込み中（{n} ファイル）…",
+  stage_zip_verify: "Chrome が保存前に ZIP（{size}）を検証しています。大きなファイルでは数分かかることがあります。タブを閉じないでください。",
   stage_zipping: "ZIP を作成中…",
   warn_media_unreadable: "{name} を読み込めませんでした（{size}、{err}）。ZIP には含まれず、リンクは切れた状態になります。通常はウイルス対策ソフトがそのファイルをブロックしていることが原因です。",
   zip_btn: "ZIP を作成"
@@ -1414,6 +1432,8 @@ hi: {
   stage_analyze: "विश्लेषण · {n}/{total} फ़ाइलें · परिणाम ~{size}…",
   stage_listing: "एक्सपोर्ट की फ़ाइलों की सूची बन रही है · {n}…",
   stage_zip_media: "ZIP में मीडिया जोड़ा जा रहा है · {n} फ़ाइलें · ~{total} में से {done}…",
+  stage_zip_index: "ZIP इंडेक्स लिखा जा रहा है ({n} फ़ाइलें)…",
+  stage_zip_verify: "Chrome सहेजने से पहले ZIP ({size}) की जाँच कर रहा है। बड़ी फ़ाइलों में इसमें कई मिनट लग सकते हैं — टैब बंद न करें।",
   stage_zipping: "ZIP बनाई जा रही है…",
   warn_media_unreadable: "{name} ({size}, {err}) पढ़ी नहीं जा सकी: यह ZIP में शामिल नहीं होगी और इसका लिंक टूट जाएगा। आमतौर पर इसकी वजह कोई एंटीवायरस होता है जो उस फ़ाइल को ब्लॉक करता है।",
   zip_btn: "ZIP बनाएँ"
@@ -1511,6 +1531,8 @@ ar: {
   stage_analyze: "جارٍ التحليل · {n}/{total} ملف · النتيجة ~{size}…",
   stage_listing: "جارٍ سرد ملفات التصديرات · {n}…",
   stage_zip_media: "جارٍ إضافة الوسائط إلى ZIP · {n} ملف · {done} من ~{total}…",
+  stage_zip_index: "جارٍ كتابة فهرس ZIP ({n} ملف)…",
+  stage_zip_verify: "يتحقق Chrome من ملف ZIP ({size}) قبل حفظه. قد يستغرق ذلك عدة دقائق مع الملفات الكبيرة، فلا تغلق علامة التبويب.",
   stage_zipping: "جارٍ إنشاء ZIP…",
   warn_media_unreadable: "تعذّرت قراءة {name} ({size}، {err}): لن يُضمَّن في ZIP وسيتعطل رابطه. يحدث هذا عادةً بسبب برنامج مكافحة فيروسات يحظر ذلك الملف.",
   zip_btn: "إنشاء ZIP"
@@ -2000,6 +2022,11 @@ function humanSize(n) {
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
   return (i === 0 ? n.toFixed(0) : n.toFixed(1)) + " " + units[i];
 }
+// 83 → "1:23"
+function fmtElapsed(secs) {
+  const s = Math.floor(secs);
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
 
 // Past this, merging on the web is just slow (lots of File System Access
 // round-trips) — a plain size heads-up, no memory reasoning involved now
@@ -2213,8 +2240,22 @@ class ZipWriter {
       throw e;
     }
   }
-  async finish() {
+  // Writes the central directory and end records. They are gathered into
+  // ZIP_CHUNK-sized blocks: one write() per entry costs an IPC round trip
+  // each, which adds up with tens of thousands of files.
+  async writeDirectory() {
     const cdStart = this.offset;
+    const parts = [];
+    let pending = 0;
+    const flush = async () => {
+      if (!pending) return;
+      const block = new Uint8Array(pending);
+      let o = 0;
+      for (const p of parts) { block.set(p, o); o += p.length; }
+      parts.length = 0;
+      pending = 0;
+      await this._push(block);
+    };
     for (const e of this.entries) {
       const bigSize = e.size >= ZIP64_LIMIT;
       const bigOff = e.offset >= ZIP64_LIMIT;
@@ -2251,8 +2292,11 @@ class ZipWriter {
         }
         if (bigOff) rec.setBigUint64(x, BigInt(e.offset), true);
       }
-      await this._push(new Uint8Array(rec.buffer));
+      parts.push(new Uint8Array(rec.buffer));
+      pending += rec.byteLength;
+      if (pending >= ZIP_CHUNK) await flush();
     }
+    await flush();
     const cdSize = this.offset - cdStart;
     const n = this.entries.length;
     const need64 = n >= 0xFFFF || cdSize >= ZIP64_LIMIT || cdStart >= ZIP64_LIMIT;
@@ -2285,7 +2329,16 @@ class ZipWriter {
     eocd.setUint32(16, cdStart >= ZIP64_LIMIT ? 0xFFFFFFFF : cdStart, true);
     eocd.setUint16(20, 0, true);              // comment length
     await this._push(new Uint8Array(eocd.buffer));
+  }
+  // close() is where Chrome turns the .crswap into the final file: it first
+  // re-reads the whole archive to hash it for Safe Browsing, so it takes
+  // about as long as reading the ZIP back from disk.
+  async close() {
     await this.writable.close();
+  }
+  async finish() {
+    await this.writeDirectory();
+    await this.close();
   }
 }
 
@@ -2933,9 +2986,29 @@ async function runZipJob({ name, title, doneText, build }) {
     const zip = new ZipWriter(writable);
     const res = await build(zip, name + "/", p => { phase = p; });
     checkCancel();
-    phase = "cerrar ZIP";
-    await zip.finish(); // writes the central directory and closes `writable`
-    dbg(`runZipJob: ZIP cerrado — ${zip.entries.length} entradas, ${humanSize(zip.offset)}`);
+    const dataBytes = zip.offset;
+    phase = "índice ZIP";
+    setStage(t("stage_zip_index", { n: zip.entries.length }), null);
+    let tPhase = performance.now();
+    await zip.writeDirectory();
+    const indexSecs = (performance.now() - tPhase) / 1000;
+    dbg(`runZipJob: índice escrito en ${indexSecs.toFixed(1)}s — ${zip.entries.length} entradas, ` +
+        `${humanSize(zip.offset - dataBytes)}`);
+
+    // Past this point the archive is complete and only Chrome's own check
+    // remains; it can't be interrupted, so the cancel button goes away.
+    phase = "verificación de Chrome (close)";
+    $("job-cancel").style.display = "none";
+    const verifyText = t("stage_zip_verify", { size: humanSize(zip.offset) });
+    setStage(verifyText, null);
+    tPhase = performance.now();
+    const tick = setInterval(() => {
+      $("job-pct").textContent = fmtElapsed((performance.now() - tPhase) / 1000);
+    }, 1000);
+    try { await zip.close(); } finally { clearInterval(tick); }
+    const closeSecs = (performance.now() - tPhase) / 1000;
+    dbg(`runZipJob: ZIP cerrado — verificación de Chrome ${closeSecs.toFixed(1)}s ` +
+        `(${humanSize(zip.offset / Math.max(closeSecs, 0.001))}/s), ${humanSize(zip.offset)} en total`);
     endJob(true, res, null, doneText);
     return true;
   } catch (e) {
