@@ -33,6 +33,7 @@ from pathlib import Path
 import telegram_export_fuser as tef
 from telegram_export_fuser import (
     DATE_TITLE_RE, count_senders, fuse, order_exports, parse_size,
+    report_stage,
 )
 from telegram_export_compactor import compact
 from telegram_export_enhancer import enhance, restore
@@ -463,7 +464,7 @@ def copy_export(src: Path, out: Path):
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(p, dst)
         done += p.stat().st_size
-        tef.report_stage("copy", frac=done / total, copied=i)
+        report_stage("copy", frac=done / total, copied=i)
     secs = time.perf_counter() - t0
     vlog(f"copia terminada en {secs:.1f}s "
          f"({human_size(total / secs if secs else total)}/s)")
