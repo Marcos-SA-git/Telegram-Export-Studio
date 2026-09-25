@@ -538,46 +538,34 @@ es: {
   stage_media: "Copiando media · {n} archivos…", stage_write: "Escribiendo páginas…",
   stage_enhance: "Mejorando {name}…", stage_restore: "Restaurando {name}…",
   stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…",
-  confirm_dangerous_zip: "Se han detectado archivos con extensiones que tu navegador puede bloquear al fusionar ({list}). Para completar la operación con seguridad, se puede generar un ZIP que podrás descargar bajo tu propio criterio. Si continúas sin ZIP, los archivos que el navegador bloquee se omitirán y, al terminar, podrás descargarlos en un ZIP de rescate para completar la fusión.",
-  stage_zip_media: "Añadiendo media al ZIP · {n} archivos · {done} de ~{total}…",
-  stage_zip_index: "Escribiendo el índice del ZIP ({n} archivos)…",
   stage_zip_verify: "Chrome está verificando el ZIP ({size}) antes de guardarlo. Con archivos grandes puede tardar varios minutos; no cierres la pestaña.",
   stage_benchmark: "Midiendo la velocidad de la carpeta de destino para ajustar cuántos archivos copiar a la vez…",
   warn_group_blocked: "{n} archivo(s) que Safe Browsing, la protección de Chrome, ha considerado sospechosos y no ha dejado escribir en la carpeta. Suele pasar con ejecutables o con archivos poco comunes, como algunos stickers, y a menudo son falsas alarmas. Al terminar podrás descargarlos en un ZIP aparte si confías en su contenido. Pulsa para ver la lista.",
-  warn_group_unreadable: "{n} archivo(s) no se pudieron leer (suele deberse a un antivirus) y no están en el ZIP. Pulsa para ver la lista.",
   rescue_text: "Faltan {n} archivo(s) ({size}) en la carpeta «{folder}»: el navegador no dejó escribirlos ahí, pero sí dentro de un ZIP. Descarga este ZIP de rescate, ábrelo y copia todo su contenido dentro de la carpeta «{folder}», combinando las carpetas si te lo pregunta. Cada archivo quedará en su sitio y sus enlaces funcionarán.",
   rescue_btn: "Descargar ZIP con los archivos que faltan",
   rescue_btn_again: "Volver a descargar el ZIP",
   rescue_progress: "Generando el ZIP de rescate · {done} de {n} archivos…",
-  rescue_done: "ZIP de rescate guardado. Ábrelo y copia todo su contenido dentro de la carpeta «{folder}», combinando las carpetas si te lo pregunta, para completar la fusión.",
+  rescue_done: "ZIP de rescate guardado. Ábrelo y copia todo su contenido dentro de la carpeta «{folder}», combinando las carpetas si te lo pregunta, para completarla.",
   rescue_partial: "Ojo: {n} archivo(s) tampoco se pudieron leer ahora y no están en el ZIP: {list}",
   rescue_failed: "No se pudo generar el ZIP de rescate: {err}",
   rescue_zip_name: "{folder} - archivos que faltan",
   rescue_readme_name: "LEEME - archivos rescatados.txt",
-  rescue_readme: "Estos archivos forman parte de la fusión guardada en la carpeta «{folder}», pero Safe Browsing, la protección de Chrome, los consideró sospechosos y no dejó escribirlos ahí. Suele pasar con ejecutables o con archivos poco comunes, como algunos stickers, y a menudo son falsas alarmas.\r\n\r\nPara completar la fusión, copia todo el contenido de este ZIP dentro de la carpeta «{folder}», combinando las carpetas si te lo pregunta. Cada archivo quedará en su sitio y los enlaces del chat funcionarán.\r\n\r\nÁbrelos solo si confías en quien los envió. Este archivo de texto puedes borrarlo.",
+  rescue_readme: "Estos archivos forman parte del resultado guardado en la carpeta «{folder}», pero Safe Browsing, la protección de Chrome, los consideró sospechosos y no dejó escribirlos ahí. Suele pasar con ejecutables o con archivos poco comunes, como algunos stickers, y a menudo son falsas alarmas.\r\n\r\nPara completar esa carpeta, copia todo el contenido de este ZIP dentro de ella, combinando las carpetas si te lo pregunta. Cada archivo quedará en su sitio y los enlaces del chat funcionarán.\r\n\r\nÁbrelos solo si confías en quien los envió. Este archivo de texto puedes borrarlo.",
   job_cancel: "Cancelar", job_cancelling: "Cancelando…", job_cancelled: "Operación cancelada",
   job_keep_open: "No recargues ni cierres esta pestaña ni el navegador hasta que termine: la operación se interrumpiría y el resultado quedaría incompleto.",
   cancel_nothing_written: "No se ha escrito nada.",
   cancel_partial_dir: "La carpeta de destino puede contener archivos a medio fusionar; bórrala o usa otra vacía al repetir la fusión.",
-  cancel_zip_removed: "El ZIP incompleto se ha descartado.",
   dest_h: "Resultado", dest_inplace: "Modificar el original", dest_copy: "Crear una copia",
   dest_inplace_hint: "Se reescriben los messages.html del propio export. Es rápido, pero la versión anterior no se conserva.",
-  dest_copy_hint: "Se crea una copia completa del export, con toda su media, y el cambio se aplica solo a la copia; el original no se toca. Si el export contiene archivos que el navegador bloquea al escribirlos en una carpeta, la copia se genera como ZIP para que salga completa. Tarda más cuanta más media tenga el chat.",
-  confirm_dangerous_zip_copy: "El export contiene archivos con extensiones que tu navegador bloquea al escribirlos en una carpeta ({list}). Para que la copia salga completa, se generará como un ZIP que podrás descomprimir después.",
-  res_written_zip_copy: "ZIP guardado. Descomprímelo para ver la copia; el export original no se ha modificado.",
-  copy_blocked_retry: "El navegador bloqueó {n} archivo(s) que no estaban previstos ({list}), así que la copia incompleta se ha eliminado. Vuelve a intentarlo: esta vez la copia se generará como ZIP.",
+  dest_copy_hint: "Se crea una copia completa del export, con toda su media, y el cambio se aplica solo a la copia; el original no se toca. Si el navegador bloquea algún archivo al copiarlo, al terminar podrás descargarlo en un ZIP aparte. Tarda más cuanta más media tenga el chat.",
   copy_inside_source: "Elige una carpeta que no esté dentro del propio export.",
   res_written_copy: "Copia creada en la carpeta «{name}». El export original no se ha modificado.",
   cancel_copy_removed: "La copia incompleta se ha eliminado; el export original no se ha modificado.",
-  dangerous_h: "Archivos que el navegador puede bloquear",
-  zip_btn: "Generar ZIP", nozip_btn: "Continuar sin ZIP",
   stage_listing: "Listando archivos de los exports · {n}…",
   stage_analyze: "Analizando · {n}/{total} archivos · resultado ~{size}…",
   ready_h: "Análisis completado",
   ready_text: "Tamaño estimado del resultado: ~{size}. Elige la carpeta de destino para empezar.",
   pick_out_btn: "Elegir carpeta de destino",
-  stage_zipping: "Generando el ZIP…",
-  res_written_zip: "ZIP guardado. Descomprímelo para ver tu chat fusionado.",
   size_warn_h: "Export considerable",
   size_warn_text: "El resultado ocupará unos {size} (sin contar archivos repetidos). En la web puede tardar un poco; para un resultado más rápido y directo se recomienda la versión de escritorio.",
   size_warn_continue: "Continuar de todas formas",
@@ -642,46 +630,34 @@ en: {
   stage_media: "Copying media · {n} files…", stage_write: "Writing pages…",
   stage_enhance: "Enhancing {name}…", stage_restore: "Restoring {name}…",
   stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…",
-  confirm_dangerous_zip: "Files with extensions your browser may block during the merge were detected ({list}). To complete the operation safely, a ZIP can be generated for you to download at your own discretion. If you continue without a ZIP, any file the browser blocks will be skipped and, once it finishes, you can download them in a rescue ZIP to complete the merge.",
-  stage_zip_media: "Adding media to the ZIP · {n} files · {done} of ~{total}…",
-  stage_zip_index: "Writing the ZIP index ({n} files)…",
   stage_zip_verify: "Chrome is verifying the ZIP ({size}) before saving it. With large files this can take several minutes — don't close the tab.",
   stage_benchmark: "Measuring the output folder's speed to tune how many files to copy at once…",
   warn_group_blocked: "{n} file(s) that Safe Browsing, Chrome's protection, considered suspicious and wouldn't let be written into the folder. This tends to happen with executables or uncommon files, such as some stickers, and they're often false alarms. When it finishes you can download them in a separate ZIP if you trust their content. Click to see the list.",
-  warn_group_unreadable: "{n} file(s) could not be read (usually antivirus software) and are not in the ZIP. Click to see the list.",
   rescue_text: "{n} file(s) ({size}) are missing from the “{folder}” folder: the browser wouldn't write them there, but it will inside a ZIP. Download this rescue ZIP, open it and copy all of its contents into the “{folder}” folder, merging folders if asked. Every file will land in its place and its links will work.",
   rescue_btn: "Download ZIP with the missing files",
   rescue_btn_again: "Download the ZIP again",
   rescue_progress: "Building the rescue ZIP · {done} of {n} files…",
-  rescue_done: "Rescue ZIP saved. Open it and copy all of its contents into the “{folder}” folder, merging folders if asked, to complete the merge.",
+  rescue_done: "Rescue ZIP saved. Open it and copy all of its contents into the “{folder}” folder, merging folders if asked, to complete it.",
   rescue_partial: "Note: {n} file(s) still could not be read and are not in the ZIP: {list}",
   rescue_failed: "Could not build the rescue ZIP: {err}",
   rescue_zip_name: "{folder} - missing files",
   rescue_readme_name: "README - rescued files.txt",
-  rescue_readme: "These files belong to the merge saved in the “{folder}” folder, but Safe Browsing, Chrome's protection, considered them suspicious and wouldn't let them be written there. This tends to happen with executables or uncommon files, such as some stickers, and they're often false alarms.\r\n\r\nTo complete the merge, copy all of this ZIP's contents into the “{folder}” folder, merging folders if asked. Every file will land in its place and the chat's links will work.\r\n\r\nOnly open them if you trust whoever sent them. You can delete this text file.",
+  rescue_readme: "These files belong to the result saved in the “{folder}” folder, but Safe Browsing, Chrome's protection, considered them suspicious and wouldn't let them be written there. This tends to happen with executables or uncommon files, such as some stickers, and they're often false alarms.\r\n\r\nTo complete that folder, copy all of this ZIP's contents into it, merging folders if asked. Every file will land in its place and the chat's links will work.\r\n\r\nOnly open them if you trust whoever sent them. You can delete this text file.",
   job_cancel: "Cancel", job_cancelling: "Cancelling…", job_cancelled: "Operation cancelled",
   job_keep_open: "Don't reload or close this tab or the browser until it finishes: the operation would be interrupted and the result left incomplete.",
   cancel_nothing_written: "Nothing was written.",
   cancel_partial_dir: "The destination folder may contain half-merged files; delete it or use another empty folder when merging again.",
-  cancel_zip_removed: "The incomplete ZIP was discarded.",
   dest_h: "Result", dest_inplace: "Modify the original", dest_copy: "Create a copy",
   dest_inplace_hint: "The export's own messages.html files are rewritten. Fast, but the previous version is not kept.",
-  dest_copy_hint: "A full copy of the export, with all its media, is created and the change is applied to the copy only; the original is left untouched. If the export holds files the browser blocks when writing them into a folder, the copy is generated as a ZIP so it comes out complete. The more media the chat has, the longer it takes.",
-  confirm_dangerous_zip_copy: "The export contains files with extensions your browser blocks when writing them into a folder ({list}). So that the copy comes out complete, it will be generated as a ZIP you can unzip afterwards.",
-  res_written_zip_copy: "ZIP saved. Unzip it to see the copy; the original export was not modified.",
-  copy_blocked_retry: "The browser blocked {n} unexpected file(s) ({list}), so the incomplete copy was removed. Try again: this time the copy will be generated as a ZIP.",
+  dest_copy_hint: "A full copy of the export, with all its media, is created and the change is applied to the copy only; the original is left untouched. If the browser blocks any file while copying, you can download it in a separate ZIP when it finishes. The more media the chat has, the longer it takes.",
   copy_inside_source: "Choose a folder that is not inside the export itself.",
   res_written_copy: "Copy created in the “{name}” folder. The original export was not modified.",
   cancel_copy_removed: "The incomplete copy was removed; the original export was not modified.",
-  dangerous_h: "Files the browser may block",
-  zip_btn: "Generate ZIP", nozip_btn: "Continue without ZIP",
   stage_listing: "Listing export files · {n}…",
   stage_analyze: "Analyzing · {n}/{total} files · result ~{size}…",
   ready_h: "Analysis complete",
   ready_text: "Estimated result size: ~{size}. Choose the destination folder to start.",
   pick_out_btn: "Choose destination folder",
-  stage_zipping: "Building the ZIP…",
-  res_written_zip: "ZIP saved. Unzip it to see your merged chat.",
   size_warn_h: "Large export",
   size_warn_text: "The result will be about {size} (not counting repeated files). On the web this may take a while; for a faster, more direct result the desktop version is recommended.",
   size_warn_continue: "Continue anyway",
@@ -749,14 +725,9 @@ fr: {
   cancel_copy_removed: "La copie incomplète a été supprimée ; l'export d'origine n'a pas été modifié.",
   cancel_nothing_written: "Rien n'a été écrit.",
   cancel_partial_dir: "Le dossier de destination peut contenir des fichiers à moitié fusionnés ; supprimez-le ou utilisez un autre dossier vide pour relancer la fusion.",
-  cancel_zip_removed: "Le ZIP incomplet a été supprimé.",
-  confirm_dangerous_zip: "Des fichiers dont l'extension peut être bloquée par votre navigateur pendant la fusion ont été détectés ({list}). Pour terminer l'opération en toute sécurité, un ZIP peut être généré, à télécharger sous votre propre responsabilité. Si vous continuez sans ZIP, les fichiers bloqués par le navigateur seront ignorés et, à la fin, vous pourrez les télécharger dans un ZIP de secours pour compléter la fusion.",
-  confirm_dangerous_zip_copy: "L'export contient des fichiers dont l'extension est bloquée par votre navigateur lors de l'écriture dans un dossier ({list}). Pour que la copie soit complète, elle sera générée sous forme de ZIP, à décompresser ensuite.",
-  copy_blocked_retry: "Le navigateur a bloqué {n} fichier(s) imprévu(s) ({list}), la copie incomplète a donc été supprimée. Réessayez : cette fois, la copie sera générée sous forme de ZIP.",
   copy_inside_source: "Choisissez un dossier qui ne se trouve pas dans l'export lui-même.",
-  dangerous_h: "Fichiers que le navigateur peut bloquer",
   dest_copy: "Créer une copie",
-  dest_copy_hint: "Une copie complète de l'export, avec tous ses médias, est créée et la modification ne s'applique qu'à la copie ; l'original reste intact. Si l'export contient des fichiers que le navigateur bloque lors de l'écriture dans un dossier, la copie est générée sous forme de ZIP pour être complète. Plus le chat contient de médias, plus cela prend de temps.",
+  dest_copy_hint: "Une copie complète de l'export, avec tous ses médias, est créée et la modification ne s'applique qu'à la copie ; l'original reste intact. Si le navigateur bloque un fichier pendant la copie, vous pourrez le télécharger dans un ZIP à part à la fin. Plus le chat contient de médias, plus cela prend de temps.",
   dest_h: "Résultat",
   dest_inplace: "Modifier l'original",
   dest_inplace_hint: "Les fichiers messages.html de l'export lui-même sont réécrits. C'est rapide, mais la version précédente n'est pas conservée.",
@@ -764,37 +735,29 @@ fr: {
   job_cancelled: "Opération annulée",
   job_cancelling: "Annulation…",
   job_keep_open: "Ne rechargez pas et ne fermez ni cet onglet ni le navigateur avant la fin : l'opération serait interrompue et le résultat incomplet.",
-  nozip_btn: "Continuer sans ZIP",
   pick_out_btn: "Choisir le dossier de destination",
   ready_h: "Analyse terminée",
   ready_text: "Taille estimée du résultat : ~{size}. Choisissez le dossier de destination pour commencer.",
   res_written_copy: "Copie créée dans le dossier « {name} ». L'export d'origine n'a pas été modifié.",
-  res_written_zip: "ZIP enregistré. Décompressez-le pour voir votre chat fusionné.",
-  res_written_zip_copy: "ZIP enregistré. Décompressez-le pour voir la copie ; l'export d'origine n'a pas été modifié.",
   size_warn_cancel: "Annuler",
   size_warn_continue: "Continuer quand même",
   size_warn_h: "Export volumineux",
   size_warn_text: "Le résultat fera environ {size} (sans compter les fichiers répétés). Sur le web, cela peut prendre du temps ; pour un résultat plus rapide et plus direct, la version de bureau est recommandée.",
   stage_analyze: "Analyse · {n}/{total} fichiers · résultat ~{size}…",
   stage_listing: "Liste des fichiers des exports · {n}…",
-  stage_zip_media: "Ajout des médias au ZIP · {n} fichiers · {done} sur ~{total}…",
-  stage_zip_index: "Écriture de l'index du ZIP ({n} fichiers)…",
   stage_zip_verify: "Chrome vérifie le ZIP ({size}) avant de l'enregistrer. Avec de gros fichiers, cela peut prendre plusieurs minutes ; ne fermez pas l'onglet.",
   stage_benchmark: "Mesure de la vitesse du dossier de destination pour régler le nombre de fichiers copiés en parallèle…",
   warn_group_blocked: "{n} fichier(s) que Safe Browsing, la protection de Chrome, a jugés suspects et n'a pas laissé écrire dans le dossier. Cela arrive avec des exécutables ou des fichiers peu courants, comme certains stickers, et ce sont souvent de fausses alertes. À la fin, vous pourrez les télécharger dans un ZIP à part si vous faites confiance à leur contenu. Cliquez pour voir la liste.",
-  warn_group_unreadable: "{n} fichier(s) n'ont pas pu être lus (souvent à cause d'un antivirus) et ne sont pas dans le ZIP. Cliquez pour voir la liste.",
   rescue_text: "Il manque {n} fichier(s) ({size}) dans le dossier « {folder} » : le navigateur a refusé de les y écrire, mais il accepte de les mettre dans un ZIP. Téléchargez ce ZIP de secours, ouvrez-le et copiez tout son contenu dans le dossier « {folder} », en fusionnant les dossiers si on vous le demande. Chaque fichier retrouvera sa place et ses liens fonctionneront.",
   rescue_btn: "Télécharger le ZIP des fichiers manquants",
   rescue_btn_again: "Télécharger à nouveau le ZIP",
   rescue_progress: "Création du ZIP de secours · {done} sur {n} fichiers…",
-  rescue_done: "ZIP de secours enregistré. Ouvrez-le et copiez tout son contenu dans le dossier « {folder} », en fusionnant les dossiers si on vous le demande, pour compléter la fusion.",
+  rescue_done: "ZIP de secours enregistré. Ouvrez-le et copiez tout son contenu dans le dossier « {folder} », en fusionnant les dossiers si on vous le demande, pour le compléter.",
   rescue_partial: "Attention : {n} fichier(s) n'ont toujours pas pu être lus et ne sont pas dans le ZIP : {list}",
   rescue_failed: "Impossible de créer le ZIP de secours : {err}",
   rescue_zip_name: "{folder} - fichiers manquants",
   rescue_readme_name: "LISEZMOI - fichiers récupérés.txt",
-  rescue_readme: "Ces fichiers font partie de la fusion enregistrée dans le dossier « {folder} », mais Safe Browsing, la protection de Chrome, les a jugés suspects et ne les a pas laissé écrire. Cela arrive avec des exécutables ou des fichiers peu courants, comme certains stickers, et ce sont souvent de fausses alertes.\r\n\r\nPour compléter la fusion, copiez tout le contenu de ce ZIP dans le dossier « {folder} », en fusionnant les dossiers si on vous le demande. Chaque fichier retrouvera sa place et les liens du chat fonctionneront.\r\n\r\nNe les ouvrez que si vous faites confiance à leur expéditeur. Vous pouvez supprimer ce fichier texte.",
-  stage_zipping: "Création du ZIP…",
-  zip_btn: "Générer le ZIP"
+  rescue_readme: "Ces fichiers font partie du résultat enregistré dans le dossier « {folder} », mais Safe Browsing, la protection de Chrome, les a jugés suspects et ne les a pas laissé écrire. Cela arrive avec des exécutables ou des fichiers peu courants, comme certains stickers, et ce sont souvent de fausses alertes.\r\n\r\nPour compléter ce dossier, copiez-y tout le contenu de ce ZIP, en fusionnant les dossiers si on vous le demande. Chaque fichier retrouvera sa place et les liens du chat fonctionneront.\r\n\r\nNe les ouvrez que si vous faites confiance à leur expéditeur. Vous pouvez supprimer ce fichier texte.",
 },
 de: {
   cta_download: "Desktop-Version",
@@ -858,14 +821,9 @@ de: {
   cancel_copy_removed: "Die unvollständige Kopie wurde entfernt; der ursprüngliche Export wurde nicht verändert.",
   cancel_nothing_written: "Es wurde nichts geschrieben.",
   cancel_partial_dir: "Der Zielordner kann halb zusammengeführte Dateien enthalten; lösche ihn oder verwende beim erneuten Zusammenführen einen anderen leeren Ordner.",
-  cancel_zip_removed: "Das unvollständige ZIP wurde verworfen.",
-  confirm_dangerous_zip: "Es wurden Dateien mit Endungen gefunden, die dein Browser beim Zusammenführen blockieren kann ({list}). Um den Vorgang sicher abzuschließen, kann ein ZIP erstellt werden, das du auf eigene Verantwortung herunterlädst. Wenn du ohne ZIP fortfährst, werden vom Browser blockierte Dateien übersprungen; am Ende kannst du sie in einem Rettungs-ZIP herunterladen, um die Zusammenführung zu vervollständigen.",
-  confirm_dangerous_zip_copy: "Der Export enthält Dateien mit Endungen, die dein Browser beim Schreiben in einen Ordner blockiert ({list}). Damit die Kopie vollständig ist, wird sie als ZIP erstellt, das du danach entpacken kannst.",
-  copy_blocked_retry: "Der Browser hat {n} unerwartete Datei(en) blockiert ({list}), daher wurde die unvollständige Kopie entfernt. Versuche es erneut: Diesmal wird die Kopie als ZIP erstellt.",
   copy_inside_source: "Wähle einen Ordner, der nicht im Export selbst liegt.",
-  dangerous_h: "Dateien, die der Browser blockieren kann",
   dest_copy: "Kopie erstellen",
-  dest_copy_hint: "Es wird eine vollständige Kopie des Exports mit allen Medien erstellt, und die Änderung wird nur auf die Kopie angewendet; das Original bleibt unverändert. Enthält der Export Dateien, die der Browser beim Schreiben in einen Ordner blockiert, wird die Kopie als ZIP erstellt, damit sie vollständig ist. Je mehr Medien der Chat hat, desto länger dauert es.",
+  dest_copy_hint: "Es wird eine vollständige Kopie des Exports mit allen Medien erstellt, und die Änderung wird nur auf die Kopie angewendet; das Original bleibt unverändert. Blockiert der Browser beim Kopieren eine Datei, kannst du sie am Ende in einem separaten ZIP herunterladen. Je mehr Medien der Chat hat, desto länger dauert es.",
   dest_h: "Ergebnis",
   dest_inplace: "Original ändern",
   dest_inplace_hint: "Die messages.html-Dateien des Exports selbst werden neu geschrieben. Schnell, aber die vorherige Version wird nicht aufbewahrt.",
@@ -873,37 +831,29 @@ de: {
   job_cancelled: "Vorgang abgebrochen",
   job_cancelling: "Wird abgebrochen…",
   job_keep_open: "Lade diesen Tab nicht neu und schließe weder ihn noch den Browser, bis der Vorgang fertig ist: Er würde unterbrochen und das Ergebnis bliebe unvollständig.",
-  nozip_btn: "Ohne ZIP fortfahren",
   pick_out_btn: "Zielordner wählen",
   ready_h: "Analyse abgeschlossen",
   ready_text: "Geschätzte Größe des Ergebnisses: ~{size}. Wähle den Zielordner, um zu beginnen.",
   res_written_copy: "Kopie im Ordner „{name}“ erstellt. Der ursprüngliche Export wurde nicht verändert.",
-  res_written_zip: "ZIP gespeichert. Entpacke es, um deinen zusammengeführten Chat zu sehen.",
-  res_written_zip_copy: "ZIP gespeichert. Entpacke es, um die Kopie zu sehen; der ursprüngliche Export wurde nicht verändert.",
   size_warn_cancel: "Abbrechen",
   size_warn_continue: "Trotzdem fortfahren",
   size_warn_h: "Großer Export",
   size_warn_text: "Das Ergebnis wird etwa {size} groß (ohne wiederholte Dateien). Im Web kann das eine Weile dauern; für ein schnelleres, direkteres Ergebnis wird die Desktop-Version empfohlen.",
   stage_analyze: "Analyse · {n}/{total} Dateien · Ergebnis ~{size}…",
   stage_listing: "Dateien der Exporte werden aufgelistet · {n}…",
-  stage_zip_media: "Medien werden zum ZIP hinzugefügt · {n} Dateien · {done} von ~{total}…",
-  stage_zip_index: "ZIP-Verzeichnis wird geschrieben ({n} Dateien)…",
   stage_zip_verify: "Chrome überprüft das ZIP ({size}) vor dem Speichern. Bei großen Dateien kann das mehrere Minuten dauern – Tab nicht schließen.",
   stage_benchmark: "Geschwindigkeit des Zielordners wird gemessen, um festzulegen, wie viele Dateien gleichzeitig kopiert werden…",
   warn_group_blocked: "{n} Datei(en), die Safe Browsing, der Schutz von Chrome, als verdächtig eingestuft und nicht in den Ordner schreiben lassen hat. Das passiert bei ausführbaren Dateien oder seltenen Dateien wie manchen Stickern, und oft sind es Fehlalarme. Am Ende kannst du sie in einem separaten ZIP herunterladen, wenn du ihrem Inhalt vertraust. Klicke, um die Liste zu sehen.",
-  warn_group_unreadable: "{n} Datei(en) konnten nicht gelesen werden (meist wegen einer Antivirensoftware) und fehlen im ZIP. Klicke, um die Liste zu sehen.",
   rescue_text: "Im Ordner „{folder}“ fehlen {n} Datei(en) ({size}): Der Browser ließ sie dort nicht schreiben, in einem ZIP aber schon. Lade dieses Rettungs-ZIP herunter, öffne es und kopiere seinen gesamten Inhalt in den Ordner „{folder}“; führe Ordner zusammen, wenn du gefragt wirst. Jede Datei landet an ihrem Platz und ihre Links funktionieren.",
   rescue_btn: "ZIP mit den fehlenden Dateien herunterladen",
   rescue_btn_again: "ZIP erneut herunterladen",
   rescue_progress: "Rettungs-ZIP wird erstellt · {done} von {n} Dateien…",
-  rescue_done: "Rettungs-ZIP gespeichert. Öffne es und kopiere seinen gesamten Inhalt in den Ordner „{folder}“ (Ordner zusammenführen, wenn gefragt), um die Zusammenführung abzuschließen.",
+  rescue_done: "Rettungs-ZIP gespeichert. Öffne es und kopiere seinen gesamten Inhalt in den Ordner „{folder}“ (Ordner zusammenführen, wenn gefragt), um ihn zu vervollständigen.",
   rescue_partial: "Achtung: {n} Datei(en) konnten auch jetzt nicht gelesen werden und fehlen im ZIP: {list}",
   rescue_failed: "Das Rettungs-ZIP konnte nicht erstellt werden: {err}",
   rescue_zip_name: "{folder} - fehlende Dateien",
   rescue_readme_name: "LIESMICH - gerettete Dateien.txt",
-  rescue_readme: "Diese Dateien gehören zur Zusammenführung im Ordner „{folder}“, aber Safe Browsing, der Schutz von Chrome, hat sie als verdächtig eingestuft und nicht dort schreiben lassen. Das passiert bei ausführbaren Dateien oder seltenen Dateien wie manchen Stickern, und oft sind es Fehlalarme.\r\n\r\nUm die Zusammenführung abzuschließen, kopiere den gesamten Inhalt dieses ZIPs in den Ordner „{folder}“ und führe Ordner zusammen, wenn du gefragt wirst. Jede Datei landet an ihrem Platz und die Links im Chat funktionieren.\r\n\r\nÖffne sie nur, wenn du dem Absender vertraust. Diese Textdatei kannst du löschen.",
-  stage_zipping: "ZIP wird erstellt…",
-  zip_btn: "ZIP erstellen"
+  rescue_readme: "Diese Dateien gehören zum Ergebnis im Ordner „{folder}“, aber Safe Browsing, der Schutz von Chrome, hat sie als verdächtig eingestuft und nicht dort schreiben lassen. Das passiert bei ausführbaren Dateien oder seltenen Dateien wie manchen Stickern, und oft sind es Fehlalarme.\r\n\r\nUm diesen Ordner zu vervollständigen, kopiere den gesamten Inhalt dieses ZIPs hinein und führe Ordner zusammen, wenn du gefragt wirst. Jede Datei landet an ihrem Platz und die Links im Chat funktionieren.\r\n\r\nÖffne sie nur, wenn du dem Absender vertraust. Diese Textdatei kannst du löschen.",
 },
 pt: {
   cta_download: "Versão para computador",
@@ -967,14 +917,9 @@ pt: {
   cancel_copy_removed: "A cópia incompleta foi removida; o export original não foi modificado.",
   cancel_nothing_written: "Nada foi gravado.",
   cancel_partial_dir: "A pasta de destino pode conter arquivos mesclados pela metade; apague-a ou use outra pasta vazia ao mesclar novamente.",
-  cancel_zip_removed: "O ZIP incompleto foi descartado.",
-  confirm_dangerous_zip: "Foram detectados arquivos com extensões que o seu navegador pode bloquear durante a mesclagem ({list}). Para concluir a operação com segurança, é possível gerar um ZIP para você baixar por sua conta e risco. Se continuar sem ZIP, os arquivos que o navegador bloquear serão ignorados e, ao terminar, você poderá baixá-los num ZIP de resgate para completar a fusão.",
-  confirm_dangerous_zip_copy: "O export contém arquivos com extensões que o seu navegador bloqueia ao gravá-los numa pasta ({list}). Para que a cópia fique completa, ela será gerada como um ZIP que você poderá descompactar depois.",
-  copy_blocked_retry: "O navegador bloqueou {n} arquivo(s) não previsto(s) ({list}), então a cópia incompleta foi removida. Tente de novo: desta vez a cópia será gerada como ZIP.",
   copy_inside_source: "Escolha uma pasta que não esteja dentro do próprio export.",
-  dangerous_h: "Arquivos que o navegador pode bloquear",
   dest_copy: "Criar uma cópia",
-  dest_copy_hint: "É criada uma cópia completa do export, com toda a sua mídia, e a alteração é aplicada só à cópia; o original não é tocado. Se o export contiver arquivos que o navegador bloqueia ao gravá-los numa pasta, a cópia é gerada como ZIP para ficar completa. Quanto mais mídia o chat tiver, mais demora.",
+  dest_copy_hint: "É criada uma cópia completa do export, com toda a sua mídia, e a alteração é aplicada só à cópia; o original não é tocado. Se o navegador bloquear algum arquivo ao copiá-lo, ao terminar você poderá baixá-lo num ZIP à parte. Quanto mais mídia o chat tiver, mais demora.",
   dest_h: "Resultado",
   dest_inplace: "Modificar o original",
   dest_inplace_hint: "Os messages.html do próprio export são reescritos. É rápido, mas a versão anterior não é mantida.",
@@ -982,37 +927,29 @@ pt: {
   job_cancelled: "Operação cancelada",
   job_cancelling: "Cancelando…",
   job_keep_open: "Não recarregue nem feche esta aba ou o navegador até terminar: a operação seria interrompida e o resultado ficaria incompleto.",
-  nozip_btn: "Continuar sem ZIP",
   pick_out_btn: "Escolher pasta de destino",
   ready_h: "Análise concluída",
   ready_text: "Tamanho estimado do resultado: ~{size}. Escolha a pasta de destino para começar.",
   res_written_copy: "Cópia criada na pasta “{name}”. O export original não foi modificado.",
-  res_written_zip: "ZIP salvo. Descompacte-o para ver seu chat mesclado.",
-  res_written_zip_copy: "ZIP salvo. Descompacte-o para ver a cópia; o export original não foi modificado.",
   size_warn_cancel: "Cancelar",
   size_warn_continue: "Continuar mesmo assim",
   size_warn_h: "Export grande",
   size_warn_text: "O resultado terá cerca de {size} (sem contar arquivos repetidos). Na web isso pode demorar um pouco; para um resultado mais rápido e direto, recomenda-se a versão para computador.",
   stage_analyze: "Analisando · {n}/{total} arquivos · resultado ~{size}…",
   stage_listing: "Listando arquivos dos exports · {n}…",
-  stage_zip_media: "Adicionando mídia ao ZIP · {n} arquivos · {done} de ~{total}…",
-  stage_zip_index: "Escrevendo o índice do ZIP ({n} arquivos)…",
   stage_zip_verify: "O Chrome está verificando o ZIP ({size}) antes de salvá-lo. Com arquivos grandes, isso pode levar vários minutos; não feche a aba.",
   stage_benchmark: "Medindo a velocidade da pasta de destino para ajustar quantos arquivos copiar ao mesmo tempo…",
   warn_group_blocked: "{n} arquivo(s) que o Safe Browsing, a proteção do Chrome, considerou suspeitos e não deixou gravar na pasta. Costuma acontecer com executáveis ou arquivos pouco comuns, como alguns stickers, e muitas vezes são alarmes falsos. Ao terminar, você poderá baixá-los num ZIP à parte se confiar no conteúdo. Clique para ver a lista.",
-  warn_group_unreadable: "{n} arquivo(s) não puderam ser lidos (geralmente por causa de um antivírus) e não estão no ZIP. Clique para ver a lista.",
   rescue_text: "Faltam {n} arquivo(s) ({size}) na pasta “{folder}”: o navegador não deixou gravá-los ali, mas deixa dentro de um ZIP. Baixe este ZIP de resgate, abra-o e copie todo o seu conteúdo para dentro da pasta “{folder}”, mesclando as pastas se for perguntado. Cada arquivo ficará no seu lugar e os links funcionarão.",
   rescue_btn: "Baixar ZIP com os arquivos que faltam",
   rescue_btn_again: "Baixar o ZIP de novo",
   rescue_progress: "Gerando o ZIP de resgate · {done} de {n} arquivos…",
-  rescue_done: "ZIP de resgate salvo. Abra-o e copie todo o seu conteúdo para dentro da pasta “{folder}”, mesclando as pastas se for perguntado, para completar a fusão.",
+  rescue_done: "ZIP de resgate salvo. Abra-o e copie todo o seu conteúdo para dentro da pasta “{folder}”, mesclando as pastas se for perguntado, para completá-la.",
   rescue_partial: "Atenção: {n} arquivo(s) também não puderam ser lidos agora e não estão no ZIP: {list}",
   rescue_failed: "Não foi possível gerar o ZIP de resgate: {err}",
   rescue_zip_name: "{folder} - arquivos que faltam",
   rescue_readme_name: "LEIAME - arquivos resgatados.txt",
-  rescue_readme: "Estes arquivos fazem parte da fusão salva na pasta “{folder}”, mas o Safe Browsing, a proteção do Chrome, considerou-os suspeitos e não deixou gravá-los ali. Costuma acontecer com executáveis ou arquivos pouco comuns, como alguns stickers, e muitas vezes são alarmes falsos.\r\n\r\nPara completar a fusão, copie todo o conteúdo deste ZIP para dentro da pasta “{folder}”, mesclando as pastas se for perguntado. Cada arquivo ficará no seu lugar e os links do chat funcionarão.\r\n\r\nSó os abra se confiar em quem os enviou. Você pode apagar este arquivo de texto.",
-  stage_zipping: "Gerando o ZIP…",
-  zip_btn: "Gerar ZIP"
+  rescue_readme: "Estes arquivos fazem parte do resultado salvo na pasta “{folder}”, mas o Safe Browsing, a proteção do Chrome, considerou-os suspeitos e não deixou gravá-los ali. Costuma acontecer com executáveis ou arquivos pouco comuns, como alguns stickers, e muitas vezes são alarmes falsos.\r\n\r\nPara completar essa pasta, copie para dentro dela todo o conteúdo deste ZIP, mesclando as pastas se for perguntado. Cada arquivo ficará no seu lugar e os links do chat funcionarão.\r\n\r\nSó os abra se confiar em quem os enviou. Você pode apagar este arquivo de texto.",
 },
 it: {
   cta_download: "Versione desktop",
@@ -1076,14 +1013,9 @@ it: {
   cancel_copy_removed: "La copia incompleta è stata eliminata; l'export originale non è stato modificato.",
   cancel_nothing_written: "Non è stato scritto nulla.",
   cancel_partial_dir: "La cartella di destinazione può contenere file uniti a metà; eliminala o usa un'altra cartella vuota quando ripeti l'unione.",
-  cancel_zip_removed: "Lo ZIP incompleto è stato scartato.",
-  confirm_dangerous_zip: "Sono stati rilevati file con estensioni che il tuo browser può bloccare durante l'unione ({list}). Per completare l'operazione in sicurezza si può generare uno ZIP da scaricare a tua discrezione. Se continui senza ZIP, i file bloccati dal browser verranno saltati e, al termine, potrai scaricarli in uno ZIP di recupero per completare la fusione.",
-  confirm_dangerous_zip_copy: "L'export contiene file con estensioni che il tuo browser blocca quando li scrive in una cartella ({list}). Perché la copia sia completa, verrà generata come ZIP da decomprimere in seguito.",
-  copy_blocked_retry: "Il browser ha bloccato {n} file non previsti ({list}), quindi la copia incompleta è stata eliminata. Riprova: questa volta la copia verrà generata come ZIP.",
   copy_inside_source: "Scegli una cartella che non si trovi dentro l'export stesso.",
-  dangerous_h: "File che il browser può bloccare",
   dest_copy: "Crea una copia",
-  dest_copy_hint: "Viene creata una copia completa dell'export, con tutti i suoi media, e la modifica si applica solo alla copia; l'originale non viene toccato. Se l'export contiene file che il browser blocca quando li scrive in una cartella, la copia viene generata come ZIP per essere completa. Più media ha la chat, più tempo ci vuole.",
+  dest_copy_hint: "Viene creata una copia completa dell'export, con tutti i suoi media, e la modifica si applica solo alla copia; l'originale non viene toccato. Se il browser blocca qualche file durante la copia, al termine potrai scaricarlo in uno ZIP a parte. Più media ha la chat, più tempo ci vuole.",
   dest_h: "Risultato",
   dest_inplace: "Modifica l'originale",
   dest_inplace_hint: "Vengono riscritti i messages.html dell'export stesso. È veloce, ma la versione precedente non viene conservata.",
@@ -1091,37 +1023,29 @@ it: {
   job_cancelled: "Operazione annullata",
   job_cancelling: "Annullamento…",
   job_keep_open: "Non ricaricare né chiudere questa scheda o il browser finché non termina: l'operazione verrebbe interrotta e il risultato resterebbe incompleto.",
-  nozip_btn: "Continua senza ZIP",
   pick_out_btn: "Scegli la cartella di destinazione",
   ready_h: "Analisi completata",
   ready_text: "Dimensione stimata del risultato: ~{size}. Scegli la cartella di destinazione per iniziare.",
   res_written_copy: "Copia creata nella cartella «{name}». L'export originale non è stato modificato.",
-  res_written_zip: "ZIP salvato. Decomprimilo per vedere la chat unita.",
-  res_written_zip_copy: "ZIP salvato. Decomprimilo per vedere la copia; l'export originale non è stato modificato.",
   size_warn_cancel: "Annulla",
   size_warn_continue: "Continua comunque",
   size_warn_h: "Export di grandi dimensioni",
   size_warn_text: "Il risultato occuperà circa {size} (senza contare i file ripetuti). Sul web può richiedere un po' di tempo; per un risultato più rapido e diretto è consigliata la versione desktop.",
   stage_analyze: "Analisi · {n}/{total} file · risultato ~{size}…",
   stage_listing: "Elenco dei file degli export · {n}…",
-  stage_zip_media: "Aggiunta dei media allo ZIP · {n} file · {done} di ~{total}…",
-  stage_zip_index: "Scrittura dell'indice dello ZIP ({n} file)…",
   stage_zip_verify: "Chrome sta verificando lo ZIP ({size}) prima di salvarlo. Con file grandi può richiedere diversi minuti; non chiudere la scheda.",
   stage_benchmark: "Misurazione della velocità della cartella di destinazione per regolare quanti file copiare in parallelo…",
   warn_group_blocked: "{n} file che Safe Browsing, la protezione di Chrome, ha ritenuto sospetti e non ha lasciato scrivere nella cartella. Succede con eseguibili o file poco comuni, come alcuni sticker, e spesso sono falsi allarmi. Al termine potrai scaricarli in uno ZIP a parte se ti fidi del loro contenuto. Clicca per vedere l'elenco.",
-  warn_group_unreadable: "{n} file non sono stati letti (di solito a causa di un antivirus) e non sono nello ZIP. Clicca per vedere l'elenco.",
   rescue_text: "Mancano {n} file ({size}) nella cartella «{folder}»: il browser non li ha lasciati scrivere lì, ma lo consente dentro uno ZIP. Scarica questo ZIP di recupero, aprilo e copia tutto il suo contenuto nella cartella «{folder}», unendo le cartelle se richiesto. Ogni file tornerà al suo posto e i suoi link funzioneranno.",
   rescue_btn: "Scarica lo ZIP con i file mancanti",
   rescue_btn_again: "Scarica di nuovo lo ZIP",
   rescue_progress: "Creazione dello ZIP di recupero · {done} di {n} file…",
-  rescue_done: "ZIP di recupero salvato. Aprilo e copia tutto il suo contenuto nella cartella «{folder}», unendo le cartelle se richiesto, per completare la fusione.",
+  rescue_done: "ZIP di recupero salvato. Aprilo e copia tutto il suo contenuto nella cartella «{folder}», unendo le cartelle se richiesto, per completarla.",
   rescue_partial: "Attenzione: {n} file non sono stati letti neanche ora e non sono nello ZIP: {list}",
   rescue_failed: "Impossibile creare lo ZIP di recupero: {err}",
   rescue_zip_name: "{folder} - file mancanti",
   rescue_readme_name: "LEGGIMI - file recuperati.txt",
-  rescue_readme: "Questi file fanno parte della fusione salvata nella cartella «{folder}», ma Safe Browsing, la protezione di Chrome, li ha ritenuti sospetti e non li ha lasciati scrivere lì. Succede con eseguibili o file poco comuni, come alcuni sticker, e spesso sono falsi allarmi.\r\n\r\nPer completare la fusione, copia tutto il contenuto di questo ZIP nella cartella «{folder}», unendo le cartelle se richiesto. Ogni file tornerà al suo posto e i link della chat funzioneranno.\r\n\r\nAprili solo se ti fidi di chi li ha inviati. Puoi eliminare questo file di testo.",
-  stage_zipping: "Creazione dello ZIP…",
-  zip_btn: "Genera ZIP"
+  rescue_readme: "Questi file fanno parte del risultato salvato nella cartella «{folder}», ma Safe Browsing, la protezione di Chrome, li ha ritenuti sospetti e non li ha lasciati scrivere lì. Succede con eseguibili o file poco comuni, come alcuni sticker, e spesso sono falsi allarmi.\r\n\r\nPer completare quella cartella, copiaci dentro tutto il contenuto di questo ZIP, unendo le cartelle se richiesto. Ogni file tornerà al suo posto e i link della chat funzioneranno.\r\n\r\nAprili solo se ti fidi di chi li ha inviati. Puoi eliminare questo file di testo.",
 },
 ru: {
   cta_download: "Настольная версия",
@@ -1185,14 +1109,9 @@ ru: {
   cancel_copy_removed: "Неполная копия удалена; исходный экспорт не изменён.",
   cancel_nothing_written: "Ничего не записано.",
   cancel_partial_dir: "Папка назначения может содержать частично объединённые файлы; удалите её или используйте другую пустую папку при повторном объединении.",
-  cancel_zip_removed: "Неполный ZIP удалён.",
-  confirm_dangerous_zip: "Обнаружены файлы с расширениями, которые браузер может заблокировать при объединении ({list}). Чтобы безопасно завершить операцию, можно создать ZIP и скачать его под свою ответственность. Если продолжить без ZIP, заблокированные браузером файлы будут пропущены, а по завершении их можно будет скачать в ZIP для восстановления, чтобы завершить объединение.",
-  confirm_dangerous_zip_copy: "Экспорт содержит файлы с расширениями, которые браузер блокирует при записи в папку ({list}). Чтобы копия была полной, она будет создана в виде ZIP, который потом можно распаковать.",
-  copy_blocked_retry: "Браузер заблокировал непредвиденные файлы: {n} ({list}), поэтому неполная копия удалена. Попробуйте ещё раз: на этот раз копия будет создана в виде ZIP.",
   copy_inside_source: "Выберите папку, которая не находится внутри самого экспорта.",
-  dangerous_h: "Файлы, которые браузер может заблокировать",
   dest_copy: "Создать копию",
-  dest_copy_hint: "Создаётся полная копия экспорта со всеми медиафайлами, и изменение применяется только к копии; оригинал не затрагивается. Если в экспорте есть файлы, которые браузер блокирует при записи в папку, копия создаётся в виде ZIP, чтобы она была полной. Чем больше медиа в чате, тем дольше.",
+  dest_copy_hint: "Создаётся полная копия экспорта со всеми медиафайлами, и изменение применяется только к копии; оригинал не затрагивается. Если браузер заблокирует какой-то файл при копировании, по завершении его можно будет скачать отдельным ZIP. Чем больше медиа в чате, тем дольше.",
   dest_h: "Результат",
   dest_inplace: "Изменить оригинал",
   dest_inplace_hint: "Перезаписываются файлы messages.html самого экспорта. Быстро, но предыдущая версия не сохраняется.",
@@ -1200,37 +1119,29 @@ ru: {
   job_cancelled: "Операция отменена",
   job_cancelling: "Отмена…",
   job_keep_open: "Не перезагружайте и не закрывайте эту вкладку или браузер до завершения: операция прервётся, а результат останется неполным.",
-  nozip_btn: "Продолжить без ZIP",
   pick_out_btn: "Выбрать папку назначения",
   ready_h: "Анализ завершён",
   ready_text: "Примерный размер результата: ~{size}. Выберите папку назначения, чтобы начать.",
   res_written_copy: "Копия создана в папке «{name}». Исходный экспорт не изменён.",
-  res_written_zip: "ZIP сохранён. Распакуйте его, чтобы увидеть объединённый чат.",
-  res_written_zip_copy: "ZIP сохранён. Распакуйте его, чтобы увидеть копию; исходный экспорт не изменён.",
   size_warn_cancel: "Отмена",
   size_warn_continue: "Всё равно продолжить",
   size_warn_h: "Большой экспорт",
   size_warn_text: "Результат займёт около {size} (без учёта повторяющихся файлов). В веб-версии это может занять время; для более быстрого и прямого результата рекомендуется настольная версия.",
   stage_analyze: "Анализ · {n}/{total} файлов · результат ~{size}…",
   stage_listing: "Составление списка файлов экспортов · {n}…",
-  stage_zip_media: "Добавление медиа в ZIP · файлов: {n} · {done} из ~{total}…",
-  stage_zip_index: "Запись оглавления ZIP (файлов: {n})…",
   stage_zip_verify: "Chrome проверяет ZIP ({size}) перед сохранением. Для больших файлов это может занять несколько минут — не закрывайте вкладку.",
   stage_benchmark: "Измеряем скорость папки назначения, чтобы подобрать, сколько файлов копировать одновременно…",
   warn_group_blocked: "Файлов, которые Safe Browsing (защита Chrome) счёл подозрительными и не разрешил записать в папку: {n}. Так бывает с исполняемыми или редкими файлами, например с некоторыми стикерами, и часто это ложная тревога. По завершении их можно будет скачать отдельным ZIP, если вы доверяете их содержимому. Нажмите, чтобы увидеть список.",
-  warn_group_unreadable: "Файлов, которые не удалось прочитать (обычно из-за антивируса), и их нет в ZIP: {n}. Нажмите, чтобы увидеть список.",
   rescue_text: "В папке «{folder}» не хватает файлов: {n} ({size}). Браузер не разрешил записать их туда, но разрешает внутри ZIP. Скачайте этот ZIP-архив для восстановления, откройте его и скопируйте всё содержимое в папку «{folder}», объединяя папки, если будет вопрос. Каждый файл окажется на своём месте, и ссылки на него заработают.",
   rescue_btn: "Скачать ZIP с недостающими файлами",
   rescue_btn_again: "Скачать ZIP ещё раз",
   rescue_progress: "Создание ZIP для восстановления · {done} из {n} файлов…",
-  rescue_done: "ZIP для восстановления сохранён. Откройте его и скопируйте всё содержимое в папку «{folder}», объединяя папки, если будет вопрос, чтобы завершить объединение.",
+  rescue_done: "ZIP для восстановления сохранён. Откройте его и скопируйте всё содержимое в папку «{folder}», объединяя папки, если будет вопрос, чтобы дополнить её.",
   rescue_partial: "Внимание: файлов, которые и сейчас не удалось прочитать и которых нет в ZIP: {n}: {list}",
   rescue_failed: "Не удалось создать ZIP для восстановления: {err}",
   rescue_zip_name: "{folder} - недостающие файлы",
   rescue_readme_name: "ПРОЧТИ - восстановленные файлы.txt",
-  rescue_readme: "Эти файлы относятся к объединению, сохранённому в папке «{folder}», но Safe Browsing (защита Chrome) счёл их подозрительными и не разрешил записать их туда. Так бывает с исполняемыми или редкими файлами, например с некоторыми стикерами, и часто это ложная тревога.\r\n\r\nЧтобы завершить объединение, скопируйте всё содержимое этого ZIP в папку «{folder}», объединяя папки, если будет вопрос. Каждый файл окажется на своём месте, и ссылки в чате заработают.\r\n\r\nОткрывайте их, только если доверяете отправителю. Этот текстовый файл можно удалить.",
-  stage_zipping: "Создание ZIP…",
-  zip_btn: "Создать ZIP"
+  rescue_readme: "Эти файлы относятся к результату, сохранённому в папке «{folder}», но Safe Browsing (защита Chrome) счёл их подозрительными и не разрешил записать их туда. Так бывает с исполняемыми или редкими файлами, например с некоторыми стикерами, и часто это ложная тревога.\r\n\r\nЧтобы дополнить эту папку, скопируйте в неё всё содержимое этого ZIP, объединяя папки, если будет вопрос. Каждый файл окажется на своём месте, и ссылки в чате заработают.\r\n\r\nОткрывайте их, только если доверяете отправителю. Этот текстовый файл можно удалить.",
 },
 zh: {
   cta_download: "桌面版",
@@ -1294,14 +1205,9 @@ zh: {
   cancel_copy_removed: "不完整的副本已删除；原始导出未被修改。",
   cancel_nothing_written: "未写入任何内容。",
   cancel_partial_dir: "目标文件夹可能包含合并了一半的文件；重新合并时请删除它或使用另一个空文件夹。",
-  cancel_zip_removed: "不完整的 ZIP 已丢弃。",
-  confirm_dangerous_zip: "检测到浏览器在合并时可能拦截的扩展名文件（{list}）。为安全完成操作，可以生成一个 ZIP，由你自行决定是否下载。如果不使用 ZIP 继续，被浏览器拦截的文件将被跳过；完成后可以将它们下载为补救 ZIP，以补全合并结果。",
-  confirm_dangerous_zip_copy: "该导出包含浏览器在写入文件夹时会拦截的扩展名文件（{list}）。为保证副本完整，将以 ZIP 形式生成，之后可以解压。",
-  copy_blocked_retry: "浏览器拦截了 {n} 个未预料的文件（{list}），因此已删除不完整的副本。请重试：这次副本将以 ZIP 形式生成。",
   copy_inside_source: "请选择不在该导出内部的文件夹。",
-  dangerous_h: "浏览器可能拦截的文件",
   dest_copy: "创建副本",
-  dest_copy_hint: "会创建导出的完整副本（含全部媒体），更改只应用于副本；原始导出保持不变。如果导出中有浏览器写入文件夹时会拦截的文件，副本会以 ZIP 形式生成以保证完整。聊天中的媒体越多，耗时越长。",
+  dest_copy_hint: "会创建导出的完整副本（含全部媒体），更改只应用于副本；原始导出保持不变。如果浏览器在复制时拦截了某些文件，完成后可以将它们下载为单独的 ZIP。聊天中的媒体越多，耗时越长。",
   dest_h: "结果",
   dest_inplace: "修改原始导出",
   dest_inplace_hint: "直接重写该导出自身的 messages.html。速度快，但不会保留之前的版本。",
@@ -1309,37 +1215,29 @@ zh: {
   job_cancelled: "操作已取消",
   job_cancelling: "正在取消…",
   job_keep_open: "在完成之前，请不要刷新或关闭此标签页或浏览器：否则操作会中断，结果将不完整。",
-  nozip_btn: "不使用 ZIP 继续",
   pick_out_btn: "选择目标文件夹",
   ready_h: "分析完成",
   ready_text: "结果预计大小：约 {size}。请选择目标文件夹开始。",
   res_written_copy: "副本已创建在“{name}”文件夹中。原始导出未被修改。",
-  res_written_zip: "ZIP 已保存。解压即可查看合并后的聊天。",
-  res_written_zip_copy: "ZIP 已保存。解压即可查看副本；原始导出未被修改。",
   size_warn_cancel: "取消",
   size_warn_continue: "仍然继续",
   size_warn_h: "导出较大",
   size_warn_text: "结果约为 {size}（不含重复文件）。在网页版中可能需要一些时间；如需更快、更直接的结果，建议使用桌面版。",
   stage_analyze: "正在分析 · {n}/{total} 个文件 · 结果约 {size}…",
   stage_listing: "正在列出导出中的文件 · {n}…",
-  stage_zip_media: "正在将媒体添加到 ZIP · {n} 个文件 · {done} / 约 {total}…",
-  stage_zip_index: "正在写入 ZIP 索引（{n} 个文件）…",
   stage_zip_verify: "Chrome 正在保存前校验 ZIP（{size}）。文件较大时可能需要几分钟，请勿关闭标签页。",
   stage_benchmark: "正在测量目标文件夹的速度，以确定同时复制多少个文件…",
   warn_group_blocked: "有 {n} 个文件被 Chrome 的保护功能 Safe Browsing 视为可疑，不允许写入该文件夹。这常见于可执行文件或不常见的文件（如部分贴纸），而且往往是误报。完成后，如果你信任其内容，可以将它们下载为单独的 ZIP。点击查看列表。",
-  warn_group_unreadable: "有 {n} 个文件无法读取（通常是杀毒软件所致），不在 ZIP 中。点击查看列表。",
   rescue_text: "文件夹“{folder}”中缺少 {n} 个文件（{size}）：浏览器不允许将它们写入该文件夹，但允许放入 ZIP。请下载此补救 ZIP，打开后将其全部内容复制到文件夹“{folder}”中，如有提示请合并文件夹。每个文件都会回到原位，链接也能正常使用。",
   rescue_btn: "下载包含缺失文件的 ZIP",
   rescue_btn_again: "再次下载 ZIP",
   rescue_progress: "正在生成补救 ZIP · 第 {done} / {n} 个文件…",
-  rescue_done: "补救 ZIP 已保存。打开它并将全部内容复制到文件夹“{folder}”中（如有提示请合并文件夹），即可完成合并。",
+  rescue_done: "补救 ZIP 已保存。打开它并将全部内容复制到文件夹“{folder}”中（如有提示请合并文件夹），即可补全该文件夹。",
   rescue_partial: "注意：仍有 {n} 个文件无法读取，未包含在 ZIP 中：{list}",
   rescue_failed: "无法生成补救 ZIP：{err}",
   rescue_zip_name: "{folder} - 缺失的文件",
   rescue_readme_name: "说明 - 补救的文件.txt",
-  rescue_readme: "这些文件属于保存在文件夹“{folder}”中的合并结果，但 Chrome 的保护功能 Safe Browsing 将它们视为可疑，不允许写入该文件夹。这常见于可执行文件或不常见的文件（如部分贴纸），而且往往是误报。\r\n\r\n要完成合并，请将此 ZIP 的全部内容复制到文件夹“{folder}”中，如有提示请合并文件夹。每个文件都会回到原位，聊天中的链接也能正常使用。\r\n\r\n仅在信任发送者时才打开它们。此文本文件可以删除。",
-  stage_zipping: "正在生成 ZIP…",
-  zip_btn: "生成 ZIP"
+  rescue_readme: "这些文件属于保存在文件夹“{folder}”中的结果，但 Chrome 的保护功能 Safe Browsing 将它们视为可疑，不允许写入该文件夹。这常见于可执行文件或不常见的文件（如部分贴纸），而且往往是误报。\r\n\r\n要补全该文件夹，请将此 ZIP 的全部内容复制进去，如有提示请合并文件夹。每个文件都会回到原位，聊天中的链接也能正常使用。\r\n\r\n仅在信任发送者时才打开它们。此文本文件可以删除。",
 },
 ja: {
   cta_download: "デスクトップ版",
@@ -1403,14 +1301,9 @@ ja: {
   cancel_copy_removed: "不完全なコピーは削除されました。元のエクスポートは変更されていません。",
   cancel_nothing_written: "何も書き込まれていません。",
   cancel_partial_dir: "保存先フォルダーに統合途中のファイルが残っている可能性があります。もう一度統合するときは、そのフォルダーを削除するか別の空のフォルダーを使ってください。",
-  cancel_zip_removed: "不完全な ZIP は破棄されました。",
-  confirm_dangerous_zip: "統合中にブラウザーがブロックする可能性のある拡張子のファイルが見つかりました（{list}）。安全に完了させるため、自己判断でダウンロードできる ZIP を作成できます。ZIP なしで続けると、ブラウザーがブロックしたファイルはスキップされますが、完了後に復旧用 ZIP としてダウンロードし、統合を補完できます。",
-  confirm_dangerous_zip_copy: "このエクスポートには、フォルダーへの書き込み時にブラウザーがブロックする拡張子のファイルが含まれています（{list}）。コピーを完全なものにするため、あとで展開できる ZIP として作成します。",
-  copy_blocked_retry: "ブラウザーが想定外のファイルを {n} 個ブロックしました（{list}）。そのため不完全なコピーは削除されました。もう一度お試しください。今回はコピーが ZIP として作成されます。",
   copy_inside_source: "エクスポート自体の中にないフォルダーを選んでください。",
-  dangerous_h: "ブラウザーがブロックする可能性のあるファイル",
   dest_copy: "コピーを作成",
-  dest_copy_hint: "すべてのメディアを含むエクスポートの完全なコピーを作成し、変更はコピーにのみ適用します。元のエクスポートには手を加えません。フォルダーへの書き込み時にブラウザーがブロックするファイルがある場合は、完全なコピーにするため ZIP として作成します。メディアが多いほど時間がかかります。",
+  dest_copy_hint: "すべてのメディアを含むエクスポートの完全なコピーを作成し、変更はコピーにのみ適用します。元のエクスポートには手を加えません。コピー中にブラウザーがファイルをブロックした場合は、完了後に別の ZIP としてダウンロードできます。メディアが多いほど時間がかかります。",
   dest_h: "結果",
   dest_inplace: "元のエクスポートを変更",
   dest_inplace_hint: "エクスポート自体の messages.html を書き換えます。高速ですが、以前のバージョンは残りません。",
@@ -1418,37 +1311,29 @@ ja: {
   job_cancelled: "操作をキャンセルしました",
   job_cancelling: "キャンセル中…",
   job_keep_open: "完了するまで、このタブやブラウザーを再読み込みしたり閉じたりしないでください。操作が中断され、結果が不完全になります。",
-  nozip_btn: "ZIP なしで続ける",
   pick_out_btn: "保存先フォルダーを選択",
   ready_h: "分析が完了しました",
   ready_text: "結果の推定サイズ：約 {size}。保存先フォルダーを選んで開始してください。",
   res_written_copy: "「{name}」フォルダーにコピーを作成しました。元のエクスポートは変更されていません。",
-  res_written_zip: "ZIP を保存しました。展開すると統合したチャットを見られます。",
-  res_written_zip_copy: "ZIP を保存しました。展開するとコピーを見られます。元のエクスポートは変更されていません。",
   size_warn_cancel: "キャンセル",
   size_warn_continue: "このまま続ける",
   size_warn_h: "大きなエクスポート",
   size_warn_text: "結果は約 {size} になります（重複ファイルを除く）。ウェブ版では時間がかかることがあります。より速く直接的な結果を得るにはデスクトップ版をおすすめします。",
   stage_analyze: "分析中 · {n}/{total} ファイル · 結果 約 {size}…",
   stage_listing: "エクスポートのファイルを一覧化中 · {n}…",
-  stage_zip_media: "メディアを ZIP に追加中 · {n} ファイル · {done} / 約 {total}…",
-  stage_zip_index: "ZIP のインデックスを書き込み中（{n} ファイル）…",
   stage_zip_verify: "Chrome が保存前に ZIP（{size}）を検証しています。大きなファイルでは数分かかることがあります。タブを閉じないでください。",
   stage_benchmark: "同時にコピーするファイル数を調整するため、保存先フォルダーの速度を測定中…",
   warn_group_blocked: "Chrome の保護機能 Safe Browsing が疑わしいと判断し、フォルダーへの書き込みを許可しなかったファイルが {n} 個あります。実行ファイルや一部のステッカーのような珍しいファイルで起こりやすく、誤検知であることもよくあります。完了後、内容を信頼できる場合は別の ZIP としてダウンロードできます。クリックで一覧を表示。",
-  warn_group_unreadable: "{n} 個のファイルを読み込めず（多くはウイルス対策ソフトが原因）、ZIP に含まれていません。クリックで一覧を表示。",
   rescue_text: "フォルダー「{folder}」に {n} 個のファイル（{size}）が不足しています。ブラウザーはそこへの書き込みを許可しませんでしたが、ZIP 内なら可能です。この復旧用 ZIP をダウンロードして開き、中身をすべてフォルダー「{folder}」にコピーしてください（確認されたらフォルダーを統合）。各ファイルが元の場所に入り、リンクも機能します。",
   rescue_btn: "不足ファイルの ZIP をダウンロード",
   rescue_btn_again: "ZIP をもう一度ダウンロード",
   rescue_progress: "復旧用 ZIP を作成中 · {n} 個中 {done} 個…",
-  rescue_done: "復旧用 ZIP を保存しました。開いて中身をすべてフォルダー「{folder}」にコピーすると（確認されたらフォルダーを統合）、統合が完了します。",
+  rescue_done: "復旧用 ZIP を保存しました。開いて中身をすべてフォルダー「{folder}」にコピーすると（確認されたらフォルダーを統合）、フォルダーが完成します。",
   rescue_partial: "注意：{n} 個のファイルは今回も読み込めず、ZIP に含まれていません：{list}",
   rescue_failed: "復旧用 ZIP を作成できませんでした：{err}",
   rescue_zip_name: "{folder} - 不足ファイル",
   rescue_readme_name: "はじめにお読みください - 復旧ファイル.txt",
-  rescue_readme: "これらのファイルはフォルダー「{folder}」に保存された統合結果の一部ですが、Chrome の保護機能 Safe Browsing が疑わしいと判断し、そこへの書き込みを許可しませんでした。実行ファイルや一部のステッカーのような珍しいファイルで起こりやすく、誤検知であることもよくあります。\r\n\r\n統合を完了するには、この ZIP の中身をすべてフォルダー「{folder}」にコピーしてください（確認されたらフォルダーを統合）。各ファイルが元の場所に入り、チャットのリンクも機能します。\r\n\r\n送信者を信頼できる場合にのみ開いてください。このテキストファイルは削除してかまいません。",
-  stage_zipping: "ZIP を作成中…",
-  zip_btn: "ZIP を作成"
+  rescue_readme: "これらのファイルはフォルダー「{folder}」に保存された結果の一部ですが、Chrome の保護機能 Safe Browsing が疑わしいと判断し、そこへの書き込みを許可しませんでした。実行ファイルや一部のステッカーのような珍しいファイルで起こりやすく、誤検知であることもよくあります。\r\n\r\nそのフォルダーを完成させるには、この ZIP の中身をすべてそこにコピーしてください（確認されたらフォルダーを統合）。各ファイルが元の場所に入り、チャットのリンクも機能します。\r\n\r\n送信者を信頼できる場合にのみ開いてください。このテキストファイルは削除してかまいません。",
 },
 hi: {
   cta_download: "डेस्कटॉप संस्करण",
@@ -1512,14 +1397,9 @@ hi: {
   cancel_copy_removed: "अधूरी कॉपी हटा दी गई; मूल एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
   cancel_nothing_written: "कुछ भी नहीं लिखा गया।",
   cancel_partial_dir: "गंतव्य फ़ोल्डर में आधी विलय हुई फ़ाइलें हो सकती हैं; दोबारा विलय करते समय इसे हटा दें या कोई दूसरा खाली फ़ोल्डर इस्तेमाल करें।",
-  cancel_zip_removed: "अधूरी ZIP फ़ाइल हटा दी गई।",
-  confirm_dangerous_zip: "ऐसे एक्सटेंशन वाली फ़ाइलें मिली हैं जिन्हें आपका ब्राउज़र विलय के दौरान ब्लॉक कर सकता है ({list})। ऑपरेशन को सुरक्षित रूप से पूरा करने के लिए एक ZIP बनाई जा सकती है, जिसे आप अपनी ज़िम्मेदारी पर डाउनलोड करें। ZIP के बिना जारी रखने पर ब्राउज़र द्वारा ब्लॉक की गई फ़ाइलें छोड़ दी जाएँगी, और पूरा होने पर विलय पूरा करने के लिए आप उन्हें बचाव ZIP में डाउनलोड कर सकेंगे।",
-  confirm_dangerous_zip_copy: "इस एक्सपोर्ट में ऐसे एक्सटेंशन वाली फ़ाइलें हैं जिन्हें आपका ब्राउज़र किसी फ़ोल्डर में लिखते समय ब्लॉक करता है ({list})। कॉपी पूरी बने, इसके लिए इसे ZIP के रूप में बनाया जाएगा, जिसे आप बाद में अनज़िप कर सकते हैं।",
-  copy_blocked_retry: "ब्राउज़र ने {n} अप्रत्याशित फ़ाइल(ें) ब्लॉक कीं ({list}), इसलिए अधूरी कॉपी हटा दी गई। फिर से कोशिश करें: इस बार कॉपी ZIP के रूप में बनेगी।",
   copy_inside_source: "ऐसा फ़ोल्डर चुनें जो एक्सपोर्ट के अंदर न हो।",
-  dangerous_h: "फ़ाइलें जिन्हें ब्राउज़र ब्लॉक कर सकता है",
   dest_copy: "कॉपी बनाएँ",
-  dest_copy_hint: "एक्सपोर्ट की पूरी कॉपी उसके सभी मीडिया के साथ बनाई जाती है और बदलाव सिर्फ़ कॉपी पर लागू होता है; मूल को छुआ नहीं जाता। अगर एक्सपोर्ट में ऐसी फ़ाइलें हैं जिन्हें ब्राउज़र फ़ोल्डर में लिखते समय ब्लॉक करता है, तो कॉपी पूरी बने इसके लिए उसे ZIP के रूप में बनाया जाता है। चैट में जितना ज़्यादा मीडिया, उतना ज़्यादा समय लगता है।",
+  dest_copy_hint: "एक्सपोर्ट की पूरी कॉपी उसके सभी मीडिया के साथ बनाई जाती है और बदलाव सिर्फ़ कॉपी पर लागू होता है; मूल को छुआ नहीं जाता। अगर कॉपी करते समय ब्राउज़र कोई फ़ाइल ब्लॉक करता है, तो पूरा होने पर आप उसे अलग ZIP में डाउनलोड कर सकेंगे। चैट में जितना ज़्यादा मीडिया, उतना ज़्यादा समय लगता है।",
   dest_h: "परिणाम",
   dest_inplace: "मूल को बदलें",
   dest_inplace_hint: "एक्सपोर्ट की अपनी messages.html फ़ाइलें दोबारा लिखी जाती हैं। तेज़ है, पर पिछला संस्करण नहीं रखा जाता।",
@@ -1527,37 +1407,29 @@ hi: {
   job_cancelled: "ऑपरेशन रद्द किया गया",
   job_cancelling: "रद्द किया जा रहा है…",
   job_keep_open: "पूरा होने तक इस टैब या ब्राउज़र को रीलोड या बंद न करें: ऑपरेशन बीच में रुक जाएगा और परिणाम अधूरा रहेगा।",
-  nozip_btn: "ZIP के बिना जारी रखें",
   pick_out_btn: "गंतव्य फ़ोल्डर चुनें",
   ready_h: "विश्लेषण पूरा हुआ",
   ready_text: "परिणाम का अनुमानित आकार: ~{size}। शुरू करने के लिए गंतव्य फ़ोल्डर चुनें।",
   res_written_copy: "“{name}” फ़ोल्डर में कॉपी बनाई गई। मूल एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
-  res_written_zip: "ZIP सहेजी गई। विलय हुई चैट देखने के लिए इसे अनज़िप करें।",
-  res_written_zip_copy: "ZIP सहेजी गई। कॉपी देखने के लिए इसे अनज़िप करें; मूल एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
   size_warn_cancel: "रद्द करें",
   size_warn_continue: "फिर भी जारी रखें",
   size_warn_h: "बड़ा एक्सपोर्ट",
   size_warn_text: "परिणाम लगभग {size} का होगा (दोहराई गई फ़ाइलों को छोड़कर)। वेब पर इसमें कुछ समय लग सकता है; तेज़ और सीधे परिणाम के लिए डेस्कटॉप संस्करण की सलाह दी जाती है।",
   stage_analyze: "विश्लेषण · {n}/{total} फ़ाइलें · परिणाम ~{size}…",
   stage_listing: "एक्सपोर्ट की फ़ाइलों की सूची बन रही है · {n}…",
-  stage_zip_media: "ZIP में मीडिया जोड़ा जा रहा है · {n} फ़ाइलें · ~{total} में से {done}…",
-  stage_zip_index: "ZIP इंडेक्स लिखा जा रहा है ({n} फ़ाइलें)…",
   stage_zip_verify: "Chrome सहेजने से पहले ZIP ({size}) की जाँच कर रहा है। बड़ी फ़ाइलों में इसमें कई मिनट लग सकते हैं — टैब बंद न करें।",
   stage_benchmark: "एक साथ कितनी फ़ाइलें कॉपी करनी हैं, यह तय करने के लिए गंतव्य फ़ोल्डर की गति मापी जा रही है…",
   warn_group_blocked: "{n} फ़ाइलें जिन्हें Chrome की सुरक्षा Safe Browsing ने संदिग्ध माना और फ़ोल्डर में लिखने नहीं दिया। ऐसा अक्सर एक्ज़ीक्यूटेबल या कुछ स्टिकर जैसी असामान्य फ़ाइलों के साथ होता है, और कई बार यह गलत चेतावनी होती है। पूरा होने पर, अगर आपको सामग्री पर भरोसा है, तो आप इन्हें अलग ZIP में डाउनलोड कर सकेंगे। सूची देखने के लिए क्लिक करें।",
-  warn_group_unreadable: "{n} फ़ाइलें पढ़ी नहीं जा सकीं (आमतौर पर एंटीवायरस के कारण) और ZIP में नहीं हैं। सूची देखने के लिए क्लिक करें।",
   rescue_text: "फ़ोल्डर “{folder}” में {n} फ़ाइलें ({size}) नहीं हैं: ब्राउज़र ने उन्हें वहाँ लिखने नहीं दिया, पर ZIP के अंदर लिखने देता है। यह बचाव ZIP डाउनलोड करें, इसे खोलें और इसकी सारी सामग्री फ़ोल्डर “{folder}” के अंदर कॉपी करें; पूछे जाने पर फ़ोल्डर मर्ज करें। हर फ़ाइल अपनी जगह पहुँचेगी और उसके लिंक काम करेंगे।",
   rescue_btn: "छूटी फ़ाइलों वाला ZIP डाउनलोड करें",
   rescue_btn_again: "ZIP फिर से डाउनलोड करें",
   rescue_progress: "बचाव ZIP बनाया जा रहा है · {n} में से {done} फ़ाइलें…",
-  rescue_done: "बचाव ZIP सहेजा गया। विलय पूरा करने के लिए इसे खोलें और इसकी सारी सामग्री फ़ोल्डर “{folder}” के अंदर कॉपी करें (पूछे जाने पर फ़ोल्डर मर्ज करें)।",
+  rescue_done: "बचाव ZIP सहेजा गया। फ़ोल्डर “{folder}” को पूरा करने के लिए इसे खोलें और इसकी सारी सामग्री उसके अंदर कॉपी करें (पूछे जाने पर फ़ोल्डर मर्ज करें)।",
   rescue_partial: "ध्यान दें: {n} फ़ाइलें अब भी पढ़ी नहीं जा सकीं और ZIP में नहीं हैं: {list}",
   rescue_failed: "बचाव ZIP नहीं बनाया जा सका: {err}",
   rescue_zip_name: "{folder} - छूटी फ़ाइलें",
   rescue_readme_name: "पढ़ें - बचाई गई फ़ाइलें.txt",
-  rescue_readme: "ये फ़ाइलें फ़ोल्डर “{folder}” में सहेजे गए विलय का हिस्सा हैं, लेकिन Chrome की सुरक्षा Safe Browsing ने इन्हें संदिग्ध माना और वहाँ लिखने नहीं दिया। ऐसा अक्सर एक्ज़ीक्यूटेबल या कुछ स्टिकर जैसी असामान्य फ़ाइलों के साथ होता है, और कई बार यह गलत चेतावनी होती है।\r\n\r\nविलय पूरा करने के लिए इस ZIP की सारी सामग्री फ़ोल्डर “{folder}” के अंदर कॉपी करें; पूछे जाने पर फ़ोल्डर मर्ज करें। हर फ़ाइल अपनी जगह पहुँचेगी और चैट के लिंक काम करेंगे।\r\n\r\nइन्हें तभी खोलें जब आपको भेजने वाले पर भरोसा हो। यह टेक्स्ट फ़ाइल आप हटा सकते हैं।",
-  stage_zipping: "ZIP बनाई जा रही है…",
-  zip_btn: "ZIP बनाएँ"
+  rescue_readme: "ये फ़ाइलें फ़ोल्डर “{folder}” में सहेजे गए परिणाम का हिस्सा हैं, लेकिन Chrome की सुरक्षा Safe Browsing ने इन्हें संदिग्ध माना और वहाँ लिखने नहीं दिया। ऐसा अक्सर एक्ज़ीक्यूटेबल या कुछ स्टिकर जैसी असामान्य फ़ाइलों के साथ होता है, और कई बार यह गलत चेतावनी होती है।\r\n\r\nउस फ़ोल्डर को पूरा करने के लिए इस ZIP की सारी सामग्री उसके अंदर कॉपी करें; पूछे जाने पर फ़ोल्डर मर्ज करें। हर फ़ाइल अपनी जगह पहुँचेगी और चैट के लिंक काम करेंगे।\r\n\r\nइन्हें तभी खोलें जब आपको भेजने वाले पर भरोसा हो। यह टेक्स्ट फ़ाइल आप हटा सकते हैं।",
 },
 ar: {
   cta_download: "نسخة سطح المكتب",
@@ -1621,14 +1493,9 @@ ar: {
   cancel_copy_removed: "حُذفت النسخة غير المكتملة؛ ولم يُعدَّل التصدير الأصلي.",
   cancel_nothing_written: "لم يُكتب أي شيء.",
   cancel_partial_dir: "قد يحتوي مجلد الوجهة على ملفات مدموجة جزئيًا؛ احذفه أو استخدم مجلدًا فارغًا آخر عند إعادة الدمج.",
-  cancel_zip_removed: "تم تجاهل ملف ZIP غير المكتمل.",
-  confirm_dangerous_zip: "عُثر على ملفات بامتدادات قد يحظرها متصفحك أثناء الدمج ({list}). لإتمام العملية بأمان، يمكن إنشاء ملف ZIP لتنزيله على مسؤوليتك. إذا تابعت دون ZIP، فسيتم تخطي الملفات التي يحظرها المتصفح، ويمكنك عند الانتهاء تنزيلها في ملف ZIP إنقاذ لإكمال الدمج.",
-  confirm_dangerous_zip_copy: "يحتوي التصدير على ملفات بامتدادات يحظرها متصفحك عند كتابتها في مجلد ({list}). لكي تكون النسخة كاملة، ستُنشأ كملف ZIP يمكنك فك ضغطه لاحقًا.",
-  copy_blocked_retry: "حظر المتصفح {n} ملف/ملفات غير متوقعة ({list})، لذا حُذفت النسخة غير المكتملة. حاول مرة أخرى: هذه المرة ستُنشأ النسخة كملف ZIP.",
   copy_inside_source: "اختر مجلدًا لا يقع داخل التصدير نفسه.",
-  dangerous_h: "ملفات قد يحظرها المتصفح",
   dest_copy: "إنشاء نسخة",
-  dest_copy_hint: "تُنشأ نسخة كاملة من التصدير بكل وسائطه، ويُطبَّق التغيير على النسخة فقط؛ ولا يُمَس الأصل. إذا احتوى التصدير على ملفات يحظرها المتصفح عند كتابتها في مجلد، تُنشأ النسخة كملف ZIP لتكون كاملة. كلما زادت الوسائط في المحادثة، طال الوقت.",
+  dest_copy_hint: "تُنشأ نسخة كاملة من التصدير بكل وسائطه، ويُطبَّق التغيير على النسخة فقط؛ ولا يُمَس الأصل. إذا حظر المتصفح أي ملف أثناء النسخ، يمكنك عند الانتهاء تنزيله في ملف ZIP منفصل. كلما زادت الوسائط في المحادثة، طال الوقت.",
   dest_h: "النتيجة",
   dest_inplace: "تعديل الأصل",
   dest_inplace_hint: "تُعاد كتابة ملفات messages.html الخاصة بالتصدير نفسه. سريع، لكن النسخة السابقة لا تُحفظ.",
@@ -1636,37 +1503,29 @@ ar: {
   job_cancelled: "أُلغيت العملية",
   job_cancelling: "جارٍ الإلغاء…",
   job_keep_open: "لا تُعِد تحميل هذه العلامة أو تغلقها ولا تغلق المتصفح حتى تنتهي العملية: وإلا ستنقطع وتبقى النتيجة غير مكتملة.",
-  nozip_btn: "المتابعة دون ZIP",
   pick_out_btn: "اختيار مجلد الوجهة",
   ready_h: "اكتمل التحليل",
   ready_text: "الحجم التقديري للنتيجة: ~{size}. اختر مجلد الوجهة للبدء.",
   res_written_copy: "أُنشئت النسخة في المجلد «{name}». لم يُعدَّل التصدير الأصلي.",
-  res_written_zip: "حُفظ ملف ZIP. فك ضغطه لرؤية المحادثة المدموجة.",
-  res_written_zip_copy: "حُفظ ملف ZIP. فك ضغطه لرؤية النسخة؛ لم يُعدَّل التصدير الأصلي.",
   size_warn_cancel: "إلغاء",
   size_warn_continue: "المتابعة على أي حال",
   size_warn_h: "تصدير كبير",
   size_warn_text: "سيبلغ حجم النتيجة نحو {size} (دون احتساب الملفات المكررة). قد يستغرق ذلك بعض الوقت على الويب؛ للحصول على نتيجة أسرع وأكثر مباشرة يُنصح بنسخة سطح المكتب.",
   stage_analyze: "جارٍ التحليل · {n}/{total} ملف · النتيجة ~{size}…",
   stage_listing: "جارٍ سرد ملفات التصديرات · {n}…",
-  stage_zip_media: "جارٍ إضافة الوسائط إلى ZIP · {n} ملف · {done} من ~{total}…",
-  stage_zip_index: "جارٍ كتابة فهرس ZIP ({n} ملف)…",
   stage_zip_verify: "يتحقق Chrome من ملف ZIP ({size}) قبل حفظه. قد يستغرق ذلك عدة دقائق مع الملفات الكبيرة، فلا تغلق علامة التبويب.",
   stage_benchmark: "جارٍ قياس سرعة مجلد الوجهة لضبط عدد الملفات التي تُنسخ في وقت واحد…",
   warn_group_blocked: "{n} ملف اعتبرها Safe Browsing، حماية Chrome، مشبوهة ولم يسمح بكتابتها في المجلد. يحدث هذا مع الملفات التنفيذية أو الملفات غير الشائعة مثل بعض الملصقات، وكثيرًا ما يكون إنذارًا كاذبًا. عند الانتهاء يمكنك تنزيلها في ملف ZIP منفصل إذا كنت تثق بمحتواها. انقر لعرض القائمة.",
-  warn_group_unreadable: "تعذّرت قراءة {n} ملف (غالبًا بسبب برنامج مكافحة فيروسات) وهي غير موجودة في ZIP. انقر لعرض القائمة.",
   rescue_text: "ينقص المجلد «{folder}» {n} ملف ({size}): لم يسمح المتصفح بكتابتها هناك، لكنه يسمح بوضعها داخل ZIP. نزّل ملف ZIP الإنقاذ هذا، وافتحه وانسخ كل محتواه إلى داخل المجلد «{folder}»، مع دمج المجلدات إذا سُئلت. سيعود كل ملف إلى مكانه وستعمل روابطه.",
   rescue_btn: "تنزيل ZIP بالملفات الناقصة",
   rescue_btn_again: "تنزيل ZIP مرة أخرى",
   rescue_progress: "جارٍ إنشاء ZIP الإنقاذ · {done} من {n} ملف…",
-  rescue_done: "حُفظ ZIP الإنقاذ. افتحه وانسخ كل محتواه إلى داخل المجلد «{folder}»، مع دمج المجلدات إذا سُئلت، لإكمال الدمج.",
+  rescue_done: "حُفظ ZIP الإنقاذ. افتحه وانسخ كل محتواه إلى داخل المجلد «{folder}»، مع دمج المجلدات إذا سُئلت، لإكماله.",
   rescue_partial: "تنبيه: تعذّرت قراءة {n} ملف هذه المرة أيضًا وهي غير موجودة في ZIP: {list}",
   rescue_failed: "تعذّر إنشاء ZIP الإنقاذ: {err}",
   rescue_zip_name: "{folder} - الملفات الناقصة",
   rescue_readme_name: "اقرأني - الملفات المستعادة.txt",
-  rescue_readme: "هذه الملفات جزء من الدمج المحفوظ في المجلد «{folder}»، لكن Safe Browsing، حماية Chrome، اعتبرها مشبوهة ولم يسمح بكتابتها هناك. يحدث هذا مع الملفات التنفيذية أو الملفات غير الشائعة مثل بعض الملصقات، وكثيرًا ما يكون إنذارًا كاذبًا.\r\n\r\nلإكمال الدمج، انسخ كل محتوى ملف ZIP هذا إلى داخل المجلد «{folder}»، مع دمج المجلدات إذا سُئلت. سيعود كل ملف إلى مكانه وستعمل روابط المحادثة.\r\n\r\nلا تفتحها إلا إذا كنت تثق بمن أرسلها. يمكنك حذف هذا الملف النصي.",
-  stage_zipping: "جارٍ إنشاء ZIP…",
-  zip_btn: "إنشاء ZIP"
+  rescue_readme: "هذه الملفات جزء من النتيجة المحفوظة في المجلد «{folder}»، لكن Safe Browsing، حماية Chrome، اعتبرها مشبوهة ولم يسمح بكتابتها هناك. يحدث هذا مع الملفات التنفيذية أو الملفات غير الشائعة مثل بعض الملصقات، وكثيرًا ما يكون إنذارًا كاذبًا.\r\n\r\nلإكمال ذلك المجلد، انسخ إليه كل محتوى ملف ZIP هذا، مع دمج المجلدات إذا سُئلت. سيعود كل ملف إلى مكانه وستعمل روابط المحادثة.\r\n\r\nلا تفتحها إلا إذا كنت تثق بمن أرسلها. يمكنك حذف هذا الملف النصي.",
 }
 };
 document.querySelectorAll(".srclink").forEach(a => { a.href = REPO_URL; });
@@ -2039,50 +1898,6 @@ async function boot() {
 const HTML_RE = /^messages\d*\.html$/;
 const ASSETS = ["css", "js", "images"];
 
-// Extensions Chromium's own download-protection file-type policy treats as
-// dangerous enough to run a Safe Browsing check on — and reject at write
-// time (see the "Blocked by Safe Browsing" mitigation in copyOneFile below).
-// Mirrors the public categories in Chromium's
-// components/safe_browsing/content/resources/download_file_types.asciipb;
-// kept conservative on purpose (common chat media — jpg/mp4/m4a/mov/wav/
-// pdf/gif — is never in it) and easy to refresh if Chrome's own list moves.
-const DANGEROUS_EXTENSIONS = new Set([
-  // Windows executables & installers
-  "exe", "msi", "msix", "msixbundle", "msp", "mst", "bat", "cmd", "com",
-  "cpl", "gadget", "hta", "inf1", "ins", "inx", "isu", "job", "jse", "lnk",
-  "msc", "paf", "pif", "ps1", "ps2", "psc1", "psc2", "reg", "scf", "scr",
-  "sct", "shb", "shs", "u3p", "vb", "vbe", "vbs", "vbscript", "vxd", "ws",
-  "wsf", "wsh", "wsc",
-  // Windows system files
-  "dll", "sys", "drv", "ocx",
-  // macOS
-  "app", "command", "dmg", "pkg", "osx", "workflow",
-  // Linux/Unix
-  "sh", "bash", "csh", "run", "bin", "out", "elf",
-  // Mobile
-  "apk", "aab", "ipa",
-  // Cross-platform executables / installers
-  "jar", "jnlp",
-  // Browser extensions
-  "crx", "xpi",
-  // Disk/archive images that can carry a payload
-  "iso", "img", "vhd", "vhdx",
-  // Office documents with macros
-  "docm", "xlsm", "xltm", "pptm", "potm", "xlm",
-  // Scripts Chrome flags on their own
-  "js",
-  // Not listed on purpose: .tgs (animated stickers). Chrome doesn't know
-  // the extension, so each one gets a Safe Browsing ping classed as
-  // WIN_EXECUTABLE, and a rarely seen sticker can come back "uncommon" and
-  // be blocked — but most pass, so forcing a ZIP for every chat with
-  // stickers would be overkill. The ones that fail go to the rescue ZIP.
-]);
-
-function fileExt(name) {
-  const dot = name.lastIndexOf(".");
-  return dot < 0 ? "" : name.slice(dot + 1).toLowerCase();
-}
-
 // getFile() here only fetches metadata: the per-file cost is one IPC
 // round-trip to the browser process, not CPU work, so on desktop a fixed
 // pool of in-flight calls hides that latency regardless of core count.
@@ -2091,14 +1906,13 @@ function fileExt(name) {
 const SCAN_CONCURRENCY = isAndroid ? 1 : 16;
 
 // Read-only pass over the exports' media (same trees copyMediaTree will later
-// walk): collects the dangerous-extension set and an estimate of the merged
-// media size, before anything is copied or an output folder is picked.
+// walk): estimates the merged media size, before anything is copied or an
+// output folder is picked.
 // The estimate applies the same dedup rule as resolveTarget — a file whose
 // relative path and size were already seen in another export is skipped by
 // the merge, so it isn't counted twice here either. Listing first (names
 // only, cheap) gives the file total, so the size pass can show a real %.
 async function scanExports(handles) {
-  const dangerous = new Set();
   const files = [];
   let lastPaint = 0;
   function throttled() {
@@ -2116,8 +1930,6 @@ async function scanExports(handles) {
         continue;
       }
       if (rel === "") continue; // top-level messages*.html, not media
-      const ext = fileExt(name);
-      if (DANGEROUS_EXTENSIONS.has(ext)) dangerous.add(ext);
       files.push({ h, path: rel + name });
       if (throttled()) setStage(t("stage_listing", { n: files.length }), null);
     }
@@ -2148,8 +1960,8 @@ async function scanExports(handles) {
   await Promise.all(Array.from({ length: Math.min(SCAN_CONCURRENCY, files.length) }, worker));
   paint();
   dbg(`scanExports: tamaños en ${((performance.now() - tSize) / 1000).toFixed(1)}s — ` +
-      `~${humanSize(totalSize)} tras deduplicar, peligrosas: ${[...dangerous].join(", ") || "ninguna"}`);
-  return { dangerous, totalSize };
+      `~${humanSize(totalSize)} tras deduplicar`);
+  return { totalSize };
 }
 
 function humanSize(n) {
@@ -2165,8 +1977,7 @@ function fmtElapsed(secs) {
 }
 
 // Past this, merging on the web is just slow (lots of File System Access
-// round-trips) — a plain size heads-up, no memory reasoning involved now
-// that the ZIP fallback always streams straight to disk (see ZipWriter).
+// round-trips) — a plain size heads-up recommending the desktop app.
 const LARGE_EXPORT_BYTES = 4 * 1024 ** 3;
 
 // In-page choice card; resolves with the id of the clicked option. Used
@@ -2230,13 +2041,11 @@ function wireDrop(el, onHandle) {
   });
 }
 
-/* ================= minimal ZIP writer (safe-browsing fallback) =========
+/* ================= minimal ZIP writer (rescue ZIP) =====================
  * Streams a ZIP straight to an open FileSystemWritableFileStream — STORE-only
  * (no compression — chat media is already compressed), no external
- * dependency. Used only for the rare case where the fuse source contains an
- * extension Chrome's Safe Browsing may block (see DANGEROUS_EXTENSIONS): the
- * resulting .zip itself is not a dangerous extension, so it can be written
- * normally instead of losing the whole merge to a silent AbortError.
+ * dependency. Used for the rescue ZIP: files Safe Browsing refused to write
+ * into the output folder can still be saved inside a .zip (see offerRescue).
  *
  * Sources are read in chunks, never as one ArrayBuffer: Chrome cannot read a
  * file of 2 GiB or more in one go, and real chat exports carry such videos.
@@ -2633,96 +2442,10 @@ function resolveTarget(written, renames, rel, name, size, isAsset) {
   return tgt;
 }
 
-// Sequential counterpart to copyMediaTree, for the Safe-Browsing ZIP
-// fallback: a ZipWriter has one growing byte sequence, so entries must be
-// added one at a time rather than with copyMediaTree's concurrent writes.
-// opts.topLevel: also take top-level non-page files (e.g. result.json) — for
-// a whole-export copy; the fuse leaves those out. opts.skip: relative paths
-// to leave out because the job writes or removes them itself.
-async function zipMediaTree(srcHandle, zipWriter, written, renames, includeAssets, rootPrefix, progress, opts = {}) {
-  const skipped = [];
-  const t0 = performance.now();
-  let added = 0, lastPaint = 0;
-  dbg(`zipMediaTree: arrancando con ${srcHandle.name} (includeAssets=${includeAssets})`);
-  function paint(force) {
-    const now = performance.now();
-    if (!force && now - lastPaint < 150) return;
-    lastPaint = now;
-    setStage(t("stage_zip_media", {
-      n: mediaDone, done: humanSize(progress.done), total: humanSize(progress.total),
-    }), progress.total ? Math.min(progress.done / progress.total, 0.99) : null);
-  }
-  function onChunk(n) {
-    progress.done += n;
-    paint(false);
-    checkCancel();
-  }
-  async function walk(src, rel) {
-    for await (const [name, h] of src.entries()) {
-      checkCancel();
-      if (h.kind === "directory") {
-        const isAsset = rel === "" && ASSETS.includes(name);
-        if (isAsset && !includeAssets) continue;
-        await walk(h, rel + name + "/");
-        continue;
-      }
-      if (rel === "" && (!opts.topLevel || HTML_RE.test(name))) continue;
-      if (opts.skip && opts.skip.has(rel + name)) continue;
-      const isAsset = ASSETS.includes(rel.split("/")[0]);
-      let size = null, target = null;
-      const tf0 = performance.now();
-      const before = progress.done;
-      // A source file can be unreadable even though listing and getFile()
-      // (metadata only) succeeded — e.g. an antivirus denying the open of a
-      // flagged file. addFile rolls a failed entry back out of the archive,
-      // so the file can be skipped with a warning, like copyOneFile does.
-      try {
-        const f = await h.getFile();
-        size = f.size;
-        target = resolveTarget(written, renames, rel, name, f.size, isAsset);
-        if (target === null) continue;
-        await zipWriter.addFile(rootPrefix + target, f, onChunk);
-      } catch (e) {
-        progress.done = before;
-        if (e instanceof JobCancelled) throw e;
-        if (target !== null) written.delete(target); // let an identical copy in a later export fill in
-        const where = target || rel + name;
-        skipped.push(where);
-        dbg(`zipMediaTree: NO añadido — ${where} (${size === null ? "?" : size + "B"}): ${e.name}: ${e.message}`);
-        pushWarnItem("unreadable", `${where} (${size === null ? "?" : humanSize(size)}, ${e.name})`);
-        continue;
-      }
-      // Big videos legitimately take seconds; flag only poor throughput.
-      const ms = performance.now() - tf0;
-      const mbps = size / 1e3 / ms;
-      if (ms > 1000 && mbps < 50) {
-        dbg(`zipMediaTree: archivo lento — ${target} (${humanSize(size)}) = ${ms.toFixed(0)}ms, ${mbps.toFixed(0)} MB/s`);
-      }
-      added++;
-      mediaDone++;
-      paint(false);
-    }
-  }
-  await walk(srcHandle, "");
-  paint(true);
-  const secs = (performance.now() - t0) / 1000;
-  dbg(`zipMediaTree: terminado ${srcHandle.name} — ${added} archivos en ${secs.toFixed(1)}s, ` +
-      `${skipped.length} omitidos` + (skipped.length ? `: ${skipped.join(", ")}` : ""));
-}
-
-async function zipBackPages(zipWriter, target, pageNames, rootPrefix) {
-  for (const name of pageNames) {
-    checkCancel();
-    const data = pyodide.FS.readFile(target + "/" + name);
-    await zipWriter.addFile(rootPrefix + name, data);
-  }
-}
-
-// blockedSink (optional array) receives the target path of every file whose
-// write failed, so a caller that can't accept gaps (copy mode) can fail.
-// failedSink (optional array) receives { handle, target, size } for each of
-// them instead, so the fuse can offer them afterwards as a rescue ZIP.
-async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency, blockedSink, failedSink) {
+// failedSink (optional array) receives { handle, target, size } for every
+// file whose write failed, so the caller can offer them afterwards as a
+// rescue ZIP (see offerRescue).
+async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concurrency, failedSink) {
   const renames = {};
   const blocked = [];
 
@@ -2773,9 +2496,9 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
     // rejects the whole write if the verdict is "dangerous" — an .exe or
     // .apk someone once sent in the chat is enough. Without this catch a
     // single such attachment rejects here, blows up the Promise.all in
-    // walk() and throws away the entire merge. Skipping the file and
-    // warning is strictly better than losing the job; the merged HTML
-    // keeps its reference, so the link just points at a missing file.
+    // walk() and throws away the entire merge. Instead the file is skipped
+    // with a warning and handed to failedSink: the HTML keeps its reference,
+    // and the rescue ZIP puts the file back at that path afterwards.
     try {
       const fh = await dst.getFileHandle(tName, { create: true });
       await f.stream().pipeTo(await fh.createWritable(), { signal: cancelSignal() });
@@ -2787,16 +2510,12 @@ async function copyMediaTree(srcHandle, outHandle, written, includeAssets, concu
         throw e;
       }
       blocked.push(target);
-      if (blockedSink) blockedSink.push(target);
       if (failedSink) failedSink.push({ handle: h, target, size: f.size });
-      // An AbortError at close() is Safe Browsing's verdict: remember the
-      // extension for this session so the next preflight catches it.
-      if (e.name === "AbortError" && fileExt(name)) DANGEROUS_EXTENSIONS.add(fileExt(name));
       dbg(`copyMediaTree: NO copiado — ${target} (${f.size}B): ${e.name}: ${e.message}`);
       // getFileHandle already created the entry; a failed write leaves a
       // 0-byte file behind that looks like a corrupt media file.
       try { await dst.removeEntry(tName); } catch (_) {}
-      if (!blockedSink) pushWarnItem("blocked", `${target} (${humanSize(f.size)})`);
+      pushWarnItem("blocked", `${target} (${humanSize(f.size)})`);
       return;
     }
     // Big videos legitimately take seconds; flag only files whose time isn't
@@ -3087,19 +2806,12 @@ async function addExport() {
   } catch (e) { if (e.name !== "AbortError") snack(pyError(e)); }
 }
 
-function fuseZipName() {
-  const title = (state.exports[0] && state.exports[0].title) || "export";
-  return title.replace(/[\\/:*?"<>|]+/g, "_").trim() || "export";
-}
-
 // Pre-write pass shared by the fuse and the compact/enhance copy mode, all
-// before any output is picked: scans the sources (progress + cancel), warns
-// when the result is large, and settles how to write. A dangerous extension
-// means Chrome may refuse to write that file into a folder: allowSkip offers
-// to go on without it (fuse); otherwise (copy) the only way on is a ZIP,
-// since a copy with files silently missing isn't a copy. Returns
-// { mode: "dir" | "zip", totalSize }, or null if cancelled.
-async function preflight(handles, { allowSkip }) {
+// before any output is picked: scans the sources (progress + cancel) and
+// warns when the result is large. Files Safe Browsing refuses during the
+// copy aren't predicted here: they're listed as they happen and offered
+// as a rescue ZIP at the end. Returns { totalSize }, or null if cancelled.
+async function preflight(handles) {
   showJob(t("stage_listing", { n: 0 }), true);
   let scan;
   try {
@@ -3110,7 +2822,7 @@ async function preflight(handles, { allowSkip }) {
     return null;
   }
   hideJob();
-  const { dangerous, totalSize } = scan;
+  const { totalSize } = scan;
   const cancelOpt = { id: "cancel", label: t("size_warn_cancel") };
 
   if (totalSize > LARGE_EXPORT_BYTES) {
@@ -3122,22 +2834,9 @@ async function preflight(handles, { allowSkip }) {
     if (c !== "continue") return null; // "desktop" already opened the releases page
   }
 
-  if (dangerous.size) {
-    const list = [...dangerous].sort().map(x => "." + x).join(", ");
-    const opts = [{ id: "zip", label: t("zip_btn"), style: "filled" }];
-    if (allowSkip) opts.push({ id: "nozip", label: t("nozip_btn"), style: "tonal" });
-    opts.push(cancelOpt);
-    dbg(`preflight: extensiones que Chrome puede bloquear: ${list}`);
-    const c = await askChoice(t("dangerous_h"),
-      t(allowSkip ? "confirm_dangerous_zip" : "confirm_dangerous_zip_copy", { list }), opts);
-    if (c === "cancel") return null;
-    if (c === "zip") return { mode: "zip", totalSize };
-    // "nozip" (fuse only): copyOneFile skips and warns about blocked files.
-  }
-
   // The folder picker needs a recent user click. If the scan took a while
-  // and no prompt above supplied a fresh one, ask for it explicitly rather
-  // than letting showDirectoryPicker fail silently.
+  // and the size prompt didn't supply a fresh one, ask for it explicitly
+  // rather than letting showDirectoryPicker fail silently.
   if (navigator.userActivation && !navigator.userActivation.isActive) {
     dbg("preflight: activación de usuario caducada tras el análisis → pido clic");
     const c = await askChoice(t("ready_h"), t("ready_text", { size: humanSize(totalSize) }), [
@@ -3146,77 +2845,11 @@ async function preflight(handles, { allowSkip }) {
     ]);
     if (c !== "go") return null;
   }
-  return { mode: "dir", totalSize };
-}
-
-// Streams a job's output into a .zip the user picks. The .zip extension
-// itself is not on Chrome's dangerous-file list, so this write goes through
-// even when files inside it would be refused in a folder. build(zip, root,
-// setPhase) adds the entries under the "<name>/" root folder and returns the
-// job result. On failure or cancel the partial file is discarded.
-async function runZipJob({ name, title, doneText, build }) {
-  let fh;
-  try {
-    fh = await showSaveFilePicker({
-      suggestedName: name + ".zip",
-      types: [{ description: "ZIP", accept: { "application/zip": [".zip"] } }],
-    });
-  } catch (e) {
-    dbg(`runZipJob: selector de guardado cerrado/fallido — ${e.name}: ${e.message}`);
-    return false;
-  }
-
-  showJob(title, true);
-  let writable;
-  let phase = "createWritable";
-  try {
-    writable = await fh.createWritable();
-    const zip = new ZipWriter(writable);
-    const res = await build(zip, name + "/", p => { phase = p; });
-    checkCancel();
-    const dataBytes = zip.offset;
-    phase = "índice ZIP";
-    setStage(t("stage_zip_index", { n: zip.entries.length }), null);
-    let tPhase = performance.now();
-    await zip.writeDirectory();
-    const indexSecs = (performance.now() - tPhase) / 1000;
-    dbg(`runZipJob: índice escrito en ${indexSecs.toFixed(1)}s — ${zip.entries.length} entradas, ` +
-        `${humanSize(zip.offset - dataBytes)}`);
-
-    // Past this point the archive is complete and only Chrome's own check
-    // remains; it can't be interrupted, so the cancel button goes away.
-    phase = "verificación de Chrome (close)";
-    $("job-cancel").style.display = "none";
-    const verifyText = t("stage_zip_verify", { size: humanSize(zip.offset) });
-    setStage(verifyText, null);
-    tPhase = performance.now();
-    const tick = setInterval(() => {
-      $("job-pct").textContent = fmtElapsed((performance.now() - tPhase) / 1000);
-    }, 1000);
-    try { await zip.close(); } finally { clearInterval(tick); }
-    const closeSecs = (performance.now() - tPhase) / 1000;
-    dbg(`runZipJob: ZIP cerrado — verificación de Chrome ${closeSecs.toFixed(1)}s ` +
-        `(${humanSize(zip.offset / Math.max(closeSecs, 0.001))}/s), ${humanSize(zip.offset)} en total`);
-    endJob(true, res, null, doneText);
-    return true;
-  } catch (e) {
-    const cancelled = e instanceof JobCancelled;
-    dbg(`runZipJob: ${cancelled ? "CANCELADO" : "FALLÓ"} en fase "${phase}" — ${e.name}: ${e.message}` +
-        (!cancelled && e.stack ? `\n${e.stack}` : ""));
-    // abort() discards everything written; remove() then drops the empty
-    // file the save picker left behind, so no broken .zip stays around.
-    if (writable) { try { await writable.abort(); } catch (_) {} }
-    try { if (fh.remove) await fh.remove(); } catch (_) {}
-    if (cancelled) endCancelled(t("cancel_zip_removed"));
-    else endJob(false, null, pyError(e));
-    return false;
-  }
+  return { totalSize };
 }
 
 async function runFuse() {
-  const pre = await preflight(state.exports.map(e => e.handle), { allowSkip: true });
-  if (!pre) return;
-  if (pre.mode === "zip") return runFuseAsZip(pre.totalSize);
+  if (!await preflight(state.exports.map(e => e.handle))) return;
 
   let out;
   try {
@@ -3237,7 +2870,7 @@ async function runFuse() {
     const concurrency = await benchmarkConcurrency(out);
     for (let i = 0; i < state.exports.length; i++) {
       maps["/work/ex" + i] = await copyMediaTree(
-        state.exports[i].handle, out, written, i === 0, concurrency, null, failed);
+        state.exports[i].handle, out, written, i === 0, concurrency, failed);
     }
     setStage(t("stage_reading"), null);
     for (let i = 0; i < state.exports.length; i++) {
@@ -3263,8 +2896,9 @@ async function runFuse() {
 }
 
 // Files Chrome refused to write into the output folder (Safe Browsing) can
-// still travel inside a .zip. The fuse keeps their source handles and, once
-// it's done, offers a ZIP holding just those files at their final paths:
+// still travel inside a .zip. The fuse and the copy mode keep their source
+// handles and, once done, offer a ZIP holding just those files at their
+// final paths:
 // extracting it into the output folder fills the gaps, so no link stays
 // dead. It's built on click because the save dialog needs a user gesture.
 let rescue = null;
@@ -3333,46 +2967,6 @@ async function downloadRescueZip() {
   }
 }
 
-// estimatedSize (from the preflight scan) drives a byte-based progress bar.
-async function runFuseAsZip(estimatedSize) {
-  await runZipJob({
-    name: fuseZipName(),
-    title: t("job_fusing"),
-    doneText: t("res_written_zip"),
-    build: async (zip, root, setPhase) => {
-      mediaDone = 0;
-      const maps = {};
-      const written = new Map();
-      const progress = { done: 0, total: estimatedSize || 0 };
-      setPhase("media");
-      for (let i = 0; i < state.exports.length; i++) {
-        const exRenames = {};
-        await zipMediaTree(state.exports[i].handle, zip, written, exRenames, i === 0, root, progress);
-        maps["/work/ex" + i] = exRenames;
-      }
-      setPhase("leer HTML");
-      setStage(t("stage_reading"), null);
-      for (let i = 0; i < state.exports.length; i++) {
-        checkCancel();
-        await loadHtmlsToFS(state.exports[i].handle, "/work/ex" + i);
-      }
-      checkCancel();
-      setPhase("fusión (Python)");
-      try { pyodide.FS.mkdirTree("/out"); } catch (_) {}
-      const paths = state.exports.map((_, i) => "/work/ex" + i);
-      const res = JSON.parse(glue.run_fuse(
-        JSON.stringify(paths), "/out",
-        chipValue("fuse-chips", "fuse-custom-n", "fuse-custom-u"),
-        state.forceMix, JSON.stringify(maps)));
-      checkCancel();
-      setPhase("páginas al ZIP");
-      setStage(t("stage_zipping"), null);
-      await zipBackPages(zip, "/out", res.pages, root);
-      return res;
-    },
-  });
-}
-
 /* ================= compact ================= */
 async function setCompactHandle(handle) {
   const info = await inspectHandle(handle, "/work/c");
@@ -3426,15 +3020,13 @@ async function pickCopyTarget(src, suffix) {
 }
 
 // Copies everything except the messages*.html pages (the job writes those)
-// from src into dst. A copy with holes isn't a copy: if Chrome refuses any
-// file (one the preflight's extension list didn't foresee), the whole copy
-// fails. Its extension is learnt, so a retry goes the ZIP way.
-async function copyExport(src, dst) {
+// from src into dst. Files Safe Browsing refuses go to `failed` (same shape
+// as copyMediaTree's failedSink), to be offered as a rescue ZIP.
+async function copyExport(src, dst, failed) {
   const t0 = performance.now();
   const concurrency = await benchmarkConcurrency(dst);
   mediaDone = 0;
-  const blocked = [];
-  await copyMediaTree(src, dst, new Map(), true, concurrency, blocked);
+  await copyMediaTree(src, dst, new Map(), true, concurrency, failed);
   for await (const [name, h] of src.entries()) {
     checkCancel();
     if (h.kind !== "file" || HTML_RE.test(name)) continue;
@@ -3444,18 +3036,14 @@ async function copyExport(src, dst) {
       await f.stream().pipeTo(await fh.createWritable(), { signal: cancelSignal() });
     } catch (e) {
       if (e.name !== "AbortError") throw e; // JobCancelled included: its name differs
-      if (fileExt(name)) DANGEROUS_EXTENSIONS.add(fileExt(name));
       dbg(`copyExport: NO copiado — ${name}: ${e.name}: ${e.message}`);
-      blocked.push(name);
+      try { await dst.removeEntry(name); } catch (_) {}
+      failed.push({ handle: h, target: name, size: f.size });
+      pushWarnItem("blocked", `${name} (${humanSize(f.size)})`);
     }
   }
   dbg(`copyExport: «${src.name}» → «${dst.name}» en ${((performance.now() - t0) / 1000).toFixed(1)}s, ` +
-      `${blocked.length} bloqueados`);
-  if (blocked.length) {
-    dbg(`copyExport: extensiones añadidas a la lista para esta sesión: ` +
-        [...new Set(blocked.map(fileExt).filter(Boolean))].join(", "));
-    throw new Error(t("copy_blocked_retry", { n: blocked.length, list: blocked.slice(0, 3).join(", ") }));
-  }
+      `${failed.length} bloqueados`);
 }
 
 async function discardCopy(dest) {
@@ -3488,10 +3076,10 @@ async function applyOutputs(target, o) {
 // Python step (fast, HTML only); outputs(res) describes the result.
 //  - In place: rewrites the export itself. Not cancellable — stopping halfway
 //    would leave the export inconsistent.
-//  - Copy: goes through the same preflight as the fuse, and a copy must be
-//    complete: if the export holds files Chrome would refuse to write into a
-//    folder, the copy is made as a ZIP instead (no "skip them" option).
-//    Python runs before any media is copied, so its errors show up first.
+//  - Copy: goes through the same preflight as the fuse, into a new folder.
+//    Files Safe Browsing refuses are offered as a rescue ZIP at the end, as
+//    in the fuse. Python runs before any media is copied, so its errors
+//    show up first.
 // Returns true on success.
 async function runExportJob({ src, copy, suffix, title, compute, outputs }) {
   dbg(`«${title}» sobre «${src.name}» — resultado: ${copy ? "copia" : "modificar el original"}`);
@@ -3509,48 +3097,25 @@ async function runExportJob({ src, copy, suffix, title, compute, outputs }) {
     }
   }
 
-  const pre = await preflight([src], { allowSkip: false });
-  if (!pre) return false;
-  dbg(`copia: se escribirá ${pre.mode === "zip" ? "como ZIP" : "en una carpeta"}`);
-
-  if (pre.mode === "zip") {
-    return runZipJob({
-      name: src.name + suffix,
-      title,
-      doneText: t("res_written_zip_copy"),
-      build: async (zip, root, setPhase) => {
-        setPhase("Python");
-        const res = await compute();
-        const o = outputs(res);
-        checkCancel();
-        setPhase("media");
-        mediaDone = 0;
-        const skip = new Set([...o.add.map(a => a[0]), ...o.remove]);
-        const progress = { done: 0, total: pre.totalSize };
-        await zipMediaTree(src, zip, new Map(), {}, true, root, progress, { topLevel: true, skip });
-        setPhase("páginas al ZIP");
-        setStage(t("stage_zipping"), null);
-        await zipBackPages(zip, o.work, o.pages, root);
-        for (const [path, fsPath] of o.add) {
-          checkCancel();
-          await zip.addFile(root + path, pyodide.FS.readFile(fsPath));
-        }
-        return res;
-      },
-    });
-  }
-
+  if (!await preflight([src])) return false;
   const dest = await pickCopyTarget(src, suffix);
   if (!dest) return false;
   showJob(title, true);
   try {
     const res = await compute();
     checkCancel();
-    await copyExport(src, dest.handle);
+    const failed = [];
+    await copyExport(src, dest.handle, failed);
     checkCancel();
     setStage(t("stage_saving"), null);
-    await applyOutputs(dest.handle, outputs(res));
+    const o = outputs(res);
+    await applyOutputs(dest.handle, o);
     endJob(true, res, null, t("res_written_copy", { name: dest.name }));
+    // Files the job itself writes or removes (e.g. restore drops the
+    // enhanced assets) don't belong in the rescue ZIP.
+    const touched = new Set([...o.add.map(a => a[0]), ...o.remove]);
+    const rescuable = failed.filter(f => !touched.has(f.target));
+    if (rescuable.length) offerRescue(dest.name, rescuable);
     return true;
   } catch (e) {
     await discardCopy(dest);
