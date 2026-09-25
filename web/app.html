@@ -400,15 +400,11 @@ select.unit { flex: none; width: 84px; }
       <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a><span class="app-version">v__APP_VERSION__</span></div>
     </section>
 
-    <!-- SIZE / RAM WARNING -->
-    <div class="card" id="size-warn" style="display:none">
-      <h2 data-i18n="size_warn_h"></h2>
-      <p id="size-warn-text" style="font-size:14px"></p>
-      <div class="dlg-actions">
-        <a class="btn tonal" id="size-warn-desktop" href="#" target="_blank" rel="noopener" data-i18n="cta_download"></a>
-        <button class="btn filled" id="size-warn-continue" data-i18n="size_warn_continue"></button>
-        <button class="btn" id="size-warn-cancel" data-i18n="size_warn_cancel"></button>
-      </div>
+    <!-- CHOICE (pre-fuse prompts) -->
+    <div class="card" id="choice" style="display:none">
+      <h2 id="choice-title"></h2>
+      <p id="choice-text" style="font-size:14px"></p>
+      <div class="dlg-actions" id="choice-actions"></div>
     </div>
 
     <!-- JOB -->
@@ -503,11 +499,18 @@ es: {
   stage_media: "Copiando media · {n} archivos…", stage_write: "Escribiendo páginas…",
   stage_enhance: "Mejorando {name}…", stage_restore: "Restaurando {name}…",
   stage_working: "Procesando…", stage_reading: "Leyendo exports…", stage_saving: "Guardando en tu carpeta…",
-  confirm_dangerous_zip: "Se han detectado archivos con extensiones que tu navegador puede bloquear al fusionar ({list}). Para completar la operación con seguridad, se generará un ZIP que podrás descargar bajo tu propio criterio. ¿Generarlo?",
+  confirm_dangerous_zip: "Se han detectado archivos con extensiones que tu navegador puede bloquear al fusionar ({list}). Para completar la operación con seguridad, se puede generar un ZIP que podrás descargar bajo tu propio criterio. Si continúas sin ZIP, los archivos que el navegador bloquee se omitirán.",
+  dangerous_h: "Archivos que el navegador puede bloquear",
+  zip_btn: "Generar ZIP", nozip_btn: "Continuar sin ZIP",
+  stage_listing: "Listando archivos de los exports · {n}…",
+  stage_analyze: "Analizando exports · {n}/{total} archivos · ~{size} tras la fusión…",
+  ready_h: "Análisis completado",
+  ready_text: "Tamaño estimado del resultado: ~{size}. Elige la carpeta de destino para empezar la fusión.",
+  pick_out_btn: "Elegir carpeta de destino",
   stage_zipping: "Generando el ZIP…",
   res_written_zip: "ZIP guardado. Descomprímelo para ver tu chat fusionado.",
   size_warn_h: "Export considerable",
-  size_warn_text: "Este chat ocupa unos {size}. La fusión en la web puede tardar un poco; para un resultado más rápido y directo se recomienda la versión de escritorio.",
+  size_warn_text: "El resultado de la fusión ocupará unos {size} (sin contar los archivos repetidos entre exports). En la web puede tardar un poco; para un resultado más rápido y directo se recomienda la versión de escritorio.",
   size_warn_continue: "Continuar de todas formas",
   size_warn_cancel: "Cancelar"
 },
@@ -572,11 +575,18 @@ en: {
   stage_media: "Copying media · {n} files…", stage_write: "Writing pages…",
   stage_enhance: "Enhancing {name}…", stage_restore: "Restoring {name}…",
   stage_working: "Working…", stage_reading: "Reading exports…", stage_saving: "Saving into your folder…",
-  confirm_dangerous_zip: "Files with extensions your browser may block during the merge were detected ({list}). To complete the operation safely, a ZIP will be generated for you to download at your own discretion. Generate it?",
+  confirm_dangerous_zip: "Files with extensions your browser may block during the merge were detected ({list}). To complete the operation safely, a ZIP can be generated for you to download at your own discretion. If you continue without a ZIP, any file the browser blocks will be skipped.",
+  dangerous_h: "Files the browser may block",
+  zip_btn: "Generate ZIP", nozip_btn: "Continue without ZIP",
+  stage_listing: "Listing export files · {n}…",
+  stage_analyze: "Analyzing exports · {n}/{total} files · ~{size} after merging…",
+  ready_h: "Analysis complete",
+  ready_text: "Estimated result size: ~{size}. Choose the destination folder to start merging.",
+  pick_out_btn: "Choose destination folder",
   stage_zipping: "Building the ZIP…",
   res_written_zip: "ZIP saved. Unzip it to see your merged chat.",
   size_warn_h: "Large export",
-  size_warn_text: "This chat is about {size}. Merging on the web may take a while; for a faster, more direct result the desktop version is recommended.",
+  size_warn_text: "The merged result will be about {size} (not counting files repeated across exports). On the web this may take a while; for a faster, more direct result the desktop version is recommended.",
   size_warn_continue: "Continue anyway",
   size_warn_cancel: "Cancel"
 },
@@ -1451,27 +1461,64 @@ function fileExt(name) {
   return dot < 0 ? "" : name.slice(dot + 1).toLowerCase();
 }
 
-// Read-only pass over an export's media (same tree copyMediaTree will later
-// walk): collects both the dangerous-extension set and the total media size,
-// so runFuse can decide on the Safe-Browsing ZIP fallback and the RAM-vs-disk
-// strategy before anything is actually copied or an output folder is picked.
-async function scanExport(handle) {
+// getFile() here only fetches metadata: the per-file cost is one IPC
+// round-trip to the browser process, not CPU work, so on desktop a fixed
+// pool of in-flight calls hides that latency regardless of core count.
+// On Android each call goes through the Storage Access Framework, which
+// serializes them anyway (see copyMediaTree), so concurrency only queues.
+const SCAN_CONCURRENCY = isAndroid ? 1 : 16;
+
+// Read-only pass over the exports' media (same trees copyMediaTree will later
+// walk): collects the dangerous-extension set and an estimate of the merged
+// media size, before anything is copied or an output folder is picked.
+// The estimate applies the same dedup rule as resolveTarget — a file whose
+// relative path and size were already seen in another export is skipped by
+// the merge, so it isn't counted twice here either. Listing first (names
+// only, cheap) gives the file total, so the size pass can show a real %.
+async function scanExports(handles) {
   const dangerous = new Set();
-  let totalSize = 0;
-  async function walk(dir, rel) {
+  const files = [];
+  let lastPaint = 0;
+  function throttled() {
+    const now = performance.now();
+    if (now - lastPaint < 100) return false;
+    lastPaint = now;
+    return true;
+  }
+  async function list(dir, rel) {
     for await (const [name, h] of dir.entries()) {
       if (h.kind === "directory") {
         if (rel === "" && ASSETS.includes(name)) continue;
-        await walk(h, rel + name + "/");
+        await list(h, rel + name + "/");
         continue;
       }
       if (rel === "") continue; // top-level messages*.html, not media
       const ext = fileExt(name);
       if (DANGEROUS_EXTENSIONS.has(ext)) dangerous.add(ext);
-      totalSize += (await h.getFile()).size;
+      files.push({ h, path: rel + name });
+      if (throttled()) setStage(t("stage_listing", { n: files.length }), null);
     }
   }
-  await walk(handle, "");
+  for (const h of handles) await list(h, "");
+
+  const seen = new Set();
+  let totalSize = 0, done = 0, next = 0;
+  function paint() {
+    setStage(t("stage_analyze", { n: done, total: files.length, size: humanSize(totalSize) }),
+             files.length ? done / files.length : null);
+  }
+  async function worker() {
+    while (next < files.length) {
+      const f = files[next++];
+      const size = (await f.h.getFile()).size;
+      const key = f.path + "\0" + size;
+      if (!seen.has(key)) { seen.add(key); totalSize += size; }
+      done++;
+      if (throttled()) paint();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(SCAN_CONCURRENCY, files.length) }, worker));
+  paint();
   return { dangerous, totalSize };
 }
 
@@ -1487,23 +1534,28 @@ function humanSize(n) {
 // that the ZIP fallback always streams straight to disk (see ZipWriter).
 const LARGE_EXPORT_BYTES = 4 * 1024 ** 3;
 
-// Blocks on a choice between going to the desktop app, continuing on the
-// web anyway, or cancelling — shown when an export is large enough that
-// the web version will noticeably drag. Not a native confirm() because it
-// needs three distinct outcomes, not two.
-function showSizeWarning(totalSize) {
+// In-page choice card; resolves with the id of the clicked option. Used
+// instead of confirm() because some prompts need more than two outcomes,
+// and because a click on our own button reliably grants the fresh user
+// activation that showDirectoryPicker/showSaveFilePicker require.
+// options: [{ id, label, style?: "filled"|"tonal", href? }]
+function askChoice(title, text, options) {
   return new Promise((resolve) => {
-    $("size-warn-text").textContent = t("size_warn_text", { size: humanSize(totalSize) });
-    const panel = $("size-warn");
+    const panel = $("choice");
+    $("choice-title").textContent = title;
+    $("choice-text").textContent = text;
+    const box = $("choice-actions");
+    box.innerHTML = "";
+    for (const o of options) {
+      const el = document.createElement(o.href ? "a" : "button");
+      el.className = "btn" + (o.style ? " " + o.style : "");
+      el.textContent = o.label;
+      if (o.href) { el.href = o.href; el.target = "_blank"; el.rel = "noopener"; }
+      el.onclick = () => { panel.style.display = "none"; resolve(o.id); };
+      box.appendChild(el);
+    }
     panel.style.display = "";
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    function done(choice) {
-      panel.style.display = "none";
-      resolve(choice);
-    }
-    $("size-warn-desktop").onclick = () => done("desktop");
-    $("size-warn-continue").onclick = () => done("continue");
-    $("size-warn-cancel").onclick = () => done("cancel");
   });
 }
 
@@ -1938,6 +1990,15 @@ function showJob(title) {
   document.querySelectorAll(".btn.filled").forEach(b => b.disabled = true);
   $("job").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
+// Dismisses the job card without a result (e.g. after the pre-fuse scan,
+// before a prompt), restoring buttons the way endJob does.
+function hideJob() {
+  $("job").classList.remove("show");
+  document.querySelectorAll(".btn.filled").forEach(b => b.disabled = false);
+  renderExports();
+  if (!state.compact) $("compact-btn").disabled = true;
+  if (!state.enhance) $("enhance-btn").disabled = true;
+}
 function setStage(text, frac) {
   $("job-stage").textContent = text;
   if (typeof frac === "number") {
@@ -2065,28 +2126,52 @@ function fuseZipName() {
 }
 
 async function runFuse() {
-  // Cheap read-only pass first: total size decides the RAM warning below,
-  // and a dangerous extension offers the Safe-Browsing ZIP fallback — both
-  // *before* even asking for an output folder, instead of discovering
-  // either mid-merge.
-  const dangerous = new Set();
-  let totalSize = 0;
-  for (const e of state.exports) {
-    const scan = await scanExport(e.handle);
-    scan.dangerous.forEach(x => dangerous.add(x));
-    totalSize += scan.totalSize;
+  // Read-only pass first: the estimated merged size decides the size
+  // warning, and a dangerous extension offers the Safe-Browsing ZIP
+  // fallback — both before asking for an output folder.
+  showJob(t("stage_listing", { n: 0 }));
+  let scan;
+  try {
+    scan = await scanExports(state.exports.map(e => e.handle));
+  } catch (e) {
+    endJob(false, null, pyError(e));
+    return;
   }
+  hideJob();
+  const { dangerous, totalSize } = scan;
+  const cancelOpt = { id: "cancel", label: t("size_warn_cancel") };
 
   if (totalSize > LARGE_EXPORT_BYTES) {
-    const choice = await showSizeWarning(totalSize);
-    if (choice !== "continue") return; // "desktop" already opened the releases page; "cancel" just stops
+    const c = await askChoice(t("size_warn_h"), t("size_warn_text", { size: humanSize(totalSize) }), [
+      { id: "desktop", label: t("cta_download"), style: "tonal", href: REPO_URL + "/releases" },
+      { id: "continue", label: t("size_warn_continue"), style: "filled" },
+      cancelOpt,
+    ]);
+    if (c !== "continue") return; // "desktop" already opened the releases page
   }
 
   if (dangerous.size) {
     const list = [...dangerous].sort().map(x => "." + x).join(", ");
-    if (confirm(t("confirm_dangerous_zip", { list }))) return runFuseAsZip();
-    // Declined: fall through to the normal path below. copyOneFile still
-    // catches and skips any file Chrome actually blocks, same as before.
+    const c = await askChoice(t("dangerous_h"), t("confirm_dangerous_zip", { list }), [
+      { id: "zip", label: t("zip_btn"), style: "filled" },
+      { id: "nozip", label: t("nozip_btn"), style: "tonal" },
+      cancelOpt,
+    ]);
+    if (c === "cancel") return;
+    if (c === "zip") return runFuseAsZip();
+    // "nozip": normal path below; copyOneFile still skips (and warns about)
+    // any file Chrome actually blocks.
+  }
+
+  // The folder picker needs a recent user click. If the scan took a while
+  // and no prompt above supplied a fresh one, ask for it explicitly rather
+  // than letting showDirectoryPicker fail silently.
+  if (navigator.userActivation && !navigator.userActivation.isActive) {
+    const c = await askChoice(t("ready_h"), t("ready_text", { size: humanSize(totalSize) }), [
+      { id: "go", label: t("pick_out_btn"), style: "filled" },
+      cancelOpt,
+    ]);
+    if (c !== "go") return;
   }
 
   let out;
@@ -2310,7 +2395,6 @@ async function runRestore() {
 
 /* ================= init ================= */
 $("download-link").href = REPO_URL + "/releases";
-$("size-warn-desktop").href = REPO_URL + "/releases";
 wireDrop($("fuse-card"), addExportHandle);
 wireDrop($("compact-card"), setCompactHandle);
 wireDrop($("enhance-card"), setEnhanceHandle);
