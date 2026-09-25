@@ -32,8 +32,8 @@ from pathlib import Path
 
 import telegram_export_fuser as tef
 from telegram_export_fuser import (
-    DATE_TITLE_RE, count_senders, fuse, order_exports, parse_size,
-    report_stage,
+    DATE_TITLE_RE, copy_file, count_senders, fuse, order_exports,
+    parse_size, report_stage,
 )
 from telegram_export_compactor import compact
 from telegram_export_enhancer import enhance, restore
@@ -57,8 +57,33 @@ SKIP_DIRS = {
 }
 
 JOB = {"state": "idle", "buf": None, "result": None, "error": None,
-       "stage": None, "warnings": []}
+       "stage": None, "warnings": [], "cancellable": False, "cancel": False,
+       "cancel_note": None}
 JOB_LOCK = threading.Lock()
+
+
+class JobCancelled(Exception):
+    """Raised inside a job when the user asked to cancel it."""
+
+
+def _check_cancel():
+    if JOB["cancel"]:
+        raise JobCancelled()
+
+
+tef.cancel_hook = _check_cancel
+
+# Auto-shutdown after IDLE_LIMIT seconds without user activity, so closing
+# the browser tab (instead of using the shutdown button) doesn't leave the
+# server running in the background forever. Activity is any request the
+# page makes on a user action, plus the end of a job. Never while a job is
+# running or a folder picker is open (see idle_watchdog).
+IDLE_LIMIT = 60 * 60
+LAST_ACTIVITY = {"t": time.monotonic()}
+
+
+def touch():
+    LAST_ACTIVITY["t"] = time.monotonic()
 
 # Modo verbose: solo afecta a esta app de escritorio (y a los AIO, que la
 # incluyen tal cual) — imprime timing por etapa en el log del trabajo, que
@@ -120,7 +145,20 @@ tef.progress_hook = _progress
 
 
 def pick_folder(title: str):
-    """Native folder picker (tkinter, stdlib). Single selection."""
+    """Native single-folder picker: the Windows shell dialog when available
+    (same as pick_folders), otherwise tkinter. The .exe is built without
+    tkinter (see build_aio.py), so on Windows this must not need it."""
+    if os.name == "nt":
+        with PICK_LOCK:
+            try:
+                paths = _pick_folders_win(title, multi=False)
+                return paths[0] if paths else None
+            except OSError:
+                pass
+    return _pick_folder_tk(title)
+
+
+def _pick_folder_tk(title: str):
     with PICK_LOCK:
         import tkinter as tk
         from tkinter import filedialog
@@ -135,10 +173,11 @@ def pick_folder(title: str):
         return path or None
 
 
-def _pick_folders_win(title: str):
-    """Multi-select folder picker via the Windows IFileOpenDialog COM API
-    (FOS_PICKFOLDERS | FOS_ALLOWMULTISELECT). tkinter's folder dialog is
-    single-selection only, so we talk to the shell directly with ctypes."""
+def _pick_folders_win(title: str, multi=True):
+    """Folder picker via the Windows IFileOpenDialog COM API
+    (FOS_PICKFOLDERS, plus FOS_ALLOWMULTISELECT when multi). tkinter's
+    folder dialog is single-selection only, so we talk to the shell
+    directly with ctypes."""
     import ctypes
     from ctypes import POINTER, byref, c_ulong, c_ushort, c_ubyte, \
         c_void_p, c_wchar_p
@@ -185,7 +224,8 @@ def _pick_folders_win(title: str):
         com_call(dialog, 10, byref(opts),          # GetOptions
                  argtypes=(POINTER(c_ulong),))
         com_call(dialog, 9,                        # SetOptions
-                 opts.value | FOS_PICKFOLDERS | FOS_FORCEFS | FOS_MULTI,
+                 opts.value | FOS_PICKFOLDERS | FOS_FORCEFS
+                 | (FOS_MULTI if multi else 0),
                  argtypes=(c_ulong,))
         com_call(dialog, 17, title, argtypes=(c_wchar_p,))  # SetTitle
         try:                                       # initial folder
@@ -227,7 +267,9 @@ def _pick_folders_win(title: str):
     finally:
         release(dialog)
     if paths:
-        LAST_DIR["path"] = str(Path(paths[0]).parent)
+        # A single pick is usually an output/parent folder: reopen inside
+        # it next time. Several picked exports: reopen where they live.
+        LAST_DIR["path"] = paths[0] if not multi else str(Path(paths[0]).parent)
     return paths
 
 
@@ -240,7 +282,7 @@ def pick_folders(title: str):
                 return _pick_folders_win(title)
             except OSError:
                 pass
-    single = pick_folder(title)
+    single = _pick_folder_tk(title)
     return [single] if single else []
 
 
@@ -396,13 +438,17 @@ def inspect_export(path: str) -> dict:
     }
 
 
-def start_job(fn, label="operación"):
+def start_job(fn, label="operación", cancellable=False):
+    """cancellable: only jobs writing to a separate output (fuse, copies).
+    In-place jobs rewrite the export itself, where stopping halfway would
+    leave it inconsistent."""
     with JOB_LOCK:
         if JOB["state"] == "running":
             raise RuntimeError("Ya hay una operación en curso")
         buf = io.StringIO()
         JOB.update(state="running", buf=buf, result=None, error=None,
-                   stage=None, warnings=[])
+                   stage=None, warnings=[], cancellable=cancellable,
+                   cancel=False, cancel_note=None)
     _stage_timing.update(key=None, t0=0.0, last_log=0.0)
 
     def target():
@@ -412,6 +458,13 @@ def start_job(fn, label="operación"):
             vlog(f"inicio: {label}")
             try:
                 result = fn()
+            except JobCancelled:
+                _end_verbose_stage()
+                vlog(f"{label}: CANCELADO tras {time.perf_counter() - t0:.1f}s")
+                with JOB_LOCK:
+                    JOB.update(state="cancelled")
+                touch()
+                return
             except (Exception, SystemExit) as e:
                 _end_verbose_stage()
                 vlog(f"{label}: FALLÓ tras {time.perf_counter() - t0:.1f}s")
@@ -420,13 +473,22 @@ def start_job(fn, label="operación"):
                 with JOB_LOCK:
                     JOB.update(state="error",
                                error=str(e) or e.__class__.__name__)
+                touch()
                 return
             _end_verbose_stage()
             vlog(f"{label}: terminado en {time.perf_counter() - t0:.1f}s")
         with JOB_LOCK:
             JOB.update(state="done", result=result)
+        touch()  # the idle hour counts from when the job ended
 
     threading.Thread(target=target, daemon=True).start()
+
+
+def cancel_job():
+    with JOB_LOCK:
+        if JOB["state"] == "running" and JOB["cancellable"]:
+            JOB["cancel"] = True
+    vlog("cancelación solicitada por el usuario")
 
 
 def job_status() -> dict:
@@ -438,7 +500,35 @@ def job_status() -> dict:
             "error": JOB["error"],
             "stage": JOB["stage"],
             "warnings": list(JOB["warnings"]),
+            "cancellable": JOB["cancellable"],
+            "cancelling": JOB["cancel"],
+            "cancel_note": JOB["cancel_note"],
         }
+
+
+def _output_state(out: Path):
+    """(existed, was_empty) of a result folder before a job writes to it."""
+    existed = out.exists()
+    return existed, not existed or not any(out.iterdir())
+
+
+def _discard_output(out: Path, existed: bool, was_empty: bool):
+    """After a cancel or failure: a result folder that was empty (or didn't
+    exist) before the job holds only what the job wrote, so its contents
+    can safely go — and the folder too if the job created it. One that
+    already had content is left alone. Records which case it was for the
+    UI (JOB["cancel_note"]: "removed" | "partial")."""
+    if was_empty and out.exists():
+        if existed:
+            for child in out.iterdir():
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
+                else:
+                    child.unlink(missing_ok=True)
+        else:
+            shutil.rmtree(out, ignore_errors=True)
+        vlog(f"resultado incompleto eliminado: {out}")
+    JOB["cancel_note"] = "removed" if was_empty else "partial"
 
 
 def do_fuse(exports, output, page_size, force=False):
@@ -449,8 +539,13 @@ def do_fuse(exports, output, page_size, force=False):
     if out in dirs:
         raise ValueError("La carpeta de destino no puede ser uno de los "
                          "exports de origen")
-    return fuse(order_exports(dirs), out, parse_size(page_size),
-                force=force)
+    existed, was_empty = _output_state(out)
+    try:
+        return fuse(order_exports(dirs), out, parse_size(page_size),
+                    force=force)
+    except BaseException:
+        _discard_output(out, existed, was_empty)
+        raise
 
 
 def copy_export(src: Path, out: Path):
@@ -462,7 +557,7 @@ def copy_export(src: Path, out: Path):
     for i, p in enumerate(files, 1):
         dst = out / p.relative_to(src)
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(p, dst)
+        copy_file(p, dst)
         done += p.stat().st_size
         report_stage("copy", frac=done / total, copied=i)
     secs = time.perf_counter() - t0
@@ -481,17 +576,15 @@ def on_export(export, output, job):
     if out == src or src in out.parents:
         raise ValueError("La copia no puede ir en el propio export ni "
                          "dentro de él")
-    if out.exists() and any(out.iterdir()):
+    existed, was_empty = _output_state(out)
+    if not was_empty:
         raise ValueError(f"La carpeta de la copia ya existe y no está "
                          f"vacía: {out}")
-    created = not out.exists()
     try:
         copy_export(src, out)
         return job(out)
     except BaseException:
-        if created:
-            shutil.rmtree(out, ignore_errors=True)
-            vlog(f"copia incompleta eliminada: {out}")
+        _discard_output(out, existed, was_empty)
         raise
 
 
@@ -825,6 +918,7 @@ select.unit { flex: none; width: 84px; cursor: pointer; }
 .job-head b { flex: 1; font-size: 15px; font-weight: 600; }
 .job-head .pct { font-size: 13.5px; font-weight: 700; color: var(--primary-strong);
   font-variant-numeric: tabular-nums; }
+.job-head .btn { padding: 6px 14px; font-size: 13px; }
 .progress { height: 6px; border-radius: 6px; overflow: hidden;
   background: var(--primary-soft); margin-bottom: 4px; }
 .progress i { display: block; height: 100%; width: 0%;
@@ -1286,6 +1380,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
     <div class="spinner" id="job-spin"></div>
     <b id="job-stage"></b>
     <span class="pct" id="job-pct"></span>
+    <button class="btn danger-tonal" id="job-cancel" style="display:none" onclick="cancelJob()"></button>
   </div>
   <div class="progress indet" id="job-progress"><i id="job-bar"></i></div>
   <div class="warns" id="job-warns"></div>
@@ -1395,6 +1490,13 @@ es: {
   job_fusing: "Fusionando exports…", job_compacting: "Compactando export…",
   job_enhancing: "Mejorando export…",
   job_done: "Completado", job_error: "Error",
+  job_cancel: "Cancelar",
+  job_cancelling: "Cancelando…",
+  job_cancelled: "Operación cancelada",
+  cancel_removed: "El resultado incompleto se ha eliminado; los exports de origen no se han modificado.",
+  cancel_partial: "La carpeta de destino ya tenía contenido, así que no se ha borrado nada: puede contener archivos a medio escribir. Los exports de origen no se han modificado.",
+  idle_done_h: "Aplicación cerrada por inactividad",
+  idle_done_p: "Se cerró sola tras una hora sin usarse, para no quedarse abierta en segundo plano. Para seguir, abre de nuevo el script o el ejecutable.",
   job_failed: "La operación ha fallado",
   job_log: "Ver registro completo",
   open_chat: "Abrir chat", open_folder: "Abrir carpeta",
@@ -1527,6 +1629,13 @@ en: {
   job_fusing: "Merging exports…", job_compacting: "Compacting export…",
   job_enhancing: "Enhancing export…",
   job_done: "Done", job_error: "Error",
+  job_cancel: "Cancel",
+  job_cancelling: "Cancelling…",
+  job_cancelled: "Operation cancelled",
+  cancel_removed: "The incomplete result was removed; the source exports were not modified.",
+  cancel_partial: "The output folder already had content, so nothing was deleted: it may contain half-written files. The source exports were not modified.",
+  idle_done_h: "App closed after inactivity",
+  idle_done_p: "It closed itself after an hour without use, so it doesn't stay running in the background. To carry on, reopen the script or the executable.",
   job_failed: "The operation failed",
   job_log: "Show full log",
   open_chat: "Open chat", open_folder: "Open folder",
@@ -1653,6 +1762,13 @@ fr: {
   job_fusing: "Fusion des exports…", job_compacting: "Compactage de l'export…",
   job_enhancing: "Amélioration de l'export…",
   job_done: "Terminé", job_error: "Erreur",
+  job_cancel: "Annuler",
+  job_cancelling: "Annulation…",
+  job_cancelled: "Opération annulée",
+  cancel_removed: "Le résultat incomplet a été supprimé ; les exports d'origine n'ont pas été modifiés.",
+  cancel_partial: "Le dossier de destination contenait déjà des fichiers, donc rien n'a été supprimé : il peut contenir des fichiers à moitié écrits. Les exports d'origine n'ont pas été modifiés.",
+  idle_done_h: "Application fermée pour inactivité",
+  idle_done_p: "Elle s'est fermée d'elle-même après une heure sans utilisation, pour ne pas rester ouverte en arrière-plan. Pour continuer, rouvrez le script ou l'exécutable.",
   job_failed: "L'opération a échoué",
   job_log: "Voir le journal complet",
   open_chat: "Ouvrir le chat", open_folder: "Ouvrir le dossier",
@@ -1787,6 +1903,13 @@ de: {
   job_fusing: "Exporte werden zusammengeführt…", job_compacting: "Export wird kompaktiert…",
   job_enhancing: "Export wird verbessert…",
   job_done: "Fertig", job_error: "Fehler",
+  job_cancel: "Abbrechen",
+  job_cancelling: "Wird abgebrochen…",
+  job_cancelled: "Vorgang abgebrochen",
+  cancel_removed: "Das unvollständige Ergebnis wurde entfernt; die Quell-Exporte wurden nicht verändert.",
+  cancel_partial: "Der Zielordner hatte bereits Inhalt, daher wurde nichts gelöscht: Er kann halb geschriebene Dateien enthalten. Die Quell-Exporte wurden nicht verändert.",
+  idle_done_h: "App wegen Inaktivität beendet",
+  idle_done_p: "Sie hat sich nach einer Stunde ohne Nutzung selbst beendet, damit sie nicht im Hintergrund weiterläuft. Um weiterzumachen, öffne das Skript oder die ausführbare Datei erneut.",
   job_failed: "Der Vorgang ist fehlgeschlagen",
   job_log: "Vollständiges Protokoll anzeigen",
   open_chat: "Chat öffnen", open_folder: "Ordner öffnen",
@@ -1921,6 +2044,13 @@ pt: {
   job_fusing: "Mesclando exports…", job_compacting: "Compactando export…",
   job_enhancing: "Melhorando export…",
   job_done: "Concluído", job_error: "Erro",
+  job_cancel: "Cancelar",
+  job_cancelling: "Cancelando…",
+  job_cancelled: "Operação cancelada",
+  cancel_removed: "O resultado incompleto foi removido; os exports de origem não foram modificados.",
+  cancel_partial: "A pasta de destino já tinha conteúdo, então nada foi apagado: pode conter arquivos gravados pela metade. Os exports de origem não foram modificados.",
+  idle_done_h: "Aplicativo fechado por inatividade",
+  idle_done_p: "Fechou-se sozinho após uma hora sem uso, para não ficar aberto em segundo plano. Para continuar, abra novamente o script ou o executável.",
   job_failed: "A operação falhou",
   job_log: "Ver registro completo",
   open_chat: "Abrir chat", open_folder: "Abrir pasta",
@@ -2055,6 +2185,13 @@ it: {
   job_fusing: "Unione degli export…", job_compacting: "Compattazione dell'export…",
   job_enhancing: "Miglioramento dell'export…",
   job_done: "Completato", job_error: "Errore",
+  job_cancel: "Annulla",
+  job_cancelling: "Annullamento…",
+  job_cancelled: "Operazione annullata",
+  cancel_removed: "Il risultato incompleto è stato eliminato; gli export di origine non sono stati modificati.",
+  cancel_partial: "La cartella di destinazione aveva già dei contenuti, quindi non è stato eliminato nulla: può contenere file scritti a metà. Gli export di origine non sono stati modificati.",
+  idle_done_h: "App chiusa per inattività",
+  idle_done_p: "Si è chiusa da sola dopo un'ora di inutilizzo, per non restare aperta in background. Per continuare, riapri lo script o l'eseguibile.",
   job_failed: "L'operazione non è riuscita",
   job_log: "Mostra registro completo",
   open_chat: "Apri chat", open_folder: "Apri cartella",
@@ -2189,6 +2326,13 @@ ru: {
   job_fusing: "Объединение экспортов…", job_compacting: "Сжатие экспорта…",
   job_enhancing: "Улучшение экспорта…",
   job_done: "Готово", job_error: "Ошибка",
+  job_cancel: "Отмена",
+  job_cancelling: "Отмена…",
+  job_cancelled: "Операция отменена",
+  cancel_removed: "Неполный результат удалён; исходные экспорты не изменены.",
+  cancel_partial: "В папке назначения уже было содержимое, поэтому ничего не удалено: в ней могут быть недописанные файлы. Исходные экспорты не изменены.",
+  idle_done_h: "Приложение закрыто из-за бездействия",
+  idle_done_p: "Оно закрылось само после часа без использования, чтобы не оставаться запущенным в фоне. Чтобы продолжить, снова откройте скрипт или исполняемый файл.",
   job_failed: "Операция не удалась",
   job_log: "Показать полный журнал",
   open_chat: "Открыть чат", open_folder: "Открыть папку",
@@ -2323,6 +2467,13 @@ zh: {
   job_fusing: "正在合并导出…", job_compacting: "正在压缩导出…",
   job_enhancing: "正在美化导出…",
   job_done: "完成", job_error: "错误",
+  job_cancel: "取消",
+  job_cancelling: "正在取消…",
+  job_cancelled: "操作已取消",
+  cancel_removed: "不完整的结果已删除；源导出未被修改。",
+  cancel_partial: "目标文件夹中原本就有内容，因此没有删除任何东西：其中可能有写到一半的文件。源导出未被修改。",
+  idle_done_h: "应用因闲置已关闭",
+  idle_done_p: "应用在一小时未使用后自动关闭，以免在后台持续运行。要继续使用，请重新打开脚本或可执行文件。",
   job_failed: "操作失败",
   job_log: "查看完整日志",
   open_chat: "打开聊天", open_folder: "打开文件夹",
@@ -2457,6 +2608,13 @@ ja: {
   job_fusing: "エクスポートを結合中…", job_compacting: "エクスポートを圧縮中…",
   job_enhancing: "エクスポートを強化中…",
   job_done: "完了", job_error: "エラー",
+  job_cancel: "キャンセル",
+  job_cancelling: "キャンセル中…",
+  job_cancelled: "操作をキャンセルしました",
+  cancel_removed: "不完全な結果は削除しました。元のエクスポートは変更されていません。",
+  cancel_partial: "保存先フォルダーには既に中身があったため、何も削除していません。書きかけのファイルが残っている可能性があります。元のエクスポートは変更されていません。",
+  idle_done_h: "操作がなかったためアプリを終了しました",
+  idle_done_p: "バックグラウンドで動き続けないよう、1 時間使われなかったため自動で終了しました。続けるには、スクリプトまたは実行ファイルをもう一度開いてください。",
   job_failed: "操作に失敗しました",
   job_log: "完全なログを表示",
   open_chat: "チャットを開く", open_folder: "フォルダを開く",
@@ -2591,6 +2749,13 @@ hi: {
   job_fusing: "एक्सपोर्ट मिलाए जा रहे हैं…", job_compacting: "एक्सपोर्ट संक्षिप्त हो रहा है…",
   job_enhancing: "एक्सपोर्ट बेहतर बनाया जा रहा है…",
   job_done: "पूरा हुआ", job_error: "त्रुटि",
+  job_cancel: "रद्द करें",
+  job_cancelling: "रद्द किया जा रहा है…",
+  job_cancelled: "ऑपरेशन रद्द किया गया",
+  cancel_removed: "अधूरा परिणाम हटा दिया गया; स्रोत एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
+  cancel_partial: "गंतव्य फ़ोल्डर में पहले से सामग्री थी, इसलिए कुछ भी हटाया नहीं गया: इसमें अधूरी लिखी फ़ाइलें हो सकती हैं। स्रोत एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
+  idle_done_h: "निष्क्रियता के कारण ऐप बंद हो गया",
+  idle_done_p: "एक घंटे तक इस्तेमाल न होने पर यह अपने-आप बंद हो गया, ताकि बैकग्राउंड में चलता न रहे। जारी रखने के लिए स्क्रिप्ट या एक्ज़ीक्यूटेबल फिर से खोलें।",
   job_failed: "कार्रवाई विफल रही",
   job_log: "पूरा लॉग देखें",
   open_chat: "चैट खोलें", open_folder: "फ़ोल्डर खोलें",
@@ -2725,6 +2890,13 @@ ar: {
   job_fusing: "جارٍ دمج التصديرات…", job_compacting: "جارٍ ضغط التصدير…",
   job_enhancing: "جارٍ تحسين التصدير…",
   job_done: "اكتمل", job_error: "خطأ",
+  job_cancel: "إلغاء",
+  job_cancelling: "جارٍ الإلغاء…",
+  job_cancelled: "أُلغيت العملية",
+  cancel_removed: "حُذفت النتيجة غير المكتملة؛ لم تُعدَّل التصديرات الأصلية.",
+  cancel_partial: "كان مجلد الوجهة يحتوي على ملفات مسبقًا، لذا لم يُحذف شيء: قد يحتوي على ملفات مكتوبة جزئيًا. لم تُعدَّل التصديرات الأصلية.",
+  idle_done_h: "أُغلق التطبيق بسبب عدم النشاط",
+  idle_done_p: "أُغلق تلقائيًا بعد ساعة دون استخدام حتى لا يبقى يعمل في الخلفية. للمتابعة، أعد فتح السكربت أو الملف التنفيذي.",
   job_failed: "فشلت العملية",
   job_log: "عرض السجل الكامل",
   open_chat: "فتح المحادثة", open_folder: "فتح المجلد",
@@ -2901,6 +3073,7 @@ async function confirmShutdown() {
   const ok = await confirmDialog(
     t("shutdown_title"), t("shutdown_body"), t("shutdown_confirm"), true, true);
   if (!ok) return;
+  appClosed = true;
   $("shutdown-btn").classList.add("closed");
   try { await api("/api/shutdown"); } catch (e) { /* el servidor ya está cerrando */ }
   $("shutdown-screen").classList.add("show");
@@ -3446,6 +3619,7 @@ async function startJob(endpoint, body, title) {
   } catch (e) { return snack(e.message); }
   warnCount = 0;
   $("job").classList.add("show");
+  $("job-cancel").style.display = "none";
   $("job-stage").textContent = title;
   $("job-pct").textContent = "";
   $("job-spin").style.display = "";
@@ -3478,8 +3652,14 @@ async function poll() {
   const s = await (await fetch("/api/status")).json();
   $("job-log").textContent = s.log || "…";
   pushWarnings(s.warnings || []);
+  const cancelBtn = $("job-cancel");
   if (s.state === "running") {
-    $("job-stage").textContent = stageLabel(s.stage);
+    // Only jobs writing to a separate output can be cancelled (fuse and
+    // copies); in-place jobs would leave the export half-rewritten.
+    cancelBtn.style.display = s.cancellable ? "" : "none";
+    cancelBtn.disabled = !!s.cancelling;
+    cancelBtn.textContent = t(s.cancelling ? "job_cancelling" : "job_cancel");
+    $("job-stage").textContent = s.cancelling ? t("job_cancelling") : stageLabel(s.stage);
     const frac = s.stage && s.stage.frac;
     if (typeof frac === "number") {
       $("job-progress").classList.remove("indet");
@@ -3492,6 +3672,7 @@ async function poll() {
     return;
   }
   clearInterval(pollTimer);
+  cancelBtn.style.display = "none";
   $("job-spin").style.display = "none";
   $("job-progress").classList.remove("indet");
   $("job-bar").style.width = "100%";
@@ -3545,13 +3726,53 @@ async function poll() {
     mk(t("open_folder"), res.out_dir,
       '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>');
   } else {
-    $("job-stage").textContent = t("job_error");
+    const cancelled = s.state === "cancelled";
+    $("job-stage").textContent = t(cancelled ? "job_cancelled" : "job_error");
     icon.className = "ricon err";
     icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
-    $("job-rtitle").textContent = t("job_failed");
-    $("job-rsub").textContent = s.error || "";
+    $("job-rtitle").textContent = t(cancelled ? "job_cancelled" : "job_failed");
+    $("job-rsub").textContent = cancelled
+      ? t(s.cancel_note === "partial" ? "cancel_partial" : "cancel_removed")
+      : (s.error || "");
   }
 }
+
+async function cancelJob() {
+  $("job-cancel").disabled = true;
+  $("job-cancel").textContent = t("job_cancelling");
+  try { await api("/api/cancel"); } catch (e) { snack(e.message); }
+}
+
+/* =============== cierre automático por inactividad ===============
+   El servidor se cierra solo tras una hora sin actividad (nunca durante una
+   operación), por si se cierra la pestaña sin usar el botón de apagar. La
+   actividad son las acciones del usuario: cada clic o tecla avisa al
+   servidor, como mucho una vez por minuto. Aparte, un GET /api/status (que
+   no cuenta como actividad) comprueba cada minuto si el servidor sigue
+   vivo, para enseñar la pantalla de cierre en vez de una app que falla. */
+let appClosed = false;
+let lastPing = 0;
+function notifyActivity() {
+  const now = Date.now();
+  if (appClosed || now - lastPing < 60000) return;
+  lastPing = now;
+  fetch("/api/ping", { method: "POST", body: "{}" }).catch(() => {});
+}
+["pointerdown", "keydown", "wheel"].forEach(ev =>
+  window.addEventListener(ev, notifyActivity, { passive: true, capture: true }));
+function showClosedScreen(idle) {
+  appClosed = true;
+  if (idle) {
+    document.querySelector("#shutdown-screen h2").textContent = t("idle_done_h");
+    document.querySelector("#shutdown-screen p").textContent = t("idle_done_p");
+  }
+  $("shutdown-screen").classList.add("show");
+}
+setInterval(async () => {
+  if (appClosed) return;
+  try { await fetch("/api/status", { cache: "no-store" }); }
+  catch (e) { showClosedScreen(true); }
+}, 60000);
 
 wireDrop($("fuse-card"), addExportByPath);
 wireDrop($("compact-card"), loadCompactPath);
@@ -3592,6 +3813,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/" or self.path.startswith("/index"):
+            touch()  # opening or reloading the page is activity too
             self._send(200, PAGE, "text/html; charset=utf-8")
         elif self.path == "/api/status":
             self._json(job_status())
@@ -3599,13 +3821,19 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "not found"}, 404)
 
     def do_POST(self):
+        touch()  # every POST comes from a user action in the page
         length = int(self.headers.get("Content-Length") or 0)
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except json.JSONDecodeError:
             return self._json({"error": "JSON inválido"}, 400)
         try:
-            if self.path == "/api/pick-folder":
+            if self.path == "/api/ping":
+                self._json({"ok": True, "idle_limit": IDLE_LIMIT})
+            elif self.path == "/api/cancel":
+                cancel_job()
+                self._json({"ok": True})
+            elif self.path == "/api/pick-folder":
                 self._json({"path": pick_folder(
                     body.get("title") or "Selecciona una carpeta")})
             elif self.path == "/api/pick-folders":
@@ -3631,14 +3859,16 @@ class Handler(BaseHTTPRequestHandler):
                     body["exports"], body["output"], body["page_size"],
                     body.get("force", False)),
                     f"fusionar {len(body['exports'])} exports → "
-                    f"{body['output']} (páginas {body['page_size']})")
+                    f"{body['output']} (páginas {body['page_size']})",
+                    cancellable=True)
                 self._json({"ok": True})
             elif self.path == "/api/compact":
                 start_job(lambda: do_compact(
                     body["export"], body["mode"], body["value"],
                     body.get("output")),
                     f"compactar ({body['mode']}={body['value']}) "
-                    f"{body['export']}{_dest_label(body)}")
+                    f"{body['export']}{_dest_label(body)}",
+                    cancellable=bool(body.get("output")))
                 self._json({"ok": True})
             elif self.path == "/api/enhance":
                 start_job(lambda: do_enhance(
@@ -3647,12 +3877,14 @@ class Handler(BaseHTTPRequestHandler):
                     body.get("fullwidth", True), body.get("output")),
                     f"mejorar (disposición={body.get('layout', 'both')}, "
                     f"remitente propio={'sí' if body.get('me') else 'no'}) "
-                    f"{body['export']}{_dest_label(body)}")
+                    f"{body['export']}{_dest_label(body)}",
+                    cancellable=bool(body.get("output")))
                 self._json({"ok": True})
             elif self.path == "/api/restore":
                 start_job(lambda: do_restore(
                     body["export"], body.get("output")),
-                    f"desmejorar {body['export']}{_dest_label(body)}")
+                    f"desmejorar {body['export']}{_dest_label(body)}",
+                    cancellable=bool(body.get("output")))
                 self._json({"ok": True})
             elif self.path == "/api/verbose":
                 VERBOSE["on"] = bool(body.get("on"))
@@ -3689,12 +3921,33 @@ def main():
     url = f"http://localhost:{port}"
     print(f"Telegram Export Studio v{VERSION} -> {url}")
     print("Ctrl+C para salir")
+    print(f"Se cierra sola tras {IDLE_LIMIT // 60} min sin actividad "
+          "(nunca con una operación en curso)")
     threading.Timer(0.4, webbrowser.open, [url]).start()
+    threading.Thread(target=idle_watchdog, args=(server,), daemon=True).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     print("\nServidor cerrado. Hasta luego")
+
+
+def idle_watchdog(server, interval=30):
+    """Shuts the server down after IDLE_LIMIT seconds without activity.
+    A running job or an open folder picker (the user is busy choosing)
+    counts as activity, so an operation is never cut short."""
+    while True:
+        time.sleep(interval)
+        with JOB_LOCK:
+            running = JOB["state"] == "running"
+        if running or PICK_LOCK.locked():
+            touch()
+            continue
+        if time.monotonic() - LAST_ACTIVITY["t"] >= IDLE_LIMIT:
+            print(f"\nSin actividad durante {IDLE_LIMIT // 60} min: "
+                  "cerrando la aplicación")
+            server.shutdown()
+            return
 
 
 if __name__ == "__main__":

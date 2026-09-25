@@ -69,6 +69,17 @@ DEFAULT_PAGE_SIZE = "500KB"
 # (payload: str). Unset (None) for CLI use — output stays print-based.
 progress_hook = None
 
+# Optional GUI cancel hook: callable() that raises to abort the running
+# operation. Checked at every report_stage() and between the chunks of a
+# large copy_file(), so a cancel lands quickly. Unset (None) for CLI use.
+cancel_hook = None
+
+# Files above this are copied in chunks (see copy_file) so a cancel doesn't
+# have to wait for a multi-GB video; smaller ones use shutil.copy2, which
+# goes through the OS's own fast copy.
+CHUNKED_COPY_MIN = 64 * 1024 * 1024
+COPY_CHUNK = 8 * 1024 * 1024
+
 # Web (browser) mode: when set, fuse() does NOT copy media itself — the
 # host copies files by streaming and provides the collision-rename map:
 # {str(export_dir): {old_ref: new_ref}}. HTML references get rewritten
@@ -76,9 +87,32 @@ progress_hook = None
 media_maps = None
 
 
+def check_cancel():
+    if cancel_hook:
+        cancel_hook()
+
+
 def report_stage(key, frac=None, **extra):
+    check_cancel()
     if progress_hook:
         progress_hook("stage", {"key": key, "frac": frac, **extra})
+
+
+def copy_file(src: Path, dest: Path):
+    """shutil.copy2 that a cancel can interrupt midway through a large file.
+    A partially written dest is removed, never left behind."""
+    if src.stat().st_size < CHUNKED_COPY_MIN:
+        shutil.copy2(src, dest)
+        return
+    try:
+        with open(src, "rb") as fin, open(dest, "wb") as fout:
+            while chunk := fin.read(COPY_CHUNK):
+                fout.write(chunk)
+                check_cancel()
+        shutil.copystat(src, dest)
+    except BaseException:
+        dest.unlink(missing_ok=True)
+        raise
 
 
 def report_warn(text):
@@ -252,8 +286,10 @@ def date_divider(date: datetime, n: int) -> str:
 def sha1(path: Path) -> str:
     h = hashlib.sha1()
     with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
+        for i, chunk in enumerate(iter(lambda: f.read(1 << 20), b"")):
             h.update(chunk)
+            if i % 64 == 63:  # a multi-GB video takes seconds to hash
+                check_cancel()
     return h.hexdigest()
 
 
@@ -288,7 +324,7 @@ def copy_media(msg: Message, out_dir: Path, copied: dict) -> str:
                 n += 1
             if not dest.exists():
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src, dest)
+                copy_file(src, dest)
             copied[key] = final_ref
         if final_ref != ref:
             report_warn(f"Colisión de nombre resuelta: {ref} → {final_ref}")
@@ -456,6 +492,7 @@ def fuse(export_dirs, out_dir: Path, page_bytes: float, force=False):
     copied = {}
     prev_real = None
     for i, msg in enumerate(merged):
+        check_cancel()
         if i % 25 == 0:
             report_stage("media", frac=i / max(len(merged), 1),
                          copied=len(copied))

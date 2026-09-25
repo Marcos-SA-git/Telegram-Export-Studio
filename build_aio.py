@@ -136,8 +136,10 @@ def build_aio():
         src = (BASE / filename).read_text(encoding="utf-8")
         src = src.replace("#!/usr/bin/env python3\n", "", 1)
         src = CROSS_IMPORT_RE.sub("", src)
-        src = src.replace("tef.progress_hook = _progress",
-                          "progress_hook = _progress")
+        # Module-level hook assignments (tef.progress_hook = ...,
+        # tef.cancel_hook = ...) become plain globals of the single file.
+        src = re.sub(r"^tef\.(\w+) = ", r"\1 = ", src, flags=re.MULTILINE)
+        assert not re.search(r"\btef\.", src), f"{filename}: tef. sin resolver"
         src = MAIN_GUARD_RE.sub("\n", src)
         assert "def main():" in src, filename
         src = src.replace("def main():", f"def {main_name}():", 1)
@@ -182,9 +184,15 @@ def build_exe():
 
     build_dir = BASE / "build"
     spec_dir = build_dir
+    # tkinter se excluye: en Windows los selectores de carpeta usan el
+    # diálogo nativo del sistema (ctypes), y el Tcl/Tk 9 de los Python
+    # recientes guarda sus datos dentro de la DLL, cosa que PyInstaller no
+    # empaqueta bien — el .exe fallaba al arrancar ("Tcl data directory
+    # ... _tcl_data not found"). De paso el .exe pesa unos MB menos.
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--onefile", "--noconsole", "--name", exe_name,
+        "--exclude-module", "tkinter", "--exclude-module", "_tkinter",
         "--distpath", str(RELEASES),
         "--workpath", str(build_dir),
         "--specpath", str(spec_dir),
