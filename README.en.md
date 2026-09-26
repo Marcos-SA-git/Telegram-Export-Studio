@@ -2,205 +2,133 @@
 
 *[Leer en español](README.md)*
 
-**Merge, compact, and enhance your Telegram chat exports — 100% local. No servers, no accounts, no telemetry: your chats never leave your computer.**
+Merge, compact, enhance and convert your Telegram chat exports. **100% local**: no servers, no accounts and no telemetry. Your chats never leave your device.
 
-Telegram Desktop exports chats as HTML, but each export is a snapshot: if you export the same chat multiple times over time, you end up with duplicated, overlapping folders. Telegram Export Studio **merges** them into a single, duplicate-free history, **compacts** the dozens of `messagesN.html` files into as many pages as you want, and **enhances** the look so it feels like a real chat (bubbles, reply quotes, dark mode, playable video and audio…) — all **reversibly**, so you can undo it whenever you like.
+**[Open the web version](https://marcos-sa-git.github.io/Telegram-Export-Studio/)** · [Download the desktop app](https://github.com/Marcos-SA-git/Telegram-Export-Studio/releases/latest)
 
-> **Important — what kind of export this accepts:** this tool is designed for exports of **a single, specific chat** (inside the chat → three-dot menu → *Export chat*), not for a full export of your entire Telegram account (*Settings → Advanced → Export Telegram data*), which has a different structure and isn't supported yet. See the [tracking issue](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/2) for this planned feature.
+## What it does
 
-## Privacy, seriously
+Telegram Desktop exports each chat as a snapshot: export it several times over the years and you end up with overlapping folders and dozens of `messagesN.html` pages. This tool fixes that with four functions:
 
-- **Nothing is ever uploaded anywhere.** There's no backend: the desktop version is a server that only listens on your own machine (`127.0.0.1`), and the web version runs the exact same Python engine **inside your browser** (WebAssembly, via Pyodide).
-- **Open source and auditable.** All the processing is five Python scripts using only the standard library, with no external dependencies.
-- The web version even works **offline** once it's loaded.
+| Function | What it's for |
+|---|---|
+| **Merge** | Joins several exports of the same chat into a single history, with no duplicate messages. |
+| **Compact** | Splits the history into as many pages as you want, for example everything in one `messages.html`. |
+| **Enhance** | Makes it look like a real chat: bubbles, reply quotes, light/dark mode, playable video and audio. |
+| **Convert** | Goes from the HTML export to Telegram's official JSON and back. |
 
-## How to use it
+The interface is available in Spanish, English, French, German, Portuguese, Italian, Russian, Chinese, Japanese, Hindi and Arabic.
 
-### Option 1 · Web version — nothing to install
+### Try it without worry
 
-Open the [published page](https://marcos-sa-git.github.io/Telegram-Export-Studio/), wait for the engine to load (only the first time takes a bit longer; after that it's cached), and pick your export folders. All processing runs entirely in your browser; nothing is sent to any server.
+Unless the app flags it in red, everything is reversible and as much information as possible is kept:
 
-Requires a Chromium-based browser (Chrome, Edge, Opera) because of the File System Access API.
+- **Merge** writes to a new folder: your source exports are never touched.
+- **Compact** loses no message and can be repeated with another size whenever you like.
+- **Enhance** is undone by unticking the options: the export goes back to its original HTML, identical byte for byte.
+- **Convert** only adds files. The only two exceptions are flagged in red before they run.
+- **Compact** and **Enhance** can also work on a copy, leaving the original untouched.
 
-Before merging (or creating a copy, see below) the web version analyzes the exports and, **if the result is over 4 GB**, recommends the desktop version, which is faster and more direct with large exports; you can still carry on.
+> **What to export:** a single chat from Telegram Desktop. Inside the chat, ⋮ menu → *Export chat history*, in HTML format.
+> The full account export (*Settings → Advanced → Export Telegram data*) is not supported yet ([issue #2](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/2)).
 
-**Files blocked by Chrome.** As each file is written, Safe Browsing (Chrome's protection) may consider it suspicious and refuse to save it into the folder. This tends to happen with executables (`.apk`, `.exe`…) or uncommon files, such as some `.tgs` animated stickers, and they're often false alarms. The operation carries on with everything else, the blocked files are listed in a collapsible panel and, once it finishes, you can download them in a **rescue ZIP** with the same folder layout. Copying its contents into the result folder puts every file in its place, with no broken links. Downloading it is your call: do it if you trust the content. The desktop version doesn't go through Safe Browsing, so this doesn't happen there.
+## Choose how to use it
 
-Long operations can be **cancelled** from the progress card itself. While one is running, don't reload or close the tab or the browser: the operation would be cut off halfway (the browser asks you to confirm if you try).
+| Version | Requirements | Best for |
+|---|---|---|
+| **Web** | Desktop Chrome, Edge or Opera | Trying it without installing anything |
+| **`TelegramExportStudio-vX.Y.Z.exe`** | Windows | Large exports, without installing Python |
+| **`Telegram Export Studio vX.Y.Z.pyw`** | Windows and Python 3.10+ | The same, without antivirus warnings |
+| **`telegram_export_studio_aio_vX.Y.Z.py`** | Any OS and Python 3.10+ | macOS or Linux, or using the command line |
 
-**Compact and enhance** let you choose the result: **modify the original** (fast, only rewrites the `messages*.html` files) or **create a full copy** of the export with the change applied, leaving the original untouched. On the web the copy goes into a new subfolder (`<export>_compacted`, `_enhanced` or `_restored`) of the folder you pick (with the same rescue ZIP if Chrome blocks anything); in the desktop version you give the copy's path, which must not exist or must be empty.
+The three desktop versions are the same app: they open the interface in your browser, served from your own computer (`127.0.0.1`). Download them from [Releases](https://github.com/Marcos-SA-git/Telegram-Export-Studio/releases/latest).
 
-The **Converter** (HTML ↔ JSON, see [`convert`](#convert--convert-between-html-and-json-the-uis-converter)) is on the web too, with the same auto-detection and modes as on desktop. It always works inside the export folder itself, since the result references the media by relative path; it only reads and writes the `messages*.html` pages, the `result*.json` files and, when generating the HTML view, the `css/`, `js/` and `images/` assets: media is never touched.
+### Web
 
-### Option 2 · Desktop app — a single file, no code involved
+Open the [published page](https://marcos-sa-git.github.io/Telegram-Export-Studio/), wait for the engine to load and pick your folders. The first load takes a bit longer; after that it is cached and even works offline.
 
-The simplest option if you don't want anything programming-related. Download one of these files from the [releases page](https://github.com/Marcos-SA-git/Telegram-Export-Studio/releases/latest) and you're done:
+Processing happens in your browser: the same Python engine compiled to WebAssembly (Pyodide). If the result will exceed 4 GB, the web suggests the desktop version, which is faster; you can continue anyway.
 
-- **`TelegramExportStudio-vX.Y.Z.exe`** (Windows, no Python required): double-click and go. The most convenient option if you don't want to install anything else.
-  > Being an unsigned `.exe`, your antivirus or Windows SmartScreen may flag it the first time you run it. This is a common false positive with this kind of executable; if you'd rather avoid it, use the `.pyw` option below.
-- **`Telegram Export Studio vX.Y.Z.pyw`** (Windows, requires Python 3.10+): double-click and the interface opens in your browser, with no terminal window. You need [Python](https://www.python.org/downloads/) installed, with the *"Add to PATH"* checkbox ticked during installation.
-- **`telegram_export_studio_aio_vX.Y.Z.py`** (any operating system, requires Python 3.10+): the same app as a single `.py` file. Run it from a terminal:
+### Desktop
 
-  ```bash
-  python telegram_export_studio_aio_vX.Y.Z.py
-  ```
+- **`.exe`**: double-click. Since it isn't signed, SmartScreen or your antivirus may warn the first time; it's a common false positive. To avoid it, use the `.pyw`.
+- **`.pyw`**: double-click, no terminal window. Needs [Python](https://www.python.org/downloads/) installed with *Add to PATH* ticked.
+- **`.py`**: `python telegram_export_studio_aio_vX.Y.Z.py` (`python3` on macOS and Linux). With subcommands it also works as a command-line tool: see the [CLI reference](docs/CLI.en.md).
 
-  This opens the graphical interface in your browser (on `localhost`, without leaving your machine). On Windows you can also use `py telegram_export_studio_aio_vX.Y.Z.py`; on macOS/Linux, `python3 telegram_export_studio_aio_vX.Y.Z.py`.
+To close the app, use the power button (top right): closing the tab doesn't stop it. Otherwise it closes by itself after an hour without activity, never during an operation.
 
-  > `X.Y.Z` is whatever version you download (it's in the filename itself, in the code's header, in the startup message, and in the interface's footer — see [VERSIONING.md](VERSIONING.md)). `--version` prints it on its own and exits.
+## How each function works
 
-  If you'd rather use the command line instead of the graphical interface, the same file accepts subcommands:
+### Merge
 
-  ```bash
-  python telegram_export_studio_aio_vX.Y.Z.py fuse export1 export2 -o merged
-  python telegram_export_studio_aio_vX.Y.Z.py compact merged --files 1
-  python telegram_export_studio_aio_vX.Y.Z.py enhance merged --me "Your Name"
-  python telegram_export_studio_aio_vX.Y.Z.py enhance merged --restore
-  python telegram_export_studio_aio_vX.Y.Z.py convert merged
-  ```
+Add two or more folders of the same chat; the app warns you if they look like different chats. The result is written to a new folder, `ChatExport_fused`, with the page size you choose. Media repeated across exports is copied only once.
 
-In the desktop app, merging and copies (when compacting, enhancing or restoring onto a copy) can be **cancelled** from the progress card; the half-written result is removed if the output folder was empty, and the source exports are never touched. Operations that modify the export itself can't be cancelled, since stopping halfway would leave it inconsistent. To close the app use the shutdown button (top right): closing the tab doesn't stop it. Otherwise it closes itself after **one hour without activity**, but never while an operation is running.
+### Compact
 
-The interface is available in Spanish, English, French, German, Portuguese, Italian, Russian, Chinese, Japanese, Hindi, and Arabic (with right-to-left layout).
+Choose how many pages you want, or how big each one should be. Only the `messages*.html` pages are rewritten; photos, videos and audio are untouched.
 
-## CLI reference
+### Enhance
 
-If you prefer the command line over the graphical interface, here are the four available commands (with `telegram_export_studio_aio_vX.Y.Z.py <command> ...`, or the matching standalone module — see the table in the "For developers" section).
+Each enhancement is turned on separately: bubbles and chat background (with who you are and the message layout), full width, reply quotes, light/dark mode, inline media and a final note with instructions.
 
-### `fuse` — merge several exports into one
+If you pick an export that is already enhanced, the app detects what it has applied and colors each option:
 
-```bash
-python telegram_export_studio_aio_vX.Y.Z.py fuse export1 export2 [export3 …] -o output_folder [-s SIZE] [-f]
-```
+| Color | Meaning |
+|---|---|
+| 🟢 Green | Applied |
+| 🔴 Red | Applied, but you unticked it: it will be removed |
+| 🔵 Blue | Not applied, but you ticked it: it will be added |
+| ⚪ Grey | Neither applied nor ticked |
 
-- `export1 export2 …` (required): Telegram export folders to merge, each containing its `messages.html`. You can pass two or more.
-- `-o, --output FOLDER`: folder where the merged result is written. Defaults to `ChatExport_merged`.
-- `-s, --page-size SIZE`: approximate size of each output `messagesN.html` page, e.g. `500KB` or `1MB`; `0` produces a single, unpaginated file. Defaults to `500KB`.
-- `-f, --force`: merges anyway even if the exports look like they belong to different chats (e.g. mismatching titles). Without this flag, the program stops and warns you, to avoid accidentally mixing up chats.
+The button follows what you're about to do: *Enhance export*, *Un-enhance* or *Change enhancements*. If you untick everything, the export goes back to its original HTML. If there's nothing to do, the button stays disabled and the app explains why.
 
-### `compact` — reduce the number of pages of an already-merged export
+### Convert (HTML ↔ JSON)
 
-```bash
-python telegram_export_studio_aio_vX.Y.Z.py compact folder [--files N | --size SIZE]
-```
+The app detects what the folder holds and offers the right operation:
 
-- `folder` (required): the export folder you want to re-paginate (contains the `messages*.html` files).
-- `-f, --files N`: maximum number of output pages. Defaults to `1` (everything in a single `messages.html`).
-- `-s, --size SIZE`: instead of a page count, set an approximate page size, e.g. `5MB`.
-- `--files` and `--size` are mutually exclusive: use one or the other, never both at once.
+| The folder has | What it does | What it writes |
+|---|---|---|
+| Only HTML | Converts to JSON | `result.json` |
+| Only JSON | Generates the HTML view | `messages*.html` and `css/`, `js/`, `images/` |
+| HTML and JSON | Enriches the official JSON with the HTML's extra data | `result_enriched.json` |
+| Only an enriched JSON | Generates the HTML view, or downgrades it to the official format | The same as above, or `result.json` |
 
-This operation rewrites the `messages*.html` files in place; it doesn't touch photos, videos, or audio. (The option to create a copy instead of modifying the original is in the graphical interface, web and desktop.)
+- **Enriched** (default): Telegram's official schema plus data that format doesn't cover, such as call status or file names.
+- ⚠️ **Official format** and **downgrade to official format** are destructive: they drop that extra data. The official format also deletes the HTML pages and `css/`, `js/`, `images/`, so the folder looks like a real JSON export.
+- It never overwrites a `result.json` the tool didn't generate itself.
+- Media isn't copied: it's linked by relative path. That's why the result is always written inside the export folder.
 
-### `enhance` — apply (or revert) the enhanced view
+The exact JSON fields are in the [CLI reference](docs/CLI.en.md#convert--convert-between-html-and-json).
 
-```bash
-python telegram_export_studio_aio_vX.Y.Z.py enhance folder [--me "Your Name"] [--layout both|chat|original] [--no-bubbles] [--no-quotes] [--no-theme] [--no-media] [--no-note] [--no-fullwidth] [--restore]
-```
+### Long operations
 
-- `folder` (required): the export folder to enhance (contains the `messages*.html` files).
-- `--me "Your Name"`: your name exactly as it appears in the exported chat. Required if you use the `chat` layout, so the program knows which messages are yours and places them on the right.
-- `--layout {both,chat,original}`: visual layout. `chat` shows your messages on the right like the Telegram app; `original` keeps the full-width layout as exported by Telegram; `both` (default) adds a toggle to switch between the two without reprocessing anything.
-- `--no-bubbles`: disables bubbles and the chat background.
-- `--no-quotes`: disables reply quotes (the quoted snippet shown when replying to a message).
-- `--no-theme`: disables the light/dark mode toggle.
-- `--no-media`: disables inline video/audio playback and the photo viewer.
-- `--no-note`: skips the final note with instructions that the enhancer adds to the export.
-- `--no-fullwidth`: keeps the message column centered instead of filling the whole screen.
-- `--restore`: undoes all applied enhancements and returns the export to its exact original HTML, with no data loss. Not meant to be combined with the other flags.
+- Merging and any operation on a copy can be **cancelled**; the half-done result is removed (on desktop, if the destination folder was empty when it started).
+- Operations that modify the export itself can't be cancelled, because stopping halfway would leave it inconsistent.
+- On the web, don't close or reload the tab while an operation is running.
 
-### `convert` — convert between HTML and JSON (the UI's "Converter")
+## Privacy
 
-```bash
-python telegram_export_studio_aio_vX.Y.Z.py convert folder                 # auto-detects
-python telegram_export_studio_aio_vX.Y.Z.py convert folder --to-json [--faithful] [-o output.json] [--indent N | --compact]
-python telegram_export_studio_aio_vX.Y.Z.py convert folder --to-html [--page-size SIZE] [--force]
-python telegram_export_studio_aio_vX.Y.Z.py convert folder --enrich [-o output.json]
-python telegram_export_studio_aio_vX.Y.Z.py convert folder --downgrade [-o output.json]
-```
+- **There is no server.** The desktop version only listens on your own computer (`127.0.0.1`) and the web runs Python inside your browser.
+- **Open source and auditable.** All the processing is Python modules that only use the standard library, with no external dependencies.
 
-- `folder` (required): the export folder. Without flags, what it contains is detected automatically: HTML → converted to JSON; JSON, or just a `result_enriched.json` → the HTML view is generated; **HTML + JSON at once → it stops with a warning** (the only useful operation in that case is `--enrich`).
+## Known limitations
 
-**HTML → JSON** (`--to-json`, works on raw, merged, compacted and/or enhanced exports):
-- By default it produces the **enriched** mode: [Telegram Desktop's official JSON export schema](https://core.telegram.org/import-export) plus extra fields the official format doesn't cover (call status/direction texts, file names, generator mark) so nothing from the HTML is lost.
-- `--faithful`: **official format** mode — official keys only. It is **destructive**: those extra fields are dropped AND the `messages*.html` pages and web assets (`css/`, `js/`, `images/`) are **deleted** from the folder, so it ends up matching a real Telegram JSON export exactly (the UI shows a permanent warning banner).
-- The JSON follows the official schema: `id`, `type`, ISO 8601 `date` and `date_unixtime`, `from`, `text` and `text_entities` (`plain`/`link`/`text_link`/`bold`/`italic`/`custom_emoji`…), `reply_to_message_id`, `forwarded_from`, `reactions`, the media (`photo`, or `file` + `media_type` + `duration_seconds` + `thumbnail`), and phone calls as service messages with `action: phone_call`, `actor`, `duration_seconds` and `discard_reason`. Fields the HTML doesn't contain cannot be recovered (`from_id`, edit dates, media sizes and `mime_type`).
-- `-o` (defaults to `result.json` in the folder), `--indent N` / `--compact` as usual. With `-o` the original folder is left untouched (even in `--faithful` mode): the page/asset deletion only happens when the result is written into the export folder itself.
-
-**JSON → HTML** (`--to-html`): regenerates the browsable `messages*.html` pages in the same folder from the `result.json` (official or generated by this tool) — or from `result_enriched.json` if that's all there is —, including the web structure (`css/`, `js/`, `images/`) the JSON export doesn't ship — it is embedded in the script itself. `--force` allows overwriting existing pages.
-
-**Both formats at once** (`--enrich`): combines the best of both — the official `result.json` (which holds data the HTML lacks: `from_id`, edits, sizes…) gets enriched with the extra fields recoverable from the HTML, written to `result_enriched.json` **without touching either original**.
-
-**Enriched JSON only** (`--downgrade`): when the folder no longer has the HTML or the official `result.json` (e.g. they were deleted by hand), this strips the fields and mark enrichment added, leaving a `result.json` matching Telegram's official format. It is **destructive**: that extra data (call direction/status, file names…) is lost and can't be recovered without the original HTML.
-
-**Media files are never copied**: they are referenced by relative path (`photos/…`, `video_files/…`), which both export layouts share. For that same reason the result is written **inside the export folder itself** (saving it elsewhere would break those relative paths); if you want the JSON somewhere else, use `-o` knowing the media references won't resolve from there.
-
-**Overwrite protection**: `--to-json`, `--enrich` and `--downgrade` refuse to overwrite a `result.json` / `result_enriched.json` this tool did not generate (detected via the `generated_by` / `enriched_by` mark), and `--to-html` never overwrites existing `messages*.html` pages without `--force`. Telegram's original exports are never touched by accident.
-
-## Compatibility
-
-- Enhanced exports can still be merged and compacted (and vice versa), in any order. "Un-enhancing" (`--restore`) returns the exact original HTML, with no data loss.
-- `.ogg` voice notes don't play in Safari (due to the Opus codec); they play fine in Chrome, Firefox, and Edge.
-- The web app requires a Chromium-based browser; the desktop app works with any modern browser.
+- **Browsers:** the web needs desktop Chrome, Edge or Opera (File System Access API). On Firefox or Safari, use the desktop version, which works with any modern browser.
+- **Files blocked by Chrome (web):** Safe Browsing may refuse to save a file it considers suspicious, such as executables or some `.tgs` stickers; they are often false alarms. The operation continues, and when it finishes you can download those files in a **rescue ZIP** to copy into the result folder. The desktop version doesn't go through Safe Browsing.
+- **Voice notes in Safari:** `.ogg` files (Opus codec) don't play in Safari; they do in Chrome, Firefox and Edge.
+- **Exports enhanced before 2.0.0:** those versions didn't keep the title of audio files sent as files, so un-enhancing them shows "Audio file". Exports enhanced with 2.0.0 or later are restored exactly.
 
 ### Mobile
 
-- **Android**: the web version works in Chrome for Android (tested on Android 14) thanks to its File System Access API support. However, **the process is noticeably slow — several seconds per file, even for the handful of fixed assets bundled with every export (CSS, icons), not just photos or videos**. This isn't a bug in the app: Android's storage provider (the Storage Access Framework) serves file operations essentially serially, with a fixed per-operation cost that neither the browser nor this tool can work around. For exports with more than a handful of files, **using a computer is recommended** even for small chats.
-- **iOS / iPadOS**: not tested. Per WebKit's own documentation, Safari (and therefore every browser on iOS, all of which are WebKit-based) doesn't implement the File System Access API's directory-picker methods (`showDirectoryPicker`) — only the *Origin Private File System*, which doesn't fit this use case. Apple hasn't announced plans to add this support. The web version will most likely **not load at all** on iOS, rather than simply being slow.
-- A native Android app that can access the filesystem more directly and in parallel, sidestepping this limitation, is on the roadmap — see the [tracking issue](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/4).
+- **Android:** the web works in Chrome, but it's very slow (several seconds per file) because of how Android grants access to files. Using a computer is recommended. A native app is on the roadmap ([issue #4](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/4)).
+- **iOS and iPadOS:** untested. Safari doesn't let a web page pick folders, so it most likely won't load.
 
-## For developers
+## More documentation
 
-The project is written as five independent Python modules, each with a single responsibility and usable on its own from the command line:
-
-| Script | What it does |
-|---|---|
-| `telegram_export_fuser.py` | Merges several exports into one: deduplicates by message id, re-paginates Telegram-style, and copies the media. `python telegram_export_fuser.py export1 export2 [export3 …] -o output_folder [--page-size 500KB\|1MB\|0] [-f]` |
-| `telegram_export_compactor.py` | Re-paginates an already-merged history without touching the media. `python telegram_export_compactor.py folder [--files N \| --size 5MB]` |
-| `telegram_export_enhancer.py` | Applies (or reverts) the enhanced view. `python telegram_export_enhancer.py folder [--me "Your Name"] [--layout both\|chat\|original] [--restore]` |
-| `telegram_export_converter.py` | Converts between HTML and JSON (both directions, auto-detected), enriches the official JSON with the HTML's data, and downgrades an enriched JSON back to the official format. `python telegram_export_converter.py folder [--to-json [--faithful] \| --to-html \| --enrich \| --downgrade]` |
-| `telegram_export_studio.py` | Local graphical interface on top of the modules above: starts a server on `127.0.0.1` and opens the browser. |
-
-The files in `releases/` (`telegram_export_studio_aio_vX.Y.Z.py`, `.pyw`, `.exe`, versioned in the filename — see [VERSIONING.md](VERSIONING.md)) are **generated artifacts**, not source code: they're produced by `build_aio.py`, which concatenates the five modules into a single self-contained file. They are never hand-edited — the file itself says so in its header. After changing anything in the modules, re-run:
-
-```bash
-python build_aio.py
-```
-
-The web version has its own generator, `build_pages.py`, which reuses the same four engine modules — fuser, compactor, enhancer and converter — (without `telegram_export_studio.py`, since there's no server in the browser). A GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) runs it automatically on every push that touches a module, the `web/` folder or `telegram_export_version.py`, and publishes the result to GitHub Pages — no manual "publish" step needed.
-
-### `tools/` — maintenance utilities
-
-`tools/pack_assets.py` regenerates the `ASSETS_BLOB` embedded in `telegram_export_converter.py`: the web structure (`css/`, `js/`, `images/`) that `--to-html` writes alongside the `messages*.html` it rebuilds, since the JSON export doesn't ship it. You only need to run it if Telegram changes those static assets in a future Desktop version, using any recent HTML export as the source:
-
-```bash
-python tools/pack_assets.py "html_export_folder"
-```
-
-`tools/make_safe_sample.py` creates a content-free copy of an export, so you can attach a real case to a bug report without handing over the conversation:
-
-```bash
-python tools/make_safe_sample.py "export_folder" --scrub-filenames
-```
-
-It replaces every message body with the word `mensaje`, empties all media files to 0 bytes while keeping their name and extension, pseudonymises names to `Persona N` (real senders) and `Reenviado N` (authors of forwarded messages) — including where they appear in reactions, replies and mentions — and points external URLs at `example.invalid`. It deliberately keeps message ids, dates, ordering and the forwarding structure, which is usually the thing being debugged.
-
-Use `--scrub-filenames` unless you specifically need the original names: files sent through Telegram often carry text written by the user. Telegram's own assets (`css/`, `js/`, `images/`) are copied intact, as they hold no personal data.
-
-With `--report-only` it writes nothing and just prints how many real senders and how many forwarded-message authors the export has — the quick way to check whether a private chat is being counted as a group:
-
-```bash
-python tools/make_safe_sample.py "export_folder" --report-only
-```
-
-Always review the result before sharing it.
-
-### Debug mode
-
-Both interfaces have a hidden diagnostic mode, meant for investigating problems (errors, performance, files the browser refuses…) without having to instrument the code by hand:
-
-- **Web** (`web/app.html`): add `?debug=1` to the URL. Opens a log panel with its own space — a right-hand column on wide screens, a bottom strip on narrow ones and on phones — so it never covers the app; it can be minimised to its title bar. It logs: engine startup (timings, Pyodide version), every inspected export (messages, pages, chat type — no people's names), the pre-scan (files, estimated size), every prompt shown and the option picked, the start, duration and end of every job (done, failed or cancelled), pages read and written, the media copy (blocked files with the exact error, slow files, the parallelism picked for copying) and the rescue ZIP (files, size, time spent in Chrome's verification), every warning and message shown to the user, the full trace of Python and JavaScript errors (the interface only shows the last line), and uncaught errors. The panel only auto-scrolls while you're at the bottom of the log, and has a "Copy" button to dump everything to the clipboard. The log contains folder and file names: review it before sharing. The flag is off by default and has zero effect on anyone not using it — it's safe to leave in the code published to GitHub Pages.
-- **Desktop / AIO** (`telegram_export_studio.py`): an icon button next to the shutdown button (top right). Turning it on makes every job write to its log (the "Show full log" disclosure in the interface): which operation starts and with what parameters (no people's names), each stage's timing (start, duration and, while there's measurable progress, % complete and ETA), a summary of the copy when compacting or enhancing onto a copy, every warning, cancellations (when requested, how long the job ran and whether the half-written result was removed), the total duration and, if it fails, the full error trace. The setting is remembered across sessions (`localStorage`).
+- [CLI reference](docs/CLI.en.md): every command and option.
+- [For developers](docs/DEVELOPMENT.en.md): modules, builds, the web version, tools and debug mode.
+- [Versioning](VERSIONING.md) (in Spanish) and [what's new in each version](https://github.com/Marcos-SA-git/Telegram-Export-Studio/releases).
 
 ## License
 
-[Apache License 2.0](LICENSE) — open source, commercial use permitted, with an explicit patent grant.
+[Apache License 2.0](LICENSE): open source, commercial use allowed, with an explicit patent grant.

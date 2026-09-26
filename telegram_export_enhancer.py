@@ -26,6 +26,7 @@ Usage:
 """
 
 import argparse
+import base64
 import json
 import re
 import sys
@@ -64,22 +65,41 @@ QUOTE_LIVE_RE = re.compile(
 QUOTE_DEAD_RE = re.compile(
     r'<div class="reply_to details"><span class="reply_quote rq_dead"'
     r'(?: data-mid="(\d+)")?>.*?</span></div>', re.DOTALL)
+# data-orig: the original Telegram markup, base64, restored verbatim (players
+# written before it existed are rebuilt from the other attributes instead,
+# which loses the audio title and the original whitespace)
 TG_VIDEO_RE = re.compile(
     r'<div class="video_file_wrap clearfix pull_left tg_video"'
-    r'(?: data-duration="([^"]*)")?>'
+    r'(?: data-duration="([^"]*)")?(?: data-orig="([^"]*)")?>'
     r'<video class="video_file" controls preload="metadata" '
     r'poster="([^"]+)"( style="[^"]*")?><source src="([^"]+)"/></video>'
     r'</div>')
 TG_AUDIO_RE = re.compile(
     r'<div class="media clearfix pull_left (tg_voice|tg_audio)"'
-    r'(?: data-status="([^"]*)")?>.*?<audio controls preload="metadata" '
-    r'src="([^"]+)"></audio></div>', re.DOTALL)
+    r'(?: data-status="([^"]*)")?(?: data-orig="([^"]*)")?>.*?'
+    r'<audio controls preload="metadata" src="([^"]+)"></audio></div>',
+    re.DOTALL)
 
-NOTE_RE = re.compile(r'\n*<div class="tg_enhanced_note">.*?<!--/tg_note-->',
+# the note is always inserted as "\n" + NOTE_HTML: removing exactly that
+# newline (not every one before it) gives the original page back
+NOTE_RE = re.compile(r'\n?<div class="tg_enhanced_note">.*?<!--/tg_note-->',
                      re.DOTALL)
 CONFIG_RE = re.compile(r'<script id="tg-enhanced-config">.*?</script>',
                        re.DOTALL)
 FOOT_RE = re.compile(r'(\n    </div>\n\n   </div>\n\n  </div>\n\n </body>)')
+
+
+def _read_page(page: Path):
+    """Page text with "\n" line ends, plus whether the file used CRLF —
+    Telegram Desktop on Windows writes CRLF, and restore() must give the
+    exact bytes back whatever platform (or the browser) it runs on."""
+    raw = page.read_bytes().decode("utf-8")
+    return raw.replace("\r\n", "\n"), "\r\n" in raw
+
+
+def _write_page(page: Path, html: str, crlf: bool):
+    page.write_text(html.replace("\n", "\r\n") if crlf else html,
+                    encoding="utf-8", newline="")
 
 
 def sorted_pages(export_dir: Path):
@@ -174,10 +194,20 @@ def revert_quotes(block: str) -> str:
     return QUOTE_DEAD_RE.sub(dead, block)
 
 
+def _orig_attr(markup: str) -> str:
+    return f' data-orig="{base64.b64encode(markup.encode("utf-8")).decode()}"'
+
+
+def _orig_markup(b64: str) -> str:
+    return base64.b64decode(b64).decode("utf-8")
+
+
 def revert_media(block: str) -> str:
     def video(m):
-        dur, poster, style, src = (m.group(1), m.group(2),
-                                   m.group(3) or "", m.group(4))
+        if m.group(2):
+            return _orig_markup(m.group(2))
+        dur, poster, style, src = (m.group(1), m.group(3),
+                                   m.group(4) or "", m.group(5))
         dur_div = (f'<div class="video_duration">\n{dur}\n</div>'
                    if dur else "")
         return (f'<a class="video_file_wrap clearfix pull_left" '
@@ -186,7 +216,9 @@ def revert_media(block: str) -> str:
                 f'<img class="video_file" src="{poster}"{style}/></a>')
 
     def audio(m):
-        css, status, src = m.group(1), m.group(2), m.group(3)
+        if m.group(3):
+            return _orig_markup(m.group(3))
+        css, status, src = m.group(1), m.group(2), m.group(4)
         kind = ("media_voice_message" if css == "tg_voice"
                 else "media_audio_file")
         title = "Voice message" if css == "tg_voice" else "Audio file"
@@ -232,7 +264,7 @@ def apply_media(block):
         dm = DURATION_RE.search(m.group(0))
         dur = f' data-duration="{dm.group(1).strip()}"' if dm else ""
         return (f'<div class="video_file_wrap clearfix pull_left tg_video"'
-                f'{dur}><video class="video_file" controls '
+                f'{dur}{_orig_attr(m.group(0))}><video class="video_file" controls '
                 f'preload="metadata" poster="{thumb}"{style}>'
                 f'<source src="{href}"/></video></div>')
 
@@ -243,7 +275,8 @@ def apply_media(block):
                  else "🎵 Audio")
         sm = STATUS_RE.search(m.group(0))
         status = f' data-status="{sm.group(1).strip()}"' if sm else ""
-        return (f'<div class="media clearfix pull_left {css}"{status}>'
+        return (f'<div class="media clearfix pull_left {css}"{status}'
+                f'{_orig_attr(m.group(0))}>'
                 f'<div class="tg_media_label">{label}</div>'
                 f'<audio controls preload="metadata" src="{href}"></audio>'
                 f'</div>')
@@ -291,7 +324,7 @@ def enhance(export_dir, me=None, layout="both", features=None,
 
     for pi, page in enumerate(pages):
         report_stage("enhance", frac=pi / len(pages), name=page.name)
-        html = page.read_text(encoding="utf-8")
+        html, crlf = _read_page(page)
         if title is None:
             tm = re.search(r'<div class="text bold">\s*\n(.*?)\n', html)
             title = tm.group(1).strip() if tm else ""
@@ -342,9 +375,9 @@ def enhance(export_dir, me=None, layout="both", features=None,
                 html = FOOT_RE.sub("\n" + NOTE_HTML + r"\1", html, count=1)
             else:
                 html = html.replace("</body>",
-                                    NOTE_HTML + "\n</body>", 1)
+                                    "\n" + NOTE_HTML + "</body>", 1)
 
-        page.write_text(html, encoding="utf-8")
+        _write_page(page, html, crlf)
 
     (d / "css").mkdir(exist_ok=True)
     (d / "js").mkdir(exist_ok=True)
@@ -365,6 +398,28 @@ def enhance(export_dir, me=None, layout="both", features=None,
     }
 
 
+def read_config(html: str):
+    """Options an enhanced page was built with, from its injected
+    tg-enhanced-config script -> {"me", "layout", "fullwidth", "features"},
+    or None when the page carries no (readable) config. Lets a UI show
+    which enhancements an export already has."""
+    m = CONFIG_RE.search(html)
+    jm = m and re.search(r"window\.TG_ENHANCED = (\{.*\});</script>",
+                         m.group(0), re.DOTALL)
+    if not jm:
+        return None
+    try:
+        cfg = json.loads(jm.group(1))
+    except json.JSONDecodeError:
+        return None
+    feats = {k: True for k in ALL_FEATURES}
+    feats.update({k: bool(v) for k, v in (cfg.get("features") or {}).items()
+                  if k in feats})
+    return {"me": cfg.get("me"), "layout": cfg.get("layout") or "both",
+            "fullwidth": cfg.get("fullwidth") is not False,
+            "features": feats}
+
+
 def restore(export_dir):
     """Undo every enhancement: revert quotes and inline media to the
     original Telegram markup, drop the 'out' tagging, remove the injected
@@ -378,7 +433,7 @@ def restore(export_dir):
     n_msgs = 0
     for pi, page in enumerate(pages):
         report_stage("restore", frac=pi / len(pages), name=page.name)
-        html = page.read_text(encoding="utf-8")
+        html, crlf = _read_page(page)
 
         out_parts = []
         pos = 0
@@ -401,9 +456,11 @@ def restore(export_dir):
         html = html.replace(
             '\n<link href="css/enhanced.css" rel="stylesheet"/>', "")
         html = CONFIG_RE.sub("", html)
+        # the injection added the script plus a newline before </head>
+        html = html.replace('\n<script src="js/enhanced.js"></script>\n', "", 1)
         html = html.replace('\n<script src="js/enhanced.js"></script>', "")
         html = NOTE_RE.sub("", html)
-        page.write_text(html, encoding="utf-8")
+        _write_page(page, html, crlf)
 
     for asset in (d / "css" / "enhanced.css", d / "js" / "enhanced.js"):
         if asset.is_file():

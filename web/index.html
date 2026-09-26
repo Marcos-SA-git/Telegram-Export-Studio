@@ -103,6 +103,13 @@ select.lang { appearance: none; font: inherit; font-size: 13px; font-weight: 600
 .trio h3 { font-size: 15px; margin-bottom: 6px; }
 .trio p { font-size: 13.5px; color: var(--muted); }
 .trio .emoji { font-size: 28px; display: block; margin-bottom: 10px; }
+/* "try it without worry": most operations can be undone */
+.card.safe { display: flex; gap: 18px; align-items: flex-start; margin-bottom: 30px;
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ok) 28%, transparent); }
+.card.safe .emoji { font-size: 30px; line-height: 1; flex: none; }
+.card.safe h3 { font-size: 15.5px; margin-bottom: 6px; }
+.card.safe p { font-size: 13.5px; color: var(--muted); }
 
 /* steps */
 .steps { margin: 10px 0 40px; }
@@ -136,6 +143,7 @@ footer a { color: var(--primary-strong); }
   <p class="tagline" data-i18n="tagline"></p>
   <div class="badges">
     <span class="badge2 green" data-i18n="badge_local"></span>
+    <span class="badge2 green" data-i18n="badge_safe"></span>
     <span class="badge2" data-i18n="badge_oss"></span>
     <span class="badge2" data-i18n="badge_free"></span>
   </div>
@@ -162,6 +170,7 @@ footer a { color: var(--primary-strong); }
     <div class="card"><span class="emoji">📂</span><h3 data-i18n="p3_t"></h3><p data-i18n="p3_d"></p></div>
   </div>
 
+  <div class="card safe"><span class="emoji">🛟</span><div><h3 data-i18n="safe_t"></h3><p data-i18n="safe_d"></p></div></div>
   <div class="section-h" data-i18n="how_h"></div>
   <div class="steps">
     <div class="card"><div class="num">1</div><div><b data-i18n="s1_t"></b><p data-i18n="s1_d"></p></div></div>
@@ -196,13 +205,16 @@ es: {
   p3_d: "Eliges qué carpetas puede leer y escribir mediante el diálogo estándar del navegador (File System Access API). Nada se sube a ningún sitio.",
   how_h: "Cómo funciona",
   s1_t: "Exporta tus chats desde Telegram Desktop",
-  s1_d: "Ajustes → Avanzado → Exportar datos de Telegram, en formato HTML. Hazlo tantas veces como quieras a lo largo del tiempo.",
+  s1_d: "Dentro del chat que quieras, menú ⋮ (arriba a la derecha) → Exportar historial del chat, en formato HTML. Ojo: no uses «Exportar datos de Telegram» de los Ajustes, que exporta toda la cuenta y todavía no está soportado. Puedes exportar el mismo chat tantas veces como quieras a lo largo del tiempo.",
   s2_t: "Abre la app y elige tus carpetas",
   s2_d: "Fusiona varios exports del mismo chat sin duplicados, compacta las páginas o mejora la visualización (burbujas, citas, modo oscuro, vídeo y audio en línea). Todo reversible.",
   s3_t: "El resultado se guarda directamente en tu disco",
   s3_d: "Sin subir nada y sin descargas intermedias: la app escribe en la carpeta que tú elijas, con tu permiso explícito.",
   footer_1: "Telegram Export Studio · sin servidores, sin cuentas, sin telemetría · ",
-  footer_src: "código fuente"
+  footer_src: "código fuente",
+  badge_safe: "↺ Reversible",
+  safe_t: "Prueba sin miedo",
+  safe_d: "Casi todo lo que hace la app se puede deshacer, y siempre procura conservar toda la información posible: la fusión no toca tus exports originales, las mejoras se pueden quitar cuando quieras, compactar no pierde ningún mensaje y la conversión solo añade archivos. Las pocas acciones sin vuelta atrás se avisan en rojo antes de ejecutarlas, y si prefieres ir sobre seguro puedes trabajar sobre una copia.",
 },
 en: {
   tagline: "Merge several exports of a Telegram chat into one, compact its pages and make it look like a real chat. Right in your browser.",
@@ -219,13 +231,16 @@ en: {
   p3_d: "You choose which folders it may read and write via the browser's standard dialog (File System Access API). Nothing is uploaded anywhere.",
   how_h: "How it works",
   s1_t: "Export your chats from Telegram Desktop",
-  s1_d: "Settings → Advanced → Export Telegram data, in HTML format. Do it as many times as you want over time.",
+  s1_d: "Inside the chat you want, open the ⋮ menu (top right) → Export chat history, in HTML format. Note: don't use “Export Telegram data” in Settings, which exports the whole account and isn't supported yet. You can export the same chat as many times as you like over time.",
   s2_t: "Open the app and pick your folders",
   s2_d: "Merge several exports of the same chat without duplicates, compact the pages or enhance the viewing experience (bubbles, quotes, dark mode, inline video and audio). All reversible.",
   s3_t: "The result is saved straight to your disk",
   s3_d: "No uploads and no intermediate downloads: the app writes into the folder you choose, with your explicit permission.",
   footer_1: "Telegram Export Studio · no servers, no accounts, no telemetry · ",
-  footer_src: "source code"
+  footer_src: "source code",
+  badge_safe: "↺ Reversible",
+  safe_t: "Try it without worry",
+  safe_d: "Almost everything the app does can be undone, and it always tries to keep as much information as possible: merging never touches your original exports, enhancements can be removed at any time, compacting loses no message and converting only adds files. The few actions with no way back are flagged in red before they run, and if you'd rather play it safe you can work on a copy.",
 },
 fr: {
   tagline: "Fusionnez plusieurs exports d'un chat Telegram en un seul, compactez ses pages et donnez-lui l'apparence d'un vrai chat. Directement dans votre navigateur.",
@@ -242,16 +257,19 @@ fr: {
   p3_d: "Vous choisissez quels dossiers elle peut lire et écrire via le dialogue standard du navigateur (File System Access API). Rien n'est téléversé nulle part.",
   how_h: "Comment ça marche",
   s1_t: "Exportez vos chats depuis Telegram Desktop",
-  s1_d: "Paramètres → Avancé → Exporter les données Telegram, au format HTML. Faites-le autant de fois que vous voulez au fil du temps.",
+  s1_d: "Dans le chat voulu, menu ⋮ (en haut à droite) → Exporter l'historique du chat, au format HTML. Attention : n'utilisez pas « Exporter les données Telegram » dans les Paramètres, qui exporte tout le compte et n'est pas encore pris en charge. Vous pouvez exporter le même chat autant de fois que vous le souhaitez au fil du temps.",
   s2_t: "Ouvrez l'app et choisissez vos dossiers",
   s2_d: "Fusionnez plusieurs exports du même chat sans doublons, compactez les pages ou améliorez l'affichage (bulles, citations, mode sombre, vidéo et audio intégrés). Tout est réversible.",
   s3_t: "Le résultat est enregistré directement sur votre disque",
   s3_d: "Aucun envoi ni téléchargement intermédiaire : l'app écrit dans le dossier que vous choisissez, avec votre permission explicite.",
   footer_1: "Telegram Export Studio · sans serveurs, sans comptes, sans télémétrie · ",
-  footer_src: "code source"
+  footer_src: "code source",
+  badge_safe: "↺ Réversible",
+  safe_t: "Essayez sans crainte",
+  safe_d: "Presque tout ce que fait l'app peut être annulé, et elle cherche toujours à conserver le maximum d'informations : la fusion ne touche jamais vos exports d'origine, les améliorations peuvent être retirées à tout moment, le compactage ne perd aucun message et la conversion ne fait qu'ajouter des fichiers. Les rares actions irréversibles sont signalées en rouge avant leur exécution, et si vous préférez jouer la sécurité, vous pouvez travailler sur une copie.",
 },
 de: {
-  tagline: "Führe mehrere Exporte eines Telegram-Chats zu einem zusammen, verdichte die Seiten und lass ihn wie einen echten Chat aussehen. Direkt in deinem Browser.",
+  tagline: "Führe mehrere Exporte eines Telegram-Chats zu einem zusammen, kompaktiere die Seiten und lass ihn wie einen echten Chat aussehen. Direkt in deinem Browser.",
   badge_local: "✓ 100 % lokal — nichts verlässt dein Gerät",
   badge_oss: "Open Source", badge_free: "Kostenlos, ohne Konto",
   cta_use: "App verwenden",
@@ -265,13 +283,16 @@ de: {
   p3_d: "Du wählst über den Standard-Dialog des Browsers (File System Access API), welche Ordner sie lesen und schreiben darf. Nichts wird irgendwohin hochgeladen.",
   how_h: "So funktioniert es",
   s1_t: "Exportiere deine Chats aus Telegram Desktop",
-  s1_d: "Einstellungen → Erweitert → Telegram-Daten exportieren, im HTML-Format. Mach das so oft du willst im Laufe der Zeit.",
+  s1_d: "Im gewünschten Chat das ⋮-Menü (oben rechts) → Chatverlauf exportieren, im HTML-Format. Achtung: Nutze nicht „Telegram-Daten exportieren“ in den Einstellungen – das exportiert das ganze Konto und wird noch nicht unterstützt. Du kannst denselben Chat im Lauf der Zeit beliebig oft exportieren.",
   s2_t: "Öffne die App und wähle deine Ordner",
-  s2_d: "Führe mehrere Exporte desselben Chats ohne Duplikate zusammen, verdichte die Seiten oder verbessere die Ansicht (Blasen, Zitate, Dunkelmodus, Video und Audio inline). Alles umkehrbar.",
+  s2_d: "Führe mehrere Exporte desselben Chats ohne Duplikate zusammen, kompaktiere die Seiten oder verbessere die Ansicht (Blasen, Zitate, Dunkelmodus, Video und Audio inline). Alles umkehrbar.",
   s3_t: "Das Ergebnis wird direkt auf deiner Festplatte gespeichert",
   s3_d: "Keine Uploads, keine Zwischendownloads: Die App schreibt in den Ordner deiner Wahl, mit deiner ausdrücklichen Erlaubnis.",
   footer_1: "Telegram Export Studio · keine Server, keine Konten, keine Telemetrie · ",
-  footer_src: "Quellcode"
+  footer_src: "Quellcode",
+  badge_safe: "↺ Umkehrbar",
+  safe_t: "Probier es ohne Sorge aus",
+  safe_d: "Fast alles, was die App tut, lässt sich rückgängig machen, und sie bewahrt stets so viele Informationen wie möglich: Das Zusammenführen berührt deine Original-Exporte nie, Verbesserungen lassen sich jederzeit wieder entfernen, beim Kompaktieren geht keine Nachricht verloren und die Konvertierung fügt nur Dateien hinzu. Die wenigen Aktionen ohne Rückweg werden vor dem Ausführen rot gewarnt, und wenn du auf Nummer sicher gehen willst, arbeitest du mit einer Kopie.",
 },
 pt: {
   tagline: "Mescle várias exportações de um chat do Telegram em uma só, compacte suas páginas e dê a ele a aparência de um chat de verdade. Direto no seu navegador.",
@@ -288,13 +309,16 @@ pt: {
   p3_d: "Você escolhe quais pastas ele pode ler e gravar pelo diálogo padrão do navegador (File System Access API). Nada é enviado a lugar nenhum.",
   how_h: "Como funciona",
   s1_t: "Exporte seus chats do Telegram Desktop",
-  s1_d: "Configurações → Avançado → Exportar dados do Telegram, em formato HTML. Faça isso quantas vezes quiser ao longo do tempo.",
+  s1_d: "Dentro do chat desejado, menu ⋮ (no canto superior direito) → Exportar histórico do chat, em formato HTML. Atenção: não use «Exportar dados do Telegram» nas Configurações, que exporta a conta inteira e ainda não é suportado. Você pode exportar o mesmo chat quantas vezes quiser ao longo do tempo.",
   s2_t: "Abra o app e escolha suas pastas",
   s2_d: "Mescle várias exportações do mesmo chat sem duplicados, compacte as páginas ou melhore a visualização (balões, citações, modo escuro, vídeo e áudio embutidos). Tudo reversível.",
   s3_t: "O resultado é salvo direto no seu disco",
   s3_d: "Sem uploads e sem downloads intermediários: o app grava na pasta que você escolher, com sua permissão explícita.",
   footer_1: "Telegram Export Studio · sem servidores, sem contas, sem telemetria · ",
-  footer_src: "código-fonte"
+  footer_src: "código-fonte",
+  badge_safe: "↺ Reversível",
+  safe_t: "Experimente sem medo",
+  safe_d: "Quase tudo o que o app faz pode ser desfeito, e ele sempre procura preservar o máximo de informação possível: a mesclagem nunca toca nos seus exports originais, as melhorias podem ser removidas quando quiser, compactar não perde nenhuma mensagem e a conversão só adiciona arquivos. As poucas ações sem volta são avisadas em vermelho antes de executar, e se preferir ir pelo seguro, pode trabalhar sobre uma cópia.",
 },
 it: {
   tagline: "Unisci più export di una chat di Telegram in uno solo, compatta le pagine e dagli l'aspetto di una chat vera. Direttamente nel tuo browser.",
@@ -311,13 +335,16 @@ it: {
   p3_d: "Scegli tu quali cartelle può leggere e scrivere tramite il dialogo standard del browser (File System Access API). Nulla viene caricato da nessuna parte.",
   how_h: "Come funziona",
   s1_t: "Esporta le tue chat da Telegram Desktop",
-  s1_d: "Impostazioni → Avanzate → Esporta i dati di Telegram, in formato HTML. Fallo tutte le volte che vuoi nel tempo.",
+  s1_d: "Nella chat che vuoi, menu ⋮ (in alto a destra) → Esporta cronologia chat, in formato HTML. Attenzione: non usare «Esporta dati di Telegram» nelle Impostazioni, che esporta l'intero account e non è ancora supportato. Puoi esportare la stessa chat tutte le volte che vuoi nel tempo.",
   s2_t: "Apri l'app e scegli le tue cartelle",
   s2_d: "Unisci più export della stessa chat senza duplicati, compatta le pagine o migliora la visualizzazione (bolle, citazioni, modalità scura, video e audio integrati). Tutto reversibile.",
   s3_t: "Il risultato viene salvato direttamente sul tuo disco",
   s3_d: "Nessun upload e nessun download intermedio: l'app scrive nella cartella che scegli, con il tuo permesso esplicito.",
   footer_1: "Telegram Export Studio · niente server, niente account, niente telemetria · ",
-  footer_src: "codice sorgente"
+  footer_src: "codice sorgente",
+  badge_safe: "↺ Reversibile",
+  safe_t: "Provala senza paura",
+  safe_d: "Quasi tutto ciò che fa l'app si può annullare, e cerca sempre di conservare quante più informazioni possibile: l'unione non tocca mai i tuoi export originali, i miglioramenti si possono rimuovere quando vuoi, la compattazione non perde nessun messaggio e la conversione aggiunge solo file. Le poche azioni senza ritorno sono segnalate in rosso prima di eseguirle, e se preferisci andare sul sicuro puoi lavorare su una copia.",
 },
 ru: {
   tagline: "Объединяйте несколько экспортов одного чата Telegram в один, сжимайте страницы и придавайте ему вид настоящего чата. Прямо в браузере.",
@@ -334,13 +361,16 @@ ru: {
   p3_d: "Вы сами выбираете, какие папки оно может читать и записывать, через стандартный диалог браузера (File System Access API). Ничего никуда не загружается.",
   how_h: "Как это работает",
   s1_t: "Экспортируйте чаты из Telegram Desktop",
-  s1_d: "Настройки → Продвинутые настройки → Экспорт данных Telegram, в формате HTML. Делайте это сколько угодно раз.",
+  s1_d: "В нужном чате откройте меню ⋮ (вверху справа) → Экспорт истории чата, в формате HTML. Внимание: не используйте «Экспорт данных из Telegram» в Настройках — он выгружает весь аккаунт и пока не поддерживается. Один и тот же чат можно экспортировать сколько угодно раз.",
   s2_t: "Откройте приложение и выберите папки",
   s2_d: "Объединяйте несколько экспортов одного чата без дубликатов, сжимайте страницы или улучшайте отображение (пузыри, цитаты, тёмная тема, встроенные видео и аудио). Всё обратимо.",
   s3_t: "Результат сохраняется прямо на ваш диск",
   s3_d: "Без загрузок на сервер и промежуточных скачиваний: приложение пишет в выбранную вами папку с вашего явного разрешения.",
   footer_1: "Telegram Export Studio · без серверов, без аккаунтов, без телеметрии · ",
-  footer_src: "исходный код"
+  footer_src: "исходный код",
+  badge_safe: "↺ Обратимо",
+  safe_t: "Пробуйте без опасений",
+  safe_d: "Почти всё, что делает приложение, можно отменить, и оно всегда старается сохранить как можно больше информации: объединение не трогает исходные экспорты, улучшения можно убрать в любой момент, уплотнение не теряет ни одного сообщения, а конвертация только добавляет файлы. Немногие необратимые действия помечаются красным до запуска, а если хотите действовать наверняка, можно работать с копией.",
 },
 zh: {
   tagline: "把同一个 Telegram 聊天的多次导出合并为一个，压缩页面，并让它看起来像真正的聊天界面。直接在浏览器中完成。",
@@ -357,13 +387,16 @@ zh: {
   p3_d: "你通过浏览器的标准对话框（File System Access API）决定它能读写哪些文件夹。任何内容都不会被上传。",
   how_h: "工作原理",
   s1_t: "从 Telegram Desktop 导出聊天",
-  s1_d: "设置 → 高级 → 导出 Telegram 数据，选择 HTML 格式。可以随时多次导出。",
+  s1_d: "在想要的聊天中打开 ⋮ 菜单（右上角）→ 导出聊天记录，格式选 HTML。注意：不要使用设置中的「导出 Telegram 数据」，它会导出整个账号，目前尚不支持。同一个聊天可以随时多次导出。",
   s2_t: "打开应用并选择文件夹",
   s2_d: "合并同一聊天的多次导出且不产生重复，压缩页面，或美化显示（气泡、引用、暗黑模式、内嵌视频和音频）。全部可逆。",
   s3_t: "结果直接保存到你的磁盘",
   s3_d: "无上传、无中间下载：应用在你明确授权后写入你选择的文件夹。",
   footer_1: "Telegram Export Studio · 无服务器、无账号、无遥测 · ",
-  footer_src: "源代码"
+  footer_src: "源代码",
+  badge_safe: "↺ 可撤销",
+  safe_t: "放心尝试",
+  safe_d: "应用的几乎所有操作都可以撤销，并始终尽可能保留全部信息：合并绝不会改动你的原始导出，美化随时可以移除，压缩不会丢失任何消息，转换只会添加文件。少数无法撤销的操作会在执行前以红色警告；如果想更稳妥，也可以在副本上操作。",
 },
 ja: {
   tagline: "Telegram チャットの複数のエクスポートを 1 つに結合し、ページを圧縮して、本物のチャットのような見た目に。ブラウザ内で直接。",
@@ -380,13 +413,16 @@ ja: {
   p3_d: "ブラウザの標準ダイアログ（File System Access API)で、読み書きできるフォルダをあなたが選びます。何もアップロードされません。",
   how_h: "使い方",
   s1_t: "Telegram Desktop からチャットをエクスポート",
-  s1_d: "設定 → 高度な設定 → Telegram データのエクスポート、HTML 形式で。時間をおいて何度でもエクスポートできます。",
+  s1_d: "対象のチャットで ⋮ メニュー（右上）→ チャット履歴をエクスポート を選び、HTML 形式で書き出します。注意：設定の「Telegram データをエクスポート」はアカウント全体を書き出すもので、まだ対応していません。同じチャットは何度でもエクスポートできます。",
   s2_t: "アプリを開いてフォルダを選択",
   s2_d: "同じチャットの複数のエクスポートを重複なしで結合、ページを圧縮、または表示を強化(吹き出し、引用、ダークモード、動画・音声のインライン再生)。すべて元に戻せます。",
   s3_t: "結果はディスクに直接保存",
   s3_d: "アップロードも中間ダウンロードもなし:あなたの明示的な許可のもと、選んだフォルダに書き込みます。",
   footer_1: "Telegram Export Studio · サーバーなし・アカウントなし・テレメトリーなし · ",
-  footer_src: "ソースコード"
+  footer_src: "ソースコード",
+  badge_safe: "↺ 元に戻せる",
+  safe_t: "安心して試せます",
+  safe_d: "アプリの操作はほぼすべて元に戻せ、常にできる限り多くの情報を保持します。結合は元のエクスポートに一切触れず、改善はいつでも解除でき、圧縮でメッセージが失われることはなく、変換はファイルを追加するだけです。元に戻せない数少ない操作は実行前に赤で警告され、念のためコピー上で作業することもできます。",
 },
 hi: {
   tagline: "एक Telegram चैट के कई एक्सपोर्ट को एक में मिलाएँ, पेज संक्षिप्त करें और उसे असली चैट जैसा रूप दें। सीधे आपके ब्राउज़र में।",
@@ -403,13 +439,16 @@ hi: {
   p3_d: "ब्राउज़र के मानक डायलॉग (File System Access API) से आप तय करते हैं कि यह कौन से फ़ोल्डर पढ़-लिख सकता है। कुछ भी कहीं अपलोड नहीं होता।",
   how_h: "यह कैसे काम करता है",
   s1_t: "Telegram Desktop से अपनी चैट एक्सपोर्ट करें",
-  s1_d: "सेटिंग्स → उन्नत → Telegram डेटा एक्सपोर्ट करें, HTML प्रारूप में। समय के साथ जितनी बार चाहें करें।",
+  s1_d: "जिस चैट को चाहें उसके अंदर ⋮ मेन्यू (ऊपर दाईं ओर) → चैट इतिहास एक्सपोर्ट करें, HTML फ़ॉर्मैट में। ध्यान दें: सेटिंग्स में «Telegram डेटा एक्सपोर्ट करें» का उपयोग न करें — वह पूरा अकाउंट एक्सपोर्ट करता है और अभी समर्थित नहीं है। आप एक ही चैट को समय के साथ जितनी बार चाहें एक्सपोर्ट कर सकते हैं।",
   s2_t: "ऐप खोलें और अपने फ़ोल्डर चुनें",
   s2_d: "एक ही चैट के कई एक्सपोर्ट बिना दोहराव मिलाएँ, पेज संक्षिप्त करें या दिखावट बेहतर बनाएँ (बबल, उद्धरण, डार्क मोड, इनलाइन वीडियो-ऑडियो)। सब कुछ उलटा किया जा सकता है।",
   s3_t: "नतीजा सीधे आपकी डिस्क पर सहेजा जाता है",
   s3_d: "कोई अपलोड नहीं, कोई बीच का डाउनलोड नहीं: ऐप आपकी स्पष्ट अनुमति से आपके चुने फ़ोल्डर में लिखता है।",
   footer_1: "Telegram Export Studio · न सर्वर, न खाते, न टेलीमेट्री · ",
-  footer_src: "सोर्स कोड"
+  footer_src: "सोर्स कोड",
+  badge_safe: "↺ वापस किया जा सकता है",
+  safe_t: "बेझिझक आज़माएँ",
+  safe_d: "ऐप जो कुछ भी करता है, उसमें से लगभग सब वापस किया जा सकता है, और यह हमेशा जितनी हो सके उतनी जानकारी सुरक्षित रखने की कोशिश करता है: मर्ज आपके मूल एक्सपोर्ट को कभी नहीं छूता, सुधार जब चाहें हटाए जा सकते हैं, कॉम्पैक्ट करने से कोई संदेश नहीं खोता और कन्वर्ज़न केवल फ़ाइलें जोड़ता है। जिन गिने-चुने कामों को वापस नहीं किया जा सकता, उनके लिए चलाने से पहले लाल रंग में चेतावनी दी जाती है, और अगर आप पूरी तरह सुरक्षित रहना चाहें तो किसी कॉपी पर काम कर सकते हैं।",
 },
 ar: {
   tagline: "ادمج عدة تصديرات لمحادثة تيليجرام في تصدير واحد، وضغّط صفحاتها وأعطها مظهر محادثة حقيقية. مباشرة في متصفحك.",
@@ -426,13 +465,16 @@ ar: {
   p3_d: "أنت تختار المجلدات التي يمكنه قراءتها والكتابة فيها عبر حوار المتصفح القياسي (File System Access API). لا يُرفع أي شيء إلى أي مكان.",
   how_h: "كيف يعمل",
   s1_t: "صدّر محادثاتك من Telegram Desktop",
-  s1_d: "الإعدادات → متقدم → تصدير بيانات تيليجرام، بصيغة HTML. افعل ذلك كلما شئت مع مرور الوقت.",
+  s1_d: "داخل المحادثة التي تريدها افتح القائمة ⋮ (أعلى اليمين) ← تصدير سجل المحادثة، بصيغة HTML. تنبيه: لا تستخدم «تصدير بيانات تيليجرام» من الإعدادات، فهو يصدّر الحساب كاملًا وغير مدعوم بعد. يمكنك تصدير المحادثة نفسها كلما شئت مع مرور الوقت.",
   s2_t: "افتح التطبيق واختر مجلداتك",
   s2_d: "ادمج عدة تصديرات للمحادثة نفسها دون تكرار، وضغّط الصفحات أو حسّن العرض (فقاعات، اقتباسات، وضع داكن، فيديو وصوت مدمجان). كل شيء قابل للتراجع.",
   s3_t: "تُحفظ النتيجة مباشرة على قرصك",
   s3_d: "بدون رفع ولا تنزيلات وسيطة: يكتب التطبيق في المجلد الذي تختاره، بإذنك الصريح.",
   footer_1: "Telegram Export Studio · بلا خوادم، بلا حسابات، بلا قياس عن بُعد · ",
-  footer_src: "الشيفرة المصدرية"
+  footer_src: "الشيفرة المصدرية",
+  badge_safe: "↺ قابل للتراجع",
+  safe_t: "جرّب دون خوف",
+  safe_d: "يمكن التراجع عن كل ما يفعله التطبيق تقريبًا، وهو يحرص دائمًا على الاحتفاظ بأكبر قدر ممكن من المعلومات: الدمج لا يلمس تصديراتك الأصلية أبدًا، والتحسينات يمكن إزالتها متى شئت، والضغط لا يُضيع أي رسالة، والتحويل يضيف ملفات فقط. الإجراءات القليلة التي لا رجعة فيها يظهر لها تحذير باللون الأحمر قبل تنفيذها، وإن فضّلت الحذر يمكنك العمل على نسخة.",
 }
 };
 let LANG = localStorage.getItem("tgxweb-lang");

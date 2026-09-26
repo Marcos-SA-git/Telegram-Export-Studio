@@ -36,7 +36,7 @@ from telegram_export_fuser import (
     parse_size, report_stage,
 )
 from telegram_export_compactor import compact
-from telegram_export_enhancer import enhance, restore
+from telegram_export_enhancer import ALL_FEATURES, enhance, read_config, restore
 from telegram_export_converter import (
     detect_formats, downgrade_json, enrich_json, from_json, load_chat, to_json,
 )
@@ -420,6 +420,14 @@ def inspect_export(path: str) -> dict:
     media_bytes = sum(
         f.stat().st_size for f in d.rglob("*")
         if f.is_file() and f.suffix != ".html")
+    head = pages[0].read_text(encoding="utf-8")
+    enhanced = "css/enhanced.css" in head[:4000]
+    # which enhancements it already has, so the UI can show them applied;
+    # a page enhanced before the config was written counts as "all on"
+    config = read_config(head) if enhanced else None
+    if enhanced and config is None:
+        config = {"me": None, "layout": "both", "fullwidth": True,
+                  "features": {k: True for k in ALL_FEATURES}}
     INSPECTED_PARENTS.add(str(d.parent))
     return {
         "path": str(d),
@@ -433,8 +441,8 @@ def inspect_export(path: str) -> dict:
         "senders": [{"name": n, "count": c}
                     for n, c in senders.most_common()],
         "kind": "group" if len(senders) > 2 else "private",
-        "enhanced": 'css/enhanced.css' in
-                    pages[0].read_text(encoding="utf-8")[:4000],
+        "enhanced": enhanced,
+        "config": config,
     }
 
 
@@ -939,6 +947,48 @@ select.unit { flex: none; width: 84px; cursor: pointer; }
 .warn-item svg { width: 17px; height: 17px; fill: var(--warn); flex: none;
   margin-top: 1px; }
 .warn-item span { word-break: break-all; }
+/* enhance: each option shown against what the export already has */
+.st-tag { display: none; flex: none; font-size: 11.5px; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.st-keep .st-tag, .st-remove .st-tag, .st-add .st-tag { display: inline-block; }
+.st-keep .st-tag { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.st-remove .st-tag { color: var(--err); background: color-mix(in srgb, var(--err) 14%, transparent); }
+.st-add .st-tag { color: var(--primary-strong); background: var(--primary-soft); }
+.st-keep .switch input:checked + i { background: var(--ok); border-color: var(--ok); }
+.st-remove .switch i { border-color: var(--err);
+  background: color-mix(in srgb, var(--err) 14%, transparent); }
+.st-remove .switch i::after { background: var(--err); }
+.chip.applied::after { content: " ✓"; color: var(--ok); }
+.field select.invalid { border-color: var(--err); }
+.linkbtn { appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13px; font-weight: 600; color: var(--err); padding: 6px 0 0; }
+.linkbtn:hover { text-decoration: underline; }
+#enhance-why { margin: 10px 4px 0; }
+.tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.tabs button { white-space: nowrap; }
+/* tabs that don't fit scroll sideways; a fade on the clipped edge(s)
+   shows there is more (see updateTabsFade) */
+.tabs.fade-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+.tabs.fade-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+.tabs.fade-start.fade-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+[dir=rtl] .tabs.fade-end { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+[dir=rtl] .tabs.fade-start { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+/* reassurance strip under the tabs: what is (and isn't) reversible in the
+   current tab; destructive options stay flagged in red where they live */
+.safe-note { display: flex; gap: 12px; align-items: flex-start;
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ok) 28%, transparent);
+  border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;
+  font-size: 13px; color: var(--muted); }
+.safe-note svg { width: 20px; height: 20px; fill: var(--ok); flex: none; margin-top: 1px; }
+.safe-note b { display: block; color: var(--on); font-weight: 600; font-size: 13.5px;
+  margin-bottom: 2px; }
 /* permanent destructive-mode banner (converter, faithful mode) */
 .warn-item.danger {
   background: color-mix(in srgb, var(--err) 12%, transparent);
@@ -1115,6 +1165,10 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
   <button data-view="enhance" data-i18n="tab_enhance"></button>
   <button data-view="convert" data-i18n="tab_convert"></button>
 </div>
+<div class="safe-note" id="safe-note">
+  <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+  <div><b data-i18n="safe_title"></b><span id="safe-note-text"></span></div>
+</div>
 
 <!-- ================= FUSE ================= -->
 <section id="view-fuse">
@@ -1240,6 +1294,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
           <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </div>
+      <div class="hint" id="ei-state" style="display:none"></div>
     </div>
   </div>
 
@@ -1283,6 +1338,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
       <div class="sw-txt"><b data-i18n="feat_note"></b><span data-i18n="feat_note_d"></span></div>
       <label class="switch"><input type="checkbox" id="opt-note" checked><i></i></label>
     </div>
+    <button class="linkbtn" id="enh-clear-all" style="display:none" onclick="clearAllEnhancements()" data-i18n="enh_clear_all"></button>
     <div class="hint" data-i18n="enhance_hint"></div>
   </div>
 
@@ -1304,13 +1360,10 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
   <div class="action-row">
     <button class="btn filled" id="enhance-btn" onclick="runEnhance()" disabled>
       <svg viewBox="0 0 24 24"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7zM19 2l.9 2.1L22 5l-2.1.9L19 8l-.9-2.1L16 5l2.1-.9z"/></svg>
-      <span data-i18n="enhance_btn"></span>
-    </button>
-    <button class="btn danger-tonal" id="restore-btn" onclick="runRestore()" style="display:none">
-      <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.9 3.9L8.8 12H6a7 7 0 1 1 2.1 5l-1.4 1.4A9 9 0 1 0 13 3z"/></svg>
-      <span data-i18n="restore_btn"></span>
+      <span id="enhance-btn-label"></span>
     </button>
   </div>
+  <p class="hint" id="enhance-why" style="display:none"></p>
 </section>
 
 <!-- ================= CONVERT ================= -->
@@ -1463,7 +1516,6 @@ es: {
   srclink: "Código abierto · ver en GitHub",
   inplace_hint: "Se repagina en el sitio: solo se reescriben los messages*.html; fotos, vídeos y audios no se tocan.",
   dest_h: "Resultado", dest_inplace: "Modificar el original", dest_copy: "Crear una copia",
-  dest_inplace_hint: "Se modifica el propio export (puedes revertirlo después con «Desmejorar»).",
   dest_copy_hint: "Se crea una copia completa del export, con toda su media, en la carpeta indicada (que debe no existir o estar vacía), y el cambio se aplica solo a la copia. El original no se toca.",
   pick_copy_parent: "Elige dónde crear la copia",
   snack_need_copy_out: "Indica la carpeta donde crear la copia",
@@ -1484,7 +1536,6 @@ es: {
   enhance_hint: "Burbujas estilo Telegram, citas de respuesta, tema claro/oscuro, vídeos y audios reproducibles y fotos en visor. Compatible: podrás seguir fusionando y compactando este export después.",
   enhance_btn: "Mejorar export",
   need_me: "Elige quién eres tú para el modo chat",
-  already_enhanced: "Este export ya estaba mejorado; se actualizará",
   item_sub: "{msgs} mensajes · {pages} página(s) · media {media}",
   item_more: "+{n} más",
   job_fusing: "Fusionando exports…", job_compacting: "Compactando export…",
@@ -1579,7 +1630,22 @@ es: {
   res_enriched: "{msgs} mensajes · {n} campos añadidos desde el HTML",
   pick_convert: "Elige la carpeta del export a convertir",
   open_json: "Abrir JSON",
-  footer: "Telegram Export Studio · se ejecuta íntegramente en tu equipo"
+  footer: "Telegram Export Studio · se ejecuta íntegramente en tu equipo",
+  safe_title: "Salvo que se avise en rojo, todo es reversible y se conserva toda la información posible.",
+  safe_fuse: "Tus exports de origen nunca se modifican: el resultado se escribe en otra carpeta.",
+  safe_compact: "No se pierde ningún mensaje: solo cambia cómo se reparten en páginas, y puedes volver a compactar con otra medida cuando quieras. Con «Crear una copia» el original queda intacto.",
+  safe_enhance: "Totalmente reversible: al desmarcar las mejoras el export vuelve a su HTML original exacto, sin pérdidas.",
+  safe_convert: "Solo añade archivos junto a los que ya tienes y nunca sobrescribe un export oficial de Telegram. Las dos únicas opciones destructivas se avisan en rojo antes de ejecutarlas.",
+  st_keep: "Aplicada",
+  st_remove: "Se quitará",
+  st_add: "Se añadirá",
+  change_btn: "Cambiar mejoras",
+  enh_detected: "Este export ya está mejorado: lo que tiene aplicado aparece en verde. Marca o desmarca opciones para cambiarlo.",
+  enh_why_nochange: "No hay nada que hacer: el export ya tiene exactamente estas mejoras. Marca o desmarca alguna opción para cambiarlas.",
+  enh_why_none: "No hay nada que hacer: activa al menos una opción para mejorar el export.",
+  enh_clear_all: "Quitar todas las mejoras",
+  enh_inplace_hint: "Se modifica el propio export. Es reversible: siempre podrás volver al diseño original desmarcando las mejoras.",
+  enh_inplace_restore_hint: "Las mejoras se quitan del propio export, que vuelve a su HTML original. Podrás aplicarlas de nuevo cuando quieras.",
 },
 en: {
   subtitle: "Merge, compact and enhance chat exports — 100% local",
@@ -1602,7 +1668,6 @@ en: {
   srclink: "Open source · view on GitHub",
   inplace_hint: "Repaginated in place: only messages*.html files are rewritten; photos, videos and audio are untouched.",
   dest_h: "Result", dest_inplace: "Modify the original", dest_copy: "Create a copy",
-  dest_inplace_hint: "The export itself is modified (you can revert it later with “Un-enhance”).",
   dest_copy_hint: "A full copy of the export, with all its media, is created in the given folder (which must not exist or must be empty), and the change is applied to the copy only. The original is left untouched.",
   pick_copy_parent: "Choose where to create the copy",
   snack_need_copy_out: "Enter the folder where the copy should be created",
@@ -1623,7 +1688,6 @@ en: {
   enhance_hint: "Telegram-style bubbles, reply quotes, light/dark theme, inline video/audio playback and a photo viewer. Compatible: you can still merge and compact this export afterwards.",
   enhance_btn: "Enhance export",
   need_me: "Choose who you are for chat mode",
-  already_enhanced: "This export was already enhanced; it will be updated",
   item_sub: "{msgs} messages · {pages} page(s) · media {media}",
   item_more: "+{n} more",
   job_fusing: "Merging exports…", job_compacting: "Compacting export…",
@@ -1718,7 +1782,22 @@ en: {
   res_enriched: "{msgs} messages · {n} fields added from the HTML",
   pick_convert: "Choose the export folder to convert",
   open_json: "Open JSON",
-  footer: "Telegram Export Studio · runs entirely on your machine"
+  footer: "Telegram Export Studio · runs entirely on your machine",
+  safe_title: "Unless flagged in red, everything is reversible and as much information as possible is kept.",
+  safe_fuse: "Your source exports are never modified: the result is written to another folder.",
+  safe_compact: "No message is lost: only how they're split into pages changes, and you can compact again with another size whenever you like. With “Create a copy” the original stays untouched.",
+  safe_enhance: "Fully reversible: unticking the enhancements gives the export back its exact original HTML, losslessly.",
+  safe_convert: "It only adds files next to the ones you already have and never overwrites an official Telegram export. The only two destructive options are flagged in red before they run.",
+  st_keep: "Applied",
+  st_remove: "Will be removed",
+  st_add: "Will be added",
+  change_btn: "Change enhancements",
+  enh_detected: "This export is already enhanced: what it has applied shows in green. Tick or untick options to change it.",
+  enh_why_nochange: "Nothing to do: the export already has exactly these enhancements. Tick or untick an option to change them.",
+  enh_why_none: "Nothing to do: turn on at least one option to enhance the export.",
+  enh_clear_all: "Remove all enhancements",
+  enh_inplace_hint: "The export itself is modified. It's reversible: you can always go back to the original design by unticking the enhancements.",
+  enh_inplace_restore_hint: "The enhancements are removed from the export itself, which goes back to its original HTML. You can apply them again whenever you like.",
 },
 fr: {
   subtitle: "Fusionnez, compactez et améliorez vos exports — 100 % local",
@@ -1756,7 +1835,6 @@ fr: {
   enhance_hint: "Bulles style Telegram, citations de réponse, thème clair/sombre, lecture vidéo/audio intégrée et visionneuse photo. Compatible : vous pourrez toujours fusionner et compacter cet export ensuite.",
   enhance_btn: "Améliorer l'export",
   need_me: "Indiquez qui vous êtes pour le mode chat",
-  already_enhanced: "Cet export était déjà amélioré ; il sera mis à jour",
   item_sub: "{msgs} messages · {pages} page(s) · médias {media}",
   item_more: "+{n} de plus",
   job_fusing: "Fusion des exports…", job_compacting: "Compactage de l'export…",
@@ -1856,10 +1934,24 @@ fr: {
   dest_copy_hint: "Une copie complète de l'export, avec tous ses médias, est créée dans le dossier indiqué (qui ne doit pas exister ou doit être vide), et la modification ne s'applique qu'à la copie. L'original reste intact.",
   dest_h: "Résultat",
   dest_inplace: "Modifier l'original",
-  dest_inplace_hint: "L'export lui-même est modifié (vous pourrez l'annuler ensuite avec « Rétablir l'original »).",
   pick_copy_parent: "Choisissez où créer la copie",
   snack_need_copy_out: "Indiquez le dossier où créer la copie",
-  stage_copy: "Copie de l'export · {copied} fichiers…"
+  stage_copy: "Copie de l'export · {copied} fichiers…",
+  safe_title: "Sauf avertissement en rouge, tout est réversible et le maximum d'informations est conservé.",
+  safe_fuse: "Vos exports source ne sont jamais modifiés : le résultat est écrit dans un autre dossier.",
+  safe_compact: "Aucun message n'est perdu : seule leur répartition en pages change, et vous pouvez recompacter avec une autre taille quand vous voulez. Avec « Créer une copie », l'original reste intact.",
+  safe_enhance: "Entièrement réversible : en décochant les améliorations, l'export retrouve son HTML d'origine exact, sans perte.",
+  safe_convert: "Il ne fait qu'ajouter des fichiers à côté de ceux que vous avez déjà et n'écrase jamais un export officiel de Telegram. Les deux seules options destructives sont signalées en rouge avant leur exécution.",
+  st_keep: "Appliquée",
+  st_remove: "Sera retirée",
+  st_add: "Sera ajoutée",
+  change_btn: "Modifier les améliorations",
+  enh_detected: "Cet export est déjà amélioré : ce qui est appliqué apparaît en vert. Cochez ou décochez des options pour le modifier.",
+  enh_why_nochange: "Rien à faire : l'export a déjà exactement ces améliorations. Cochez ou décochez une option pour les modifier.",
+  enh_why_none: "Rien à faire : activez au moins une option pour améliorer l'export.",
+  enh_clear_all: "Retirer toutes les améliorations",
+  enh_inplace_hint: "L'export lui-même est modifié. C'est réversible : vous pourrez toujours revenir au design original en décochant les améliorations.",
+  enh_inplace_restore_hint: "Les améliorations sont retirées de l'export lui-même, qui retrouve son HTML d'origine. Vous pourrez les appliquer de nouveau quand vous voudrez.",
 },
 de: {
   subtitle: "Chat-Exporte zusammenführen, kompaktieren und verbessern — 100 % lokal",
@@ -1897,7 +1989,6 @@ de: {
   enhance_hint: "Telegram-Sprechblasen, Antwort-Zitate, helles/dunkles Design, eingebettete Video-/Audio-Wiedergabe und Foto-Viewer. Kompatibel: du kannst diesen Export danach weiterhin zusammenführen und kompaktieren.",
   enhance_btn: "Export verbessern",
   need_me: "Wähle für den Chat-Modus, wer du bist",
-  already_enhanced: "Dieser Export war bereits verbessert; er wird aktualisiert",
   item_sub: "{msgs} Nachrichten · {pages} Seite(n) · Medien {media}",
   item_more: "+{n} weitere",
   job_fusing: "Exporte werden zusammengeführt…", job_compacting: "Export wird kompaktiert…",
@@ -1997,10 +2088,24 @@ de: {
   dest_copy_hint: "Im angegebenen Ordner (der nicht existieren oder leer sein muss) wird eine vollständige Kopie des Exports mit allen Medien erstellt, und die Änderung wird nur auf die Kopie angewendet. Das Original bleibt unverändert.",
   dest_h: "Ergebnis",
   dest_inplace: "Original ändern",
-  dest_inplace_hint: "Der Export selbst wird verändert (du kannst das später mit „Zurücksetzen“ rückgängig machen).",
   pick_copy_parent: "Wähle, wo die Kopie erstellt werden soll",
   snack_need_copy_out: "Gib den Ordner an, in dem die Kopie erstellt werden soll",
-  stage_copy: "Export wird kopiert · {copied} Dateien…"
+  stage_copy: "Export wird kopiert · {copied} Dateien…",
+  safe_title: "Sofern nicht rot gewarnt, ist alles umkehrbar und es bleiben so viele Informationen wie möglich erhalten.",
+  safe_fuse: "Deine Quell-Exporte werden nie verändert: Das Ergebnis wird in einen anderen Ordner geschrieben.",
+  safe_compact: "Keine Nachricht geht verloren: Nur die Aufteilung auf Seiten ändert sich, und du kannst jederzeit mit einer anderen Größe neu kompaktieren. Mit „Kopie erstellen“ bleibt das Original unverändert.",
+  safe_enhance: "Vollständig umkehrbar: Wählst du die Verbesserungen ab, erhält der Export sein exaktes Original-HTML verlustfrei zurück.",
+  safe_convert: "Es fügt nur Dateien neben den vorhandenen hinzu und überschreibt nie einen offiziellen Telegram-Export. Die einzigen zwei destruktiven Optionen werden vor dem Ausführen rot gewarnt.",
+  st_keep: "Aktiv",
+  st_remove: "Wird entfernt",
+  st_add: "Wird hinzugefügt",
+  change_btn: "Verbesserungen ändern",
+  enh_detected: "Dieser Export ist bereits verbessert: Was angewendet ist, erscheint grün. Setze oder entferne Häkchen, um es zu ändern.",
+  enh_why_nochange: "Nichts zu tun: Der Export hat bereits genau diese Verbesserungen. Setze oder entferne ein Häkchen, um sie zu ändern.",
+  enh_why_none: "Nichts zu tun: Aktiviere mindestens eine Option, um den Export zu verbessern.",
+  enh_clear_all: "Alle Verbesserungen entfernen",
+  enh_inplace_hint: "Der Export selbst wird verändert. Das ist umkehrbar: Du kannst jederzeit zum Originaldesign zurück, indem du die Verbesserungen abwählst.",
+  enh_inplace_restore_hint: "Die Verbesserungen werden aus dem Export selbst entfernt, der wieder sein Original-HTML erhält. Du kannst sie jederzeit erneut anwenden.",
 },
 pt: {
   subtitle: "Mescle, compacte e melhore exports de chats — 100% local",
@@ -2038,7 +2143,6 @@ pt: {
   enhance_hint: "Balões estilo Telegram, citações de resposta, tema claro/escuro, vídeo/áudio embutidos e visualizador de fotos. Compatível: você ainda poderá mesclar e compactar este export depois.",
   enhance_btn: "Melhorar export",
   need_me: "Escolha quem é você para o modo chat",
-  already_enhanced: "Este export já estava melhorado; será atualizado",
   item_sub: "{msgs} mensagens · {pages} página(s) · mídia {media}",
   item_more: "+{n} mais",
   job_fusing: "Mesclando exports…", job_compacting: "Compactando export…",
@@ -2077,7 +2181,7 @@ pt: {
   feat_media_d: "Vídeos e áudios reproduzíveis inline, fotos em visualizador",
   feat_note: "Mensagem final com instruções",
   feat_note_d: "Nota no fim do chat sobre como usar estas ferramentas",
-  restore_btn: "Reverter melhorias",
+  restore_btn: null,
   job_restoring: "Restaurando o design original…",
   stage_restore: "Restaurando {name}…",
   kind_group: "👥 Grupo · {n} participantes",
@@ -2138,10 +2242,24 @@ pt: {
   dest_copy_hint: "É criada uma cópia completa do export, com toda a sua mídia, na pasta indicada (que não deve existir ou deve estar vazia), e a alteração é aplicada só à cópia. O original não é tocado.",
   dest_h: "Resultado",
   dest_inplace: "Modificar o original",
-  dest_inplace_hint: "O próprio export é modificado (você pode reverter depois com “Reverter melhorias”).",
   pick_copy_parent: "Escolha onde criar a cópia",
   snack_need_copy_out: "Indique a pasta onde criar a cópia",
-  stage_copy: "Copiando o export · {copied} arquivos…"
+  stage_copy: "Copiando o export · {copied} arquivos…",
+  safe_title: "Salvo aviso em vermelho, tudo é reversível e se preserva o máximo de informação possível.",
+  safe_fuse: "Seus exports de origem nunca são modificados: o resultado é gravado em outra pasta.",
+  safe_compact: "Nenhuma mensagem se perde: muda apenas como elas se dividem em páginas, e você pode compactar de novo com outro tamanho quando quiser. Com «Criar uma cópia» o original fica intacto.",
+  safe_enhance: "Totalmente reversível: ao desmarcar as melhorias, o export volta ao seu HTML original exato, sem perdas.",
+  safe_convert: "Só adiciona arquivos ao lado dos que você já tem e nunca sobrescreve um export oficial do Telegram. As duas únicas opções destrutivas são avisadas em vermelho antes de executar.",
+  st_keep: "Aplicada",
+  st_remove: "Será removida",
+  st_add: "Será adicionada",
+  change_btn: "Alterar melhorias",
+  enh_detected: "Este export já está melhorado: o que está aplicado aparece em verde. Marque ou desmarque opções para alterá-lo.",
+  enh_why_nochange: "Nada a fazer: o export já tem exatamente estas melhorias. Marque ou desmarque alguma opção para alterá-las.",
+  enh_why_none: "Nada a fazer: ative pelo menos uma opção para melhorar o export.",
+  enh_clear_all: "Remover todas as melhorias",
+  enh_inplace_hint: "O próprio export é modificado. É reversível: você sempre poderá voltar ao design original desmarcando as melhorias.",
+  enh_inplace_restore_hint: "As melhorias são removidas do próprio export, que volta ao seu HTML original. Você poderá aplicá-las de novo quando quiser.",
 },
 it: {
   subtitle: "Unisci, compatta e migliora gli export delle chat — 100% locale",
@@ -2179,7 +2297,6 @@ it: {
   enhance_hint: "Bolle in stile Telegram, citazioni delle risposte, tema chiaro/scuro, riproduzione video/audio integrata e visualizzatore foto. Compatibile: potrai comunque unire e compattare questo export in seguito.",
   enhance_btn: "Migliora export",
   need_me: "Scegli chi sei per la modalità chat",
-  already_enhanced: "Questo export era già migliorato; verrà aggiornato",
   item_sub: "{msgs} messaggi · {pages} pagina/e · media {media}",
   item_more: "+{n} altri",
   job_fusing: "Unione degli export…", job_compacting: "Compattazione dell'export…",
@@ -2279,10 +2396,24 @@ it: {
   dest_copy_hint: "Nella cartella indicata (che non deve esistere o deve essere vuota) viene creata una copia completa dell'export, con tutti i suoi media, e la modifica si applica solo alla copia. L'originale non viene toccato.",
   dest_h: "Risultato",
   dest_inplace: "Modifica l'originale",
-  dest_inplace_hint: "Viene modificato l'export stesso (potrai annullare in seguito con «Ripristina originale»).",
   pick_copy_parent: "Scegli dove creare la copia",
   snack_need_copy_out: "Indica la cartella in cui creare la copia",
-  stage_copy: "Copia dell'export · {copied} file…"
+  stage_copy: "Copia dell'export · {copied} file…",
+  safe_title: "Salvo avviso in rosso, tutto è reversibile e si conservano quante più informazioni possibile.",
+  safe_fuse: "I tuoi export di origine non vengono mai modificati: il risultato viene scritto in un'altra cartella.",
+  safe_compact: "Nessun messaggio va perso: cambia solo come sono suddivisi in pagine, e puoi ricompattare con un'altra misura quando vuoi. Con «Crea una copia» l'originale resta intatto.",
+  safe_enhance: "Completamente reversibile: deselezionando i miglioramenti l'export torna al suo HTML originale esatto, senza perdite.",
+  safe_convert: "Aggiunge solo file accanto a quelli che hai già e non sovrascrive mai un export ufficiale di Telegram. Le uniche due opzioni distruttive sono segnalate in rosso prima di eseguirle.",
+  st_keep: "Applicata",
+  st_remove: "Verrà rimossa",
+  st_add: "Verrà aggiunta",
+  change_btn: "Modifica miglioramenti",
+  enh_detected: "Questo export è già migliorato: ciò che è applicato appare in verde. Seleziona o deseleziona le opzioni per modificarlo.",
+  enh_why_nochange: "Niente da fare: l'export ha già esattamente questi miglioramenti. Seleziona o deseleziona un'opzione per modificarli.",
+  enh_why_none: "Niente da fare: attiva almeno un'opzione per migliorare l'export.",
+  enh_clear_all: "Rimuovi tutti i miglioramenti",
+  enh_inplace_hint: "Viene modificato l'export stesso. È reversibile: potrai sempre tornare al design originale deselezionando i miglioramenti.",
+  enh_inplace_restore_hint: "I miglioramenti vengono rimossi dall'export stesso, che torna al suo HTML originale. Potrai applicarli di nuovo quando vuoi.",
 },
 ru: {
   subtitle: "Объединяйте, сжимайте и улучшайте экспорты чатов — 100% локально",
@@ -2320,7 +2451,6 @@ ru: {
   enhance_hint: "Пузыри в стиле Telegram, цитаты ответов, светлая/тёмная тема, воспроизводимые видео и аудио, просмотр фото. Совместимо: этот экспорт можно будет объединять и сжимать дальше.",
   enhance_btn: "Улучшить экспорт",
   need_me: "Укажите, кто вы, для режима диалога",
-  already_enhanced: "Этот экспорт уже был улучшен; он будет обновлён",
   item_sub: "{msgs} сообщений · {pages} страниц(ы) · медиа {media}",
   item_more: "ещё +{n}",
   job_fusing: "Объединение экспортов…", job_compacting: "Сжатие экспорта…",
@@ -2420,10 +2550,24 @@ ru: {
   dest_copy_hint: "В указанной папке (она не должна существовать или должна быть пустой) создаётся полная копия экспорта со всеми медиафайлами, и изменение применяется только к копии. Оригинал не затрагивается.",
   dest_h: "Результат",
   dest_inplace: "Изменить оригинал",
-  dest_inplace_hint: "Изменяется сам экспорт (позже это можно отменить кнопкой «Вернуть оригинал»).",
   pick_copy_parent: "Выберите, где создать копию",
   snack_need_copy_out: "Укажите папку, в которой создать копию",
-  stage_copy: "Копирование экспорта · файлов: {copied}…"
+  stage_copy: "Копирование экспорта · файлов: {copied}…",
+  safe_title: "Если нет предупреждения красным, всё обратимо и сохраняется как можно больше информации.",
+  safe_fuse: "Исходные экспорты никогда не изменяются: результат записывается в другую папку.",
+  safe_compact: "Ни одно сообщение не теряется: меняется только их разбивка на страницы, и вы в любой момент можете уплотнить заново с другим размером. С «Создать копию» оригинал остаётся нетронутым.",
+  safe_enhance: "Полностью обратимо: если снять улучшения, экспорт вернётся к точному исходному HTML без потерь.",
+  safe_convert: "Только добавляет файлы рядом с уже имеющимися и никогда не перезаписывает официальный экспорт Telegram. Единственные две разрушительные опции помечаются красным до запуска.",
+  st_keep: "Применено",
+  st_remove: "Будет убрано",
+  st_add: "Будет добавлено",
+  change_btn: "Изменить улучшения",
+  enh_detected: "Этот экспорт уже улучшен: применённое показано зелёным. Отметьте или снимите опции, чтобы изменить его.",
+  enh_why_nochange: "Делать нечего: у экспорта уже ровно эти улучшения. Отметьте или снимите какую-нибудь опцию, чтобы их изменить.",
+  enh_why_none: "Делать нечего: включите хотя бы одну опцию, чтобы улучшить экспорт.",
+  enh_clear_all: "Убрать все улучшения",
+  enh_inplace_hint: "Изменяется сам экспорт. Это обратимо: вы всегда сможете вернуть исходный вид, сняв улучшения.",
+  enh_inplace_restore_hint: "Улучшения убираются из самого экспорта, и он возвращается к исходному HTML. Вы сможете применить их снова в любой момент.",
 },
 zh: {
   subtitle: "合并、压缩并美化聊天导出 — 100% 本地运行",
@@ -2461,7 +2605,6 @@ zh: {
   enhance_hint: "Telegram 风格气泡、回复引用、明暗主题、视频音频可播放、照片查看器。完全兼容：之后仍可继续合并和压缩此导出。",
   enhance_btn: "美化导出",
   need_me: "请选择你是谁以启用对话模式",
-  already_enhanced: "此导出已经美化过；将会更新",
   item_sub: "{msgs} 条消息 · {pages} 页 · 媒体 {media}",
   item_more: "还有 {n} 个",
   job_fusing: "正在合并导出…", job_compacting: "正在压缩导出…",
@@ -2561,10 +2704,24 @@ zh: {
   dest_copy_hint: "会在指定文件夹（该文件夹必须不存在或为空）中创建导出的完整副本（含全部媒体），更改只应用于副本。原始导出保持不变。",
   dest_h: "结果",
   dest_inplace: "修改原始导出",
-  dest_inplace_hint: "直接修改该导出本身（之后可以用“撤销美化”恢复）。",
   pick_copy_parent: "选择创建副本的位置",
   snack_need_copy_out: "请指定要创建副本的文件夹",
-  stage_copy: "正在复制导出 · {copied} 个文件…"
+  stage_copy: "正在复制导出 · {copied} 个文件…",
+  safe_title: "除非以红色警告，所有操作都可撤销，并尽可能保留全部信息。",
+  safe_fuse: "源导出永远不会被修改：结果会写入另一个文件夹。",
+  safe_compact: "不会丢失任何消息：只改变消息在页面间的划分，你随时可以用其他大小重新压缩。选择「创建副本」则原始导出保持不变。",
+  safe_enhance: "完全可撤销：取消勾选美化后，导出会无损恢复为完全相同的原始 HTML。",
+  safe_convert: "只会在现有文件旁添加文件，绝不会覆盖 Telegram 的官方导出。仅有的两个破坏性选项会在执行前以红色警告。",
+  st_keep: "已应用",
+  st_remove: "将移除",
+  st_add: "将添加",
+  change_btn: "更改美化",
+  enh_detected: "此导出已美化：已应用的内容显示为绿色。勾选或取消勾选选项即可更改。",
+  enh_why_nochange: "无需操作：此导出已经恰好具有这些美化。勾选或取消勾选某个选项即可更改。",
+  enh_why_none: "无需操作：请至少开启一个选项来美化导出。",
+  enh_clear_all: "移除全部美化",
+  enh_inplace_hint: "将直接修改导出本身。此操作可撤销：取消勾选美化即可随时恢复原始设计。",
+  enh_inplace_restore_hint: "将从导出本身移除美化，恢复其原始 HTML。你可以随时重新应用。",
 },
 ja: {
   subtitle: "チャットのエクスポートを結合・圧縮・強化 — 100% ローカル",
@@ -2602,7 +2759,6 @@ ja: {
   enhance_hint: "Telegram 風の吹き出し、返信の引用、ライト/ダークテーマ、動画と音声の再生、写真ビューア。互換性あり：このエクスポートは後からでも結合・圧縮できます。",
   enhance_btn: "エクスポートを強化",
   need_me: "会話モードにはあなたが誰かを選んでください",
-  already_enhanced: "このエクスポートは既に強化済みです。更新されます",
   item_sub: "{msgs} 件のメッセージ · {pages} ページ · メディア {media}",
   item_more: "他 {n} 件",
   job_fusing: "エクスポートを結合中…", job_compacting: "エクスポートを圧縮中…",
@@ -2702,10 +2858,24 @@ ja: {
   dest_copy_hint: "指定したフォルダー（存在しないか空である必要があります）に、すべてのメディアを含むエクスポートの完全なコピーを作成し、変更はコピーにのみ適用します。元のエクスポートには手を加えません。",
   dest_h: "結果",
   dest_inplace: "元のエクスポートを変更",
-  dest_inplace_hint: "エクスポート自体を変更します（あとで「元に戻す」で戻せます）。",
   pick_copy_parent: "コピーを作成する場所を選択",
   snack_need_copy_out: "コピーを作成するフォルダーを指定してください",
-  stage_copy: "エクスポートをコピー中 · {copied} ファイル…"
+  stage_copy: "エクスポートをコピー中 · {copied} ファイル…",
+  safe_title: "赤で警告されない限り、すべて元に戻せ、できる限り多くの情報を保持します。",
+  safe_fuse: "元のエクスポートは一切変更されません。結果は別のフォルダーに書き込まれます。",
+  safe_compact: "メッセージは失われません。ページへの分け方が変わるだけで、いつでも別のサイズで再圧縮できます。「コピーを作成」なら元のエクスポートはそのままです。",
+  safe_enhance: "完全に元に戻せます。改善のチェックを外せば、エクスポートは元の HTML に損失なく正確に戻ります。",
+  safe_convert: "既存のファイルの横にファイルを追加するだけで、Telegram の公式エクスポートを上書きすることはありません。破壊的な 2 つのオプションだけは、実行前に赤で警告されます。",
+  st_keep: "適用済み",
+  st_remove: "解除されます",
+  st_add: "追加されます",
+  change_btn: "改善を変更",
+  enh_detected: "このエクスポートはすでに改善済みです。適用中のものは緑で表示されます。オプションのチェックを付け外しして変更できます。",
+  enh_why_nochange: "何もすることがありません。エクスポートにはすでにこの改善がそのまま適用されています。変更するにはオプションのチェックを付け外ししてください。",
+  enh_why_none: "何もすることがありません。改善するにはオプションを 1 つ以上オンにしてください。",
+  enh_clear_all: "すべての改善を解除",
+  enh_inplace_hint: "エクスポート自体が変更されます。元に戻せます。改善のチェックを外せば、いつでも元のデザインに戻せます。",
+  enh_inplace_restore_hint: "エクスポート自体から改善が解除され、元の HTML に戻ります。いつでも再適用できます。",
 },
 hi: {
   subtitle: "चैट एक्सपोर्ट को मिलाएँ, संक्षिप्त करें और बेहतर बनाएँ — 100% लोकल",
@@ -2743,7 +2913,6 @@ hi: {
   enhance_hint: "Telegram जैसे बबल, जवाब के उद्धरण, लाइट/डार्क थीम, चलने वाले वीडियो-ऑडियो और फ़ोटो व्यूअर। संगत: बाद में भी इस एक्सपोर्ट को मिलाना और संक्षिप्त करना संभव रहेगा।",
   enhance_btn: "एक्सपोर्ट बेहतर बनाएँ",
   need_me: "बातचीत मोड के लिए चुनें कि आप कौन हैं",
-  already_enhanced: "यह एक्सपोर्ट पहले से बेहतर बनाया गया था; इसे अपडेट किया जाएगा",
   item_sub: "{msgs} संदेश · {pages} पेज · मीडिया {media}",
   item_more: "+{n} और",
   job_fusing: "एक्सपोर्ट मिलाए जा रहे हैं…", job_compacting: "एक्सपोर्ट संक्षिप्त हो रहा है…",
@@ -2843,10 +3012,24 @@ hi: {
   dest_copy_hint: "बताए गए फ़ोल्डर में (जो मौजूद न हो या खाली हो) एक्सपोर्ट की पूरी कॉपी उसके सभी मीडिया के साथ बनाई जाती है, और बदलाव सिर्फ़ कॉपी पर लागू होता है। मूल को छुआ नहीं जाता।",
   dest_h: "परिणाम",
   dest_inplace: "मूल को बदलें",
-  dest_inplace_hint: "एक्सपोर्ट को ही बदला जाता है (बाद में “मूल रूप लौटाएँ” से वापस कर सकते हैं)।",
   pick_copy_parent: "चुनें कि कॉपी कहाँ बनानी है",
   snack_need_copy_out: "वह फ़ोल्डर बताएँ जहाँ कॉपी बनानी है",
-  stage_copy: "एक्सपोर्ट कॉपी हो रहा है · {copied} फ़ाइलें…"
+  stage_copy: "एक्सपोर्ट कॉपी हो रहा है · {copied} फ़ाइलें…",
+  safe_title: "जब तक लाल रंग में चेतावनी न दी जाए, सब कुछ वापस किया जा सकता है और जितनी हो सके उतनी जानकारी सुरक्षित रखी जाती है।",
+  safe_fuse: "आपके स्रोत एक्सपोर्ट कभी नहीं बदले जाते: परिणाम किसी दूसरे फ़ोल्डर में लिखा जाता है।",
+  safe_compact: "कोई संदेश नहीं खोता: केवल पेजों में उनका बँटवारा बदलता है, और आप जब चाहें किसी दूसरे आकार के साथ फिर से कॉम्पैक्ट कर सकते हैं। «कॉपी बनाएँ» चुनने पर मूल एक्सपोर्ट जस का तस रहता है।",
+  safe_enhance: "पूरी तरह वापस किया जा सकता है: सुधार हटाने पर एक्सपोर्ट बिना किसी नुकसान के हूबहू अपने मूल HTML पर लौट आता है।",
+  safe_convert: "यह केवल आपकी मौजूदा फ़ाइलों के बगल में फ़ाइलें जोड़ता है और Telegram के आधिकारिक एक्सपोर्ट को कभी ओवरराइट नहीं करता। केवल दो विनाशकारी विकल्पों के लिए चलाने से पहले लाल रंग में चेतावनी दी जाती है।",
+  st_keep: "लागू",
+  st_remove: "हटाया जाएगा",
+  st_add: "जोड़ा जाएगा",
+  change_btn: "सुधार बदलें",
+  enh_detected: "यह एक्सपोर्ट पहले से बेहतर बनाया गया है: जो लागू है वह हरे रंग में दिखता है। बदलने के लिए विकल्पों को चुनें या हटाएँ।",
+  enh_why_nochange: "करने को कुछ नहीं: एक्सपोर्ट में पहले से ठीक यही सुधार हैं। इन्हें बदलने के लिए कोई विकल्प चुनें या हटाएँ।",
+  enh_why_none: "करने को कुछ नहीं: एक्सपोर्ट बेहतर बनाने के लिए कम से कम एक विकल्प चालू करें।",
+  enh_clear_all: "सभी सुधार हटाएँ",
+  enh_inplace_hint: "एक्सपोर्ट ख़ुद बदला जाता है। यह वापस किया जा सकता है: सुधारों को हटाकर आप कभी भी मूल डिज़ाइन पर लौट सकते हैं।",
+  enh_inplace_restore_hint: "सुधार एक्सपोर्ट से ही हटा दिए जाते हैं और वह अपने मूल HTML पर लौट आता है। आप जब चाहें इन्हें फिर से लागू कर सकते हैं।",
 },
 ar: {
   subtitle: "ادمج وضغّط وحسّن تصديرات المحادثات — 100% محليًا",
@@ -2884,7 +3067,6 @@ ar: {
   enhance_hint: "فقاعات بأسلوب تيليجرام، اقتباسات الردود، سمة فاتحة/داكنة، تشغيل الفيديو والصوت مباشرة وعارض للصور. متوافق: يمكنك دمج هذا التصدير وضغطه لاحقًا.",
   enhance_btn: "تحسين التصدير",
   need_me: "اختر من أنت لوضع المحادثة",
-  already_enhanced: "هذا التصدير محسَّن مسبقًا؛ سيتم تحديثه",
   item_sub: "{msgs} رسالة · {pages} صفحة · وسائط {media}",
   item_more: "+{n} أخرى",
   job_fusing: "جارٍ دمج التصديرات…", job_compacting: "جارٍ ضغط التصدير…",
@@ -2984,10 +3166,24 @@ ar: {
   dest_copy_hint: "تُنشأ في المجلد المحدد (الذي يجب ألا يكون موجودًا أو أن يكون فارغًا) نسخة كاملة من التصدير بكل وسائطه، ويُطبَّق التغيير على النسخة فقط. لا يُمَس الأصل.",
   dest_h: "النتيجة",
   dest_inplace: "تعديل الأصل",
-  dest_inplace_hint: "يُعدَّل التصدير نفسه (يمكنك التراجع لاحقًا عبر «إزالة التحسين»).",
   pick_copy_parent: "اختر مكان إنشاء النسخة",
   snack_need_copy_out: "حدِّد المجلد الذي تُنشأ فيه النسخة",
-  stage_copy: "جارٍ نسخ التصدير · {copied} ملف…"
+  stage_copy: "جارٍ نسخ التصدير · {copied} ملف…",
+  safe_title: "ما لم يظهر تحذير باللون الأحمر، فكل شيء قابل للتراجع ويُحتفظ بأكبر قدر ممكن من المعلومات.",
+  safe_fuse: "لا تُعدَّل تصديراتك المصدر أبدًا: تُكتب النتيجة في مجلد آخر.",
+  safe_compact: "لا تضيع أي رسالة: يتغير فقط توزيعها على الصفحات، ويمكنك إعادة الضغط بحجم آخر متى شئت. مع «إنشاء نسخة» يبقى الأصل كما هو.",
+  safe_enhance: "قابل للتراجع بالكامل: بإلغاء تحديد التحسينات يعود التصدير إلى ملف HTML الأصلي تمامًا دون أي فقدان.",
+  safe_convert: "يضيف ملفات فقط بجانب ما لديك ولا يستبدل أبدًا تصديرًا رسميًا من تيليجرام. الخياران المدمِّران الوحيدان يظهر لهما تحذير باللون الأحمر قبل التنفيذ.",
+  st_keep: "مطبَّق",
+  st_remove: "ستُزال",
+  st_add: "ستُضاف",
+  change_btn: "تغيير التحسينات",
+  enh_detected: "هذا التصدير محسَّن بالفعل: ما هو مطبَّق يظهر باللون الأخضر. حدِّد الخيارات أو ألغِ تحديدها لتغييره.",
+  enh_why_nochange: "لا شيء لفعله: التصدير يحتوي بالفعل على هذه التحسينات تمامًا. حدِّد خيارًا أو ألغِ تحديده لتغييرها.",
+  enh_why_none: "لا شيء لفعله: فعِّل خيارًا واحدًا على الأقل لتحسين التصدير.",
+  enh_clear_all: "إزالة كل التحسينات",
+  enh_inplace_hint: "يُعدَّل التصدير نفسه. العملية قابلة للتراجع: يمكنك دائمًا العودة إلى التصميم الأصلي بإلغاء تحديد التحسينات.",
+  enh_inplace_restore_hint: "تُزال التحسينات من التصدير نفسه فيعود إلى ملف HTML الأصلي. يمكنك تطبيقها من جديد متى شئت.",
 }
 };
 
@@ -3019,8 +3215,10 @@ function applyLang() {
   updateDestHints();
   renderExports();
   renderMeOptions();
+  updateEnhanceAction();
   if (state.compact) renderCompactInfo();
-  requestAnimationFrame(movePill);
+  updateSafeNote();
+  requestAnimationFrame(() => { movePill(); updateTabsFade(); });
 }
 $("lang").onchange = () => {
   LANG = $("lang").value;
@@ -3094,6 +3292,10 @@ async function toggleVerbose() {
 }
 
 /* =============== tabs =============== */
+function updateSafeNote() {
+  const b = document.querySelector("#tabs button.active");
+  $("safe-note-text").textContent = t("safe_" + b.dataset.view);
+}
 function movePill() {
   const btn = document.querySelector("#tabs button.active");
   const pill = $("pill");
@@ -3108,10 +3310,24 @@ document.querySelectorAll("#tabs button").forEach(b => {
     ["fuse", "compact", "enhance", "convert"].forEach(v => {
       $("view-" + v).style.display = v === state.view ? "" : "none";
     });
+    updateSafeNote();
     movePill();
+    b.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   };
 });
 window.addEventListener("resize", movePill);
+// Fades whichever edge of the tab bar hides more tabs. scrollLeft is 0 at
+// the start and grows (LTR) or goes negative (RTL) towards the end.
+function updateTabsFade() {
+  const el = $("tabs");
+  const max = el.scrollWidth - el.clientWidth;
+  const pos = Math.abs(el.scrollLeft);
+  el.classList.toggle("fade-start", max > 1 && pos > 1);
+  el.classList.toggle("fade-end", max > 1 && pos < max - 1);
+}
+$("tabs").addEventListener("scroll", updateTabsFade, { passive: true });
+window.addEventListener("resize", updateTabsFade);
+
 
 /* =============== chips =============== */
 function wireChips(chipsId, customId, onSel) {
@@ -3126,7 +3342,7 @@ function wireChips(chipsId, customId, onSel) {
 }
 wireChips("fuse-chips", "fuse-custom");
 wireChips("compact-chips", "compact-custom");
-wireChips("layout-chips", null, updateLayoutHint);
+wireChips("layout-chips", null, () => { updateLayoutHint(); updateEnhanceAction(); });
 
 /* explicaciones dinamicas: cambian con la opcion elegida */
 function updateGoalHint() {
@@ -3312,7 +3528,7 @@ function destIsCopy(kind) {
 }
 function updateDestHints() {
   $("compact-dest-hint").textContent = t(destIsCopy("compact") ? "dest_copy_hint" : "inplace_hint");
-  $("enhance-dest-hint").textContent = t(destIsCopy("enhance") ? "dest_copy_hint" : "dest_inplace_hint");
+  $("enhance-dest-hint").textContent = t(destIsCopy("enhance") ? "dest_copy_hint" : enhanceDestHint());
   for (const k of ["compact", "enhance"]) {
     $(k + "-dest-field").style.display = destIsCopy(k) ? "" : "none";
   }
@@ -3432,7 +3648,10 @@ function renderMeOptions() {
   if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
 
-function applyEnhanceState(info) {
+// refresh: re-inspection of the same export after a job — keep the options
+// the user is editing unless the export's own enhancements changed.
+function applyEnhanceState(info, refresh) {
+  const prev = state.enhance;
   state.enhance = info;
   autoFillCopyOut("enhance", info.path);
   $("ei-name").textContent = info.name + (info.title ? " — " + info.title : "");
@@ -3441,14 +3660,13 @@ function applyEnhanceState(info) {
   renderMeOptions();
   $("enhance-sel").style.display = "none";
   $("enhance-info").style.display = "";
-  $("enhance-btn").disabled = false;
-  $("restore-btn").style.display = info.enhanced ? "" : "none";
+  if (refresh && prev && prev.path === info.path
+      && JSON.stringify(prev.config) === JSON.stringify(info.config)) updateEnhanceAction();
+  else loadEnhanceOptions();
 }
 
 async function loadEnhancePath(path) {
-  const info = await api("/api/inspect", { path });
-  applyEnhanceState(info);
-  if (info.enhanced) snack(t("already_enhanced"));
+  applyEnhanceState(await api("/api/inspect", { path }));
 }
 
 async function pickEnhance() {
@@ -3462,35 +3680,134 @@ function clearEnhance() {
   state.enhance = null;
   $("enhance-sel").style.display = "";
   $("enhance-info").style.display = "none";
-  $("enhance-btn").disabled = true;
-  $("restore-btn").style.display = "none";
+  updateEnhanceAction();
 }
 
-$("opt-bubbles").onchange = () => {
-  $("bubbles-sub").classList.toggle("off", !$("opt-bubbles").checked);
-};
+function enhanceBusy() { return jobBusy; }
+/* ---- enhance options vs what the export already has ----
+ * An enhanced export records the options it was built with, so the switches
+ * start from that state and every change is shown against it:
+ *   applied + on  -> green "Applied"      not applied + on  -> blue "Will be added"
+ *   applied + off -> red "Will be removed" not applied + off -> grey
+ * The button follows the diff: only additions -> Enhance, only removals ->
+ * Un-enhance (a full restore once everything is off), both (or a new "who
+ * are you" / layout) -> Change enhancements, nothing -> disabled, saying why. */
+const ENH_OPTS = ["bubbles", "fullwidth", "quotes", "theme", "media", "note"];
+function enhConfig() {
+  return state.enhance ? state.enhance.config : null;
+}
+function enhApplied(k) {
+  const c = enhConfig();
+  if (!c) return false;
+  return k === "fullwidth" ? !!c.fullwidth : !!c.features[k];
+}
+function enhOn(k) { return $("opt-" + k).checked; }
+function enhLayout() { return $("layout-chips").querySelector(".chip.sel").dataset.layout; }
+
+// Switches, "who are you" and layout as the export has them (defaults for a
+// plain export).
+function loadEnhanceOptions() {
+  const c = enhConfig();
+  for (const k of ENH_OPTS) $("opt-" + k).checked = c ? enhApplied(k) : true;
+  const layout = c ? c.layout : "both";
+  $("layout-chips").querySelectorAll(".chip").forEach(x =>
+    x.classList.toggle("sel", x.dataset.layout === layout));
+  const sel = $("me-select");
+  sel.value = c && c.me && [...sel.options].some(o => o.value === c.me) ? c.me : "";
+  $("bubbles-sub").classList.toggle("off", !enhOn("bubbles"));
+  updateLayoutHint();
+  updateEnhanceAction();
+}
+
+// { kind: "enhance" | "restore" | null, label, why, needMe }
+function enhanceAction() {
+  if (!state.enhance) return { kind: null };
+  const c = enhConfig();
+  const added = ENH_OPTS.filter(k => enhOn(k) && !enhApplied(k));
+  const removed = ENH_OPTS.filter(k => !enhOn(k) && enhApplied(k));
+  const me = $("me-select").value, layout = enhLayout();
+  const needMe = enhOn("bubbles") && layout !== "original" && !me;
+  if (!c) {
+    if (!added.length) return { kind: null, why: "enh_why_none" };
+    if (needMe) return { kind: null, why: "need_me", needMe };
+    return { kind: "enhance", label: "enhance_btn" };
+  }
+  const retuned = enhOn("bubbles") && enhApplied("bubbles")
+    && (me !== (c.me || "") || layout !== c.layout);
+  if (!added.length && !removed.length && !retuned) return { kind: null, why: "enh_why_nochange" };
+  if (ENH_OPTS.every(k => !enhOn(k))) return { kind: "restore", label: "restore_btn" };
+  if (needMe) return { kind: null, why: "need_me", needMe };
+  const label = added.length && !removed.length && !retuned ? "enhance_btn"
+    : removed.length && !added.length && !retuned ? "restore_btn" : "change_btn";
+  return { kind: "enhance", label };
+}
+
+function updateEnhanceAction() {
+  const c = enhConfig();
+  const a = enhanceAction();
+  for (const k of ENH_OPTS) {
+    const row = $("opt-" + k).closest(".switchrow");
+    let tag = row.querySelector(".st-tag");
+    if (!tag) {
+      tag = document.createElement("span");
+      tag.className = "st-tag";
+      row.insertBefore(tag, row.querySelector(".switch"));
+    }
+    const st = !c ? "" : enhApplied(k) ? (enhOn(k) ? "keep" : "remove") : (enhOn(k) ? "add" : "");
+    row.classList.remove("st-keep", "st-remove", "st-add");
+    if (st) row.classList.add("st-" + st);
+    tag.textContent = st ? t("st_" + st) : "";
+  }
+  $("layout-chips").querySelectorAll(".chip").forEach(x => x.classList.toggle("applied",
+    !!c && enhApplied("bubbles") && x.dataset.layout === c.layout));
+  $("me-select").classList.toggle("invalid", !!a.needMe);
+  $("ei-state").textContent = c ? t("enh_detected") : "";
+  $("ei-state").style.display = c ? "" : "none";
+  $("enh-clear-all").style.display = c && ENH_OPTS.some(enhOn) ? "" : "none";
+  $("enhance-btn-label").textContent = t(a.label || "enhance_btn");
+  $("enhance-btn").disabled = !a.kind || enhanceBusy();
+  $("enhance-why").textContent = a.why ? t(a.why) : "";
+  $("enhance-why").style.display = a.why ? "" : "none";
+  updateDestHints();
+}
+function enhanceDestHint() {
+  return enhanceAction().kind === "restore" ? "enh_inplace_restore_hint" : "enh_inplace_hint";
+}
+function clearAllEnhancements() {
+  for (const k of ENH_OPTS) $("opt-" + k).checked = false;
+  $("bubbles-sub").classList.add("off");
+  updateEnhanceAction();
+}
+for (const k of ENH_OPTS) {
+  $("opt-" + k).addEventListener("change", () => {
+    if (k === "bubbles") $("bubbles-sub").classList.toggle("off", !enhOn("bubbles"));
+    updateEnhanceAction();
+  });
+}
+$("me-select").addEventListener("change", updateEnhanceAction);
 
 function features() {
   return {
-    bubbles: $("opt-bubbles").checked,
-    quotes: $("opt-quotes").checked,
-    theme: $("opt-theme").checked,
-    media: $("opt-media").checked,
-    note: $("opt-note").checked
+    bubbles: enhOn("bubbles"),
+    quotes: enhOn("quotes"),
+    theme: enhOn("theme"),
+    media: enhOn("media"),
+    note: enhOn("note")
   };
 }
 
 function runEnhance() {
-  if (!state.enhance) return;
+  const a = enhanceAction();
+  if (!a.kind) return;
+  if (a.kind === "restore") return runRestore();
   const f = features();
-  const layout = $("layout-chips").querySelector(".chip.sel").dataset.layout;
+  const layout = enhLayout();
   const me = $("me-select").value;
-  if (f.bubbles && !me && layout !== "original") return snack(t("need_me"));
   const output = copyOutput("enhance");
   if (output === "") return snack(t("snack_need_copy_out"));
   startJob("/api/enhance",
     { export: state.enhance.path, me, layout, features: f,
-      fullwidth: $("opt-fullwidth").checked, output },
+      fullwidth: enhOn("fullwidth"), output },
     t("job_enhancing"));
 }
 
@@ -3539,12 +3856,14 @@ function clearConvert() {
   $("convert-btn").disabled = true;
 }
 
-async function loadConvertPath(path) {
+// silent: re-analysis after a job — the folder may now hold both formats
+// because of it, so no need to ask about that again.
+async function loadConvertPath(path, silent) {
   const info = await api("/api/inspect-convert", { path });
   if (info.has_html && info.has_json) {
     // both formats at once: the only useful operation is enriching the
     // official JSON with the HTML's extra data — ask harshly first
-    const ok = await confirmDialog(t("both_title"), t("both_body"),
+    const ok = silent || await confirmDialog(t("both_title"), t("both_body"),
                                    t("btn_enrich"));
     if (!ok) { clearConvert(); return; }
     setConvert(info, "enrich");
@@ -3612,6 +3931,7 @@ function runConvert() {
 /* =============== job =============== */
 let pollTimer = null;
 let warnCount = 0;
+let jobBusy = false;
 
 async function startJob(endpoint, body, title) {
   try {
@@ -3628,6 +3948,7 @@ async function startJob(endpoint, body, title) {
   $("job-warns").innerHTML = "";
   $("job-log").textContent = "";
   $("job-result").classList.remove("show");
+  jobBusy = true;
   document.querySelectorAll(".btn.filled").forEach(b => b.disabled = true);
   $("job").scrollIntoView({ behavior: "smooth", block: "nearest" });
   pollTimer = setInterval(poll, 300);
@@ -3672,6 +3993,7 @@ async function poll() {
     return;
   }
   clearInterval(pollTimer);
+  jobBusy = false;
   cancelBtn.style.display = "none";
   $("job-spin").style.display = "none";
   $("job-progress").classList.remove("indet");
@@ -3680,11 +4002,15 @@ async function poll() {
   document.querySelectorAll(".btn.filled").forEach(b => b.disabled = false);
   renderExports();
   if (!state.compact) $("compact-btn").disabled = true;
-  if (!state.enhance) $("enhance-btn").disabled = true;
+  updateEnhanceAction();
   if (!state.convert) $("convert-btn").disabled = true;
   if (state.enhance) {
     api("/api/inspect", { path: state.enhance.path })
-      .then(applyEnhanceState).catch(() => {});
+      .then(info => applyEnhanceState(info, true)).catch(() => {});
+  }
+  if (state.convert) {
+    // what the folder holds now (e.g. HTML + the new JSON -> enrich next)
+    loadConvertPath(state.convert.path, true).catch(clearConvert);
   }
 
   const r = $("job-result"), icon = $("job-ricon"), acts = $("job-actions");

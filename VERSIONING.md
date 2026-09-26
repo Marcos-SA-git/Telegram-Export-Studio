@@ -1,55 +1,33 @@
 # Versionado
 
-Telegram Export Studio usa [Versionado Semántico](https://semver.org/lang/es/):
-tres números separados por puntos, `MAYOR.MENOR.PARCHE` (p. ej. `1.1.0`).
+Telegram Export Studio usa [versionado semántico](https://semver.org/lang/es/): `MAYOR.MENOR.PARCHE`, por ejemplo `2.0.0`.
 
-La versión vive en un único sitio, [`telegram_export_version.py`](telegram_export_version.py)
-— todo lo demás (el nombre de los archivos en `releases/`, la cabecera del
-código, el mensaje de bienvenida de la CLI, el footer de la interfaz) la lee
-de ahí.
+La versión vive en un único sitio, [`telegram_export_version.py`](telegram_export_version.py). Todo lo demás la lee de ahí: el nombre de los archivos de `releases/`, la cabecera del código, el mensaje al arrancar y el pie de la interfaz.
 
 ## Qué significa cada número
 
-Leyendo de izquierda a derecha, `MAYOR.MENOR.PARCHE`:
+| Número | Sube cuando… | Ejemplos |
+|---|---|---|
+| **MAYOR** | Algo que ya funcionaba deja de funcionar igual. | Un export procesado se comporta distinto con otra versión, una opción de la CLI cambia de nombre o de efecto, el formato de salida cambia de forma incompatible. |
+| **MENOR** | Se puede hacer algo nuevo sin que cambie lo anterior. | Un módulo, subcomando u opción nuevos, una mejora de rendimiento notable. |
+| **PARCHE** | Se corrige algo que no funcionaba bien, sin añadir nada. | Arreglos de errores y ajustes menores. |
 
-- **MAYOR** — cambios que rompen compatibilidad: un export procesado con una
-  versión antigua deja de abrirse igual, una opción de la CLI cambia de
-  nombre o de comportamiento, o el formato de salida cambia de forma
-  incompatible. Sube cuando algo que ya funcionaba deja de funcionar como
-  antes.
-- **MENOR** — funcionalidad nueva que no rompe nada existente: un módulo
-  nuevo, un subcomando nuevo, una opción nueva, una mejora de rendimiento
-  notable. Sube cuando se puede hacer algo que antes no se podía, sin que
-  el uso anterior cambie.
-- **PARCHE** — arreglos de errores y ajustes menores que no añaden
-  funcionalidad ni cambian comportamiento observable, más allá de corregir
-  el bug en cuestión. Sube cuando se soluciona algo que no funcionaba bien.
+### Cambios mayores
 
-## Cómo consultar la versión actual
+- **2.0.0:** los exports mejorados guardan ahora una copia del marcado original de cada audio y vídeo (atributo `data-orig`), para poder desmejorarlos de forma exacta. Las versiones 1.x no reconocen ese formato, así que no pueden desmejorar esos elementos en un export mejorado con la 2.0.0 o posterior. Además, en la interfaz, el botón *Desmejorar* separado se sustituye por un botón que se adapta a las opciones marcadas.
 
-- **Apps de escritorio (AIO):** el nombre del propio archivo la incluye
-  (`telegram_export_studio_aio_vX.Y.Z.py`, `Telegram Export Studio vX.Y.Z.pyw`,
-  `TelegramExportStudio-vX.Y.Z.exe`), y aparece también al principio del
-  código, en el mensaje de bienvenida al arrancar la interfaz, y en el
-  footer de la propia interfaz.
-- **Por CLI:** `python telegram_export_studio_aio_vX.Y.Z.py --version` (o
-  `-v`) la imprime y termina sin hacer nada más.
-- **Módulos sueltos / repositorio:** [`telegram_export_version.py`](telegram_export_version.py)
-  siempre tiene la versión vigente en el momento de ese commit.
-- **Versión web (GitHub Pages):** por su naturaleza, siempre corresponde a
-  la última versión desarrollada — el workflow de GitHub Actions
-  (`.github/workflows/deploy-pages.yml`) la reconstruye con `build_pages.py`
-  en cada push a `main`, tomando el `VERSION` de ese mismo commit. A
-  diferencia de las apps AIO (que quedan fijadas a la versión que se
-  descargó), la web nunca se queda desactualizada ni exige que el usuario
-  la reinstale.
+## Cómo saber qué versión tienes
+
+| Dónde | Cómo |
+|---|---|
+| App de escritorio | En el nombre del archivo (`…vX.Y.Z…`), en la cabecera del código, al arrancar y en el pie de la interfaz. |
+| Terminal | `python telegram_export_studio_aio_vX.Y.Z.py --version` (o `-v`). |
+| Repositorio | [`telegram_export_version.py`](telegram_export_version.py) en ese commit. |
+| Web | En el pie de la app. Siempre es la última versión: se reconstruye en cada push a `main`, así que nunca queda desactualizada. |
 
 ## Al publicar una nueva versión
 
-1. Edita `VERSION` en `telegram_export_version.py`.
-2. Ejecuta `python build_aio.py` para regenerar los artefactos de
-   `releases/` con el nombre y la cabecera actualizados (borra los de la
-   versión anterior).
-3. Escribe el changelog del release describiendo qué cambió desde la
-   versión anterior, usando las categorías de arriba (MAYOR/MENOR/PARCHE)
-   como guía de qué número mover.
+1. Cambia `VERSION` en `telegram_export_version.py`.
+2. Ejecuta `python build_aio.py`. Regenera los archivos de `releases/` y borra los de la versión anterior.
+3. Haz commit y push a `main`. La web se actualiza sola.
+4. Crea el release en GitHub con la etiqueta `vX.Y.Z`, adjunta los tres archivos de `releases/` y describe qué cambió, usando la tabla de arriba para justificar qué número sube.

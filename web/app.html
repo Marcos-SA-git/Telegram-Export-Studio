@@ -177,6 +177,47 @@ select.unit { flex: none; width: 84px; }
 .action-row { display: flex; gap: 10px; }
 .action-row .btn.filled { flex: 1; }
 
+/* reassurance strip under the tabs: what is (and isn't) reversible in the
+   current tab; destructive options stay flagged in red where they live */
+.safe-note { display: flex; gap: 12px; align-items: flex-start;
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ok) 28%, transparent);
+  border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;
+  font-size: 13px; color: var(--muted); }
+.safe-note svg { width: 20px; height: 20px; fill: var(--ok); flex: none; margin-top: 1px; }
+.safe-note b { display: block; color: var(--on); font-weight: 600; font-size: 13.5px;
+  margin-bottom: 2px; }
+
+/* enhance: each option shown against what the export already has */
+.st-tag { display: none; flex: none; font-size: 11.5px; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.st-keep .st-tag, .st-remove .st-tag, .st-add .st-tag { display: inline-block; }
+.st-keep .st-tag { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.st-remove .st-tag { color: var(--err); background: color-mix(in srgb, var(--err) 14%, transparent); }
+.st-add .st-tag { color: var(--primary-strong); background: var(--primary-soft); }
+.st-keep .switch input:checked + i { background: var(--ok); border-color: var(--ok); }
+.st-remove .switch i { border-color: var(--err);
+  background: color-mix(in srgb, var(--err) 14%, transparent); }
+.st-remove .switch i::after { background: var(--err); }
+.chip.applied::after { content: " ✓"; color: var(--ok); }
+.field select.invalid { border-color: var(--err); }
+.linkbtn { appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13px; font-weight: 600; color: var(--err); padding: 6px 0 0; }
+.linkbtn:hover { text-decoration: underline; }
+#enhance-why { margin: 10px 4px 0; }
+/* tabs that don't fit scroll sideways; a fade on the clipped edge(s)
+   shows there is more (see updateTabsFade) */
+.tabs.fade-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+.tabs.fade-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+.tabs.fade-start.fade-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+[dir=rtl] .tabs.fade-end { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+[dir=rtl] .tabs.fade-start { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
 #job { display: none; }
 #job.show { display: block; }
 .dlg-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
@@ -293,6 +334,10 @@ details.warn-item[open] summary::after { transform: rotate(180deg); }
       <button data-view="enhance" data-i18n="tab_enhance"></button>
       <button data-view="convert" data-i18n="tab_convert"></button>
     </div>
+    <div class="safe-note" id="safe-note">
+      <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+      <div><b data-i18n="safe_title"></b><span id="safe-note-text"></span></div>
+    </div>
 
     <!-- FUSE -->
     <section id="view-fuse">
@@ -394,6 +439,7 @@ details.warn-item[open] summary::after { transform: rotate(180deg); }
             <div class="info"><b id="ei-name"></b><span id="ei-sub"></span></div>
             <button class="iconbtn" onclick="clearEnhance()"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
           </div>
+          <div class="hint" id="ei-state" style="display:none"></div>
         </div>
       </div>
       <div class="card">
@@ -423,6 +469,7 @@ details.warn-item[open] summary::after { transform: rotate(180deg); }
           <label class="switch"><input type="checkbox" id="opt-media" checked><i></i></label></div>
         <div class="switchrow"><div class="sw-txt"><b data-i18n="feat_note"></b><span data-i18n="feat_note_d"></span></div>
           <label class="switch"><input type="checkbox" id="opt-note" checked><i></i></label></div>
+        <button class="linkbtn" id="enh-clear-all" style="display:none" onclick="clearAllEnhancements()" data-i18n="enh_clear_all"></button>
       </div>
       <div class="card">
         <h2 data-i18n="dest_h"></h2>
@@ -435,13 +482,10 @@ details.warn-item[open] summary::after { transform: rotate(180deg); }
       <div class="action-row">
         <button class="btn filled" id="enhance-btn" onclick="runEnhance()" disabled>
           <svg viewBox="0 0 24 24"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7z"/></svg>
-          <span data-i18n="enhance_btn"></span>
-        </button>
-        <button class="btn danger-tonal" id="restore-btn" onclick="runRestore()" style="display:none">
-          <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.9 3.9L8.8 12H6a7 7 0 1 1 2.1 5l-1.4 1.4A9 9 0 1 0 13 3z"/></svg>
-          <span data-i18n="restore_btn"></span>
+          <span id="enhance-btn-label"></span>
         </button>
       </div>
+      <p class="hint" id="enhance-why" style="display:none"></p>
       <div><a class="srclink" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="srclink"></span></a><span class="app-version">v__APP_VERSION__</span></div>
     </section>
 
@@ -566,7 +610,7 @@ es: {
   fuse_add_more: "Añade o arrastra aquí otra carpeta",
   dest_pagination: "Paginación",
   size_label: "Tamaño de página", chip_single: "Archivo único", chip_custom: "Personalizado",
-  fuse_out_hint: "Al fusionar se te pedirá elegir la carpeta de destino (usa una carpeta vacía).",
+  fuse_out_hint: "Al fusionar eliges dónde guardarlo, y ahí se crea una carpeta nueva «ChatExport_fused» con el resultado. Tus exports de origen no se tocan.",
   fuse_btn: "Fusionar exports", fuse_btn_n: "Fusionar {n} exports",
   compact_source: "Export a compactar",
   compact_pick: "Elige o arrastra aquí la carpeta del export",
@@ -590,10 +634,9 @@ es: {
   feat_quotes: "Citas de respuesta", feat_quotes_d: "Recuadro con autor y fragmento del mensaje citado",
   feat_theme: "Modo claro / oscuro", feat_theme_d: "Botón flotante para cambiar de tema",
   feat_media: "Media en vivo", feat_media_d: "Vídeos y audios reproducibles, fotos en visor",
-  feat_note: "Mensaje final", feat_note_d: "Nota al final del chat con cómo usar estas herramientas",
+  feat_note: "Mensaje final con instrucciones", feat_note_d: "Nota al final del chat con cómo usar estas herramientas",
   enhance_btn: "Mejorar export", restore_btn: "Desmejorar",
   need_me: "Elige quién eres tú para el modo conversación",
-  already_enhanced: "Este export ya estaba mejorado; se actualizará",
   kind_group: "👥 Grupo · {n} participantes", kind_private: "👤 Chat privado",
   item_sub: "{msgs} mensajes · {pages} página(s)",
   confirm_mix: "«{a}» no coincide con «{b}». Los exports parecen de chats diferentes. ¿Añadirlo igualmente?",
@@ -675,6 +718,25 @@ es: {
   res_convert: "{msgs} mensajes",
   res_enriched: "{msgs} mensajes · {n} campos añadidos desde el HTML",
   convert_nothing: "«{name}» no contiene messages.html, result.json ni result_enriched.json",
+  safe_title: "Salvo que se avise en rojo, todo es reversible y se conserva toda la información posible.",
+  safe_fuse: "Tus exports de origen nunca se modifican: el resultado se escribe en otra carpeta.",
+  safe_compact: "No se pierde ningún mensaje: solo cambia cómo se reparten en páginas, y puedes volver a compactar con otra medida cuando quieras. Con «Crear una copia» el original queda intacto.",
+  safe_enhance: "Totalmente reversible: al desmarcar las mejoras el export vuelve a su HTML original exacto, sin pérdidas.",
+  safe_convert: "Solo añade archivos junto a los que ya tienes y nunca sobrescribe un export oficial de Telegram. Las dos únicas opciones destructivas se avisan en rojo antes de ejecutarlas.",
+  st_keep: "Aplicada",
+  st_remove: "Se quitará",
+  st_add: "Se añadirá",
+  change_btn: "Cambiar mejoras",
+  enh_detected: "Este export ya está mejorado: lo que tiene aplicado aparece en verde. Marca o desmarca opciones para cambiarlo.",
+  enh_why_nochange: "No hay nada que hacer: el export ya tiene exactamente estas mejoras. Marca o desmarca alguna opción para cambiarlas.",
+  enh_why_none: "No hay nada que hacer: activa al menos una opción para mejorar el export.",
+  enh_clear_all: "Quitar todas las mejoras",
+  enh_inplace_hint: "Se modifica el propio export. Es reversible: siempre podrás volver al diseño original desmarcando las mejoras.",
+  enh_inplace_restore_hint: "Las mejoras se quitan del propio export, que vuelve a su HTML original. Podrás aplicarlas de nuevo cuando quieras.",
+  confirm_title: "¿Chats distintos?",
+  btn_continue: "Añadir igualmente",
+  res_written_fuse: "Resultado guardado en la carpeta nueva «{name}». Abre messages.html para verlo.",
+  cancel_fuse_removed: "La fusión incompleta se ha eliminado; tus exports de origen no se han modificado.",
 },
 en: {
   cta_download: "Desktop version",
@@ -692,7 +754,7 @@ en: {
   fuse_add_more: "Add or drag another folder here",
   dest_pagination: "Pagination",
   size_label: "Page size", chip_single: "Single file", chip_custom: "Custom",
-  fuse_out_hint: "When merging you will be asked to choose the destination folder (use an empty one).",
+  fuse_out_hint: "When merging you choose where to save it, and a new “ChatExport_fused” folder with the result is created there. Your source exports are left untouched.",
   fuse_btn: "Merge exports", fuse_btn_n: "Merge {n} exports",
   compact_source: "Export to compact",
   compact_pick: "Choose or drag the export folder here",
@@ -716,10 +778,9 @@ en: {
   feat_quotes: "Reply quotes", feat_quotes_d: "Box with author and snippet of the quoted message",
   feat_theme: "Light / dark mode", feat_theme_d: "Floating button to switch theme",
   feat_media: "Live media", feat_media_d: "Playable videos and audio, photos in a viewer",
-  feat_note: "Final note", feat_note_d: "Note at the end of the chat on how to use these tools",
+  feat_note: "Final note with instructions", feat_note_d: "Note at the end of the chat on how to use these tools",
   enhance_btn: "Enhance export", restore_btn: "Un-enhance",
   need_me: "Choose who you are for chat mode",
-  already_enhanced: "This export was already enhanced; it will be updated",
   kind_group: "👥 Group · {n} participants", kind_private: "👤 Private chat",
   item_sub: "{msgs} messages · {pages} page(s)",
   confirm_mix: "“{a}” doesn't match “{b}”. These exports look like different chats. Add it anyway?",
@@ -801,6 +862,25 @@ en: {
   res_convert: "{msgs} messages",
   res_enriched: "{msgs} messages · {n} fields added from the HTML",
   convert_nothing: "“{name}” doesn't contain messages.html, result.json or result_enriched.json",
+  safe_title: "Unless flagged in red, everything is reversible and as much information as possible is kept.",
+  safe_fuse: "Your source exports are never modified: the result is written to another folder.",
+  safe_compact: "No message is lost: only how they're split into pages changes, and you can compact again with another size whenever you like. With “Create a copy” the original stays untouched.",
+  safe_enhance: "Fully reversible: unticking the enhancements gives the export back its exact original HTML, losslessly.",
+  safe_convert: "It only adds files next to the ones you already have and never overwrites an official Telegram export. The only two destructive options are flagged in red before they run.",
+  st_keep: "Applied",
+  st_remove: "Will be removed",
+  st_add: "Will be added",
+  change_btn: "Change enhancements",
+  enh_detected: "This export is already enhanced: what it has applied shows in green. Tick or untick options to change it.",
+  enh_why_nochange: "Nothing to do: the export already has exactly these enhancements. Tick or untick an option to change them.",
+  enh_why_none: "Nothing to do: turn on at least one option to enhance the export.",
+  enh_clear_all: "Remove all enhancements",
+  enh_inplace_hint: "The export itself is modified. It's reversible: you can always go back to the original design by unticking the enhancements.",
+  enh_inplace_restore_hint: "The enhancements are removed from the export itself, which goes back to its original HTML. You can apply them again whenever you like.",
+  confirm_title: "Different chats?",
+  btn_continue: "Add anyway",
+  res_written_fuse: "Result saved in the new “{name}” folder. Open messages.html to view it.",
+  cancel_fuse_removed: "The incomplete merge was removed; your source exports were not modified.",
 },
 fr: {
   cta_download: "Version de bureau",
@@ -816,7 +896,7 @@ fr: {
   fuse_add_more: "Ajoutez ou déposez ici un autre dossier",
   dest_pagination: "Pagination",
   size_label: "Taille de page", chip_single: "Fichier unique", chip_custom: "Personnalisé",
-  fuse_out_hint: "Lors de la fusion, on vous demandera le dossier de destination (utilisez un dossier vide).",
+  fuse_out_hint: "Lors de la fusion, vous choisissez où l'enregistrer, et un nouveau dossier « ChatExport_fused » contenant le résultat y est créé. Vos exports source ne sont pas touchés.",
   fuse_btn: "Fusionner les exports", fuse_btn_n: "Fusionner {n} exports",
   compact_source: "Export à compacter",
   compact_pick: "Choisissez ou déposez ici le dossier de l'export",
@@ -840,10 +920,9 @@ fr: {
   feat_quotes: "Citations de réponse", feat_quotes_d: "Encadré avec auteur et extrait du message cité",
   feat_theme: "Mode clair / sombre", feat_theme_d: "Bouton flottant pour changer de thème",
   feat_media: "Médias intégrés", feat_media_d: "Vidéos et audios lisibles, photos dans une visionneuse",
-  feat_note: "Note finale", feat_note_d: "Note à la fin du chat sur l'utilisation de ces outils",
+  feat_note: "Note finale avec instructions", feat_note_d: "Note à la fin du chat sur l'utilisation de ces outils",
   enhance_btn: "Améliorer l'export", restore_btn: "Rétablir l'original",
   need_me: "Indiquez qui vous êtes pour le mode conversation",
-  already_enhanced: "Cet export était déjà amélioré ; il sera mis à jour",
   kind_group: "👥 Groupe · {n} participants", kind_private: "👤 Chat privé",
   item_sub: "{msgs} messages · {pages} page(s)",
   confirm_mix: "« {a} » ne correspond pas à « {b} ». Ces exports semblent provenir de chats différents. L'ajouter quand même ?",
@@ -931,6 +1010,25 @@ fr: {
   res_convert: "{msgs} messages",
   res_enriched: "{msgs} messages · {n} champs ajoutés depuis le HTML",
   convert_nothing: "« {name} » ne contient ni messages.html, ni result.json, ni result_enriched.json",
+  safe_title: "Sauf avertissement en rouge, tout est réversible et le maximum d'informations est conservé.",
+  safe_fuse: "Vos exports source ne sont jamais modifiés : le résultat est écrit dans un autre dossier.",
+  safe_compact: "Aucun message n'est perdu : seule leur répartition en pages change, et vous pouvez recompacter avec une autre taille quand vous voulez. Avec « Créer une copie », l'original reste intact.",
+  safe_enhance: "Entièrement réversible : en décochant les améliorations, l'export retrouve son HTML d'origine exact, sans perte.",
+  safe_convert: "Il ne fait qu'ajouter des fichiers à côté de ceux que vous avez déjà et n'écrase jamais un export officiel de Telegram. Les deux seules options destructives sont signalées en rouge avant leur exécution.",
+  st_keep: "Appliquée",
+  st_remove: "Sera retirée",
+  st_add: "Sera ajoutée",
+  change_btn: "Modifier les améliorations",
+  enh_detected: "Cet export est déjà amélioré : ce qui est appliqué apparaît en vert. Cochez ou décochez des options pour le modifier.",
+  enh_why_nochange: "Rien à faire : l'export a déjà exactement ces améliorations. Cochez ou décochez une option pour les modifier.",
+  enh_why_none: "Rien à faire : activez au moins une option pour améliorer l'export.",
+  enh_clear_all: "Retirer toutes les améliorations",
+  enh_inplace_hint: "L'export lui-même est modifié. C'est réversible : vous pourrez toujours revenir au design original en décochant les améliorations.",
+  enh_inplace_restore_hint: "Les améliorations sont retirées de l'export lui-même, qui retrouve son HTML d'origine. Vous pourrez les appliquer de nouveau quand vous voudrez.",
+  confirm_title: "Chats différents ?",
+  btn_continue: "Ajouter quand même",
+  res_written_fuse: "Résultat enregistré dans le nouveau dossier « {name} ». Ouvrez messages.html pour le voir.",
+  cancel_fuse_removed: "La fusion incomplète a été supprimée ; vos exports source n'ont pas été modifiés.",
 },
 de: {
   cta_download: "Desktop-Version",
@@ -940,47 +1038,46 @@ de: {
   loader_hint: "Nur beim ersten Mal: Der Interpreter wird zwischengespeichert. Die gesamte Verarbeitung passiert auf deinem Gerät.",
   boot_loading: "Python für deinen Browser wird geladen (~15 MB)…",
   boot_engine: "Engine wird geladen…",
-  tab_fuse: "Zusammenführen", tab_compact: "Verdichten", tab_enhance: "Verbessern",
+  tab_fuse: "Zusammenführen", tab_compact: "Kompaktieren", tab_enhance: "Verbessern",
   fuse_sources: "Quell-Exporte",
   fuse_empty: "Füge zwei oder mehr Telegram-Exportordner hinzu oder ziehe sie hierher",
   fuse_add_more: "Weiteren Ordner hinzufügen oder hierher ziehen",
   dest_pagination: "Seitenaufteilung",
   size_label: "Seitengröße", chip_single: "Einzelne Datei", chip_custom: "Benutzerdefiniert",
-  fuse_out_hint: "Beim Zusammenführen wirst du nach dem Zielordner gefragt (nutze einen leeren).",
+  fuse_out_hint: "Beim Zusammenführen wählst du den Speicherort, und dort wird ein neuer Ordner „ChatExport_fused“ mit dem Ergebnis angelegt. Deine Quell-Exporte bleiben unberührt.",
   fuse_btn: "Exporte zusammenführen", fuse_btn_n: "{n} Exporte zusammenführen",
-  compact_source: "Zu verdichtender Export",
+  compact_source: "Zu kompaktierender Export",
   compact_pick: "Wähle den Exportordner oder ziehe ihn hierher",
   goal: "Ziel", mode_files: "Anzahl der Dateien", mode_size: "Größe pro Seite",
   goal_hint_files: "Du wählst, wie viele messages.html am Ende übrig bleiben (1 = der gesamte Verlauf in einer), die Seitengröße wird automatisch berechnet.",
   goal_hint_size: "Du legst die maximale Größe jeder messages.html fest, die Dateianzahl ergibt sich aus dem Gesamtverlauf.",
   srclink: "Open Source · auf GitHub ansehen",
-  compact_btn: "Verdichten",
+  compact_btn: "Kompaktieren",
   enhance_source: "Zu verbessernder Export",
   enhance_pick: "Wähle den Exportordner oder ziehe ihn hierher",
   enhance_opts: "Anzeigeoptionen",
   me_label: "Wer bist du? (Die Nachrichten der gewählten Person werden farblich hervorgehoben)",
   me_none: "— Nur Originaldesign, keine eigene Seite —",
   layout_label: "Nachrichten-Layout",
-  layout_both: "Beide (umschaltbar)", layout_chat: "Unterhaltung", layout_original: "Original",
+  layout_both: "Beide (umschaltbar)", layout_chat: null, layout_original: "Original",
   layout_hint_original: "Alle Avatare links, wie im ursprünglichen Telegram-Export.",
   layout_hint_chat: "Avatare auf beiden Seiten: dein Gegenüber links, du rechts.",
   layout_hint_both: "Ein schwebender Button im Chat wechselt zwischen beiden Layouts.",
   feat_fullwidth: "Volle Breite", feat_fullwidth_d: "Der Chat füllt den ganzen Bildschirm, ohne zentrierte Spalte",
-  feat_bubbles: "Blasen & Chat-Hintergrund", feat_bubbles_d: "Echter Telegram-Look",
+  feat_bubbles: "Sprechblasen & Chat-Hintergrund", feat_bubbles_d: "Echter Telegram-Look",
   feat_quotes: "Antwort-Zitate", feat_quotes_d: "Rahmen mit Autor und Ausschnitt der zitierten Nachricht",
   feat_theme: "Heller / dunkler Modus", feat_theme_d: "Schwebender Button zum Themenwechsel",
-  feat_media: "Live-Medien", feat_media_d: "Abspielbare Videos und Audios, Fotos im Viewer",
-  feat_note: "Abschlussnotiz", feat_note_d: "Notiz am Ende des Chats zur Nutzung dieser Tools",
+  feat_media: "Eingebettete Medien", feat_media_d: "Abspielbare Videos und Audios, Fotos im Viewer",
+  feat_note: "Abschlussnotiz mit Anleitung", feat_note_d: "Notiz am Ende des Chats zur Nutzung dieser Tools",
   enhance_btn: "Export verbessern", restore_btn: "Zurücksetzen",
   need_me: "Wähle, wer du bist, für den Unterhaltungsmodus",
-  already_enhanced: "Dieser Export war bereits verbessert; er wird aktualisiert",
   kind_group: "👥 Gruppe · {n} Teilnehmer", kind_private: "👤 Privater Chat",
   item_sub: "{msgs} Nachrichten · {pages} Seite(n)",
   confirm_mix: "„{a}“ passt nicht zu „{b}“. Diese Exporte scheinen aus verschiedenen Chats zu stammen. Trotzdem hinzufügen?",
   confirm_kind: "Du mischst einen Gruppenchat mit einem privaten. Trotzdem hinzufügen?",
   snack_dup: "Dieser Export ist bereits in der Liste",
   drop_no_messages: "„{name}“ enthält keine messages.html",
-  job_fusing: "Exporte werden zusammengeführt…", job_compacting: "Wird verdichtet…",
+  job_fusing: "Exporte werden zusammengeführt…", job_compacting: "Wird kompaktiert…",
   job_enhancing: "Wird verbessert…", job_restoring: "Originaldesign wird wiederhergestellt…",
   job_done: "Fertig", job_error: "Fehler", job_failed: "Der Vorgang ist fehlgeschlagen",
   res_summary: "{msgs} Nachrichten auf {pages} Seite(n)",
@@ -1061,6 +1158,25 @@ de: {
   res_convert: "{msgs} Nachrichten",
   res_enriched: "{msgs} Nachrichten · {n} Felder aus dem HTML ergänzt",
   convert_nothing: "„{name}“ enthält weder messages.html noch result.json oder result_enriched.json",
+  safe_title: "Sofern nicht rot gewarnt, ist alles umkehrbar und es bleiben so viele Informationen wie möglich erhalten.",
+  safe_fuse: "Deine Quell-Exporte werden nie verändert: Das Ergebnis wird in einen anderen Ordner geschrieben.",
+  safe_compact: "Keine Nachricht geht verloren: Nur die Aufteilung auf Seiten ändert sich, und du kannst jederzeit mit einer anderen Größe neu kompaktieren. Mit „Kopie erstellen“ bleibt das Original unverändert.",
+  safe_enhance: "Vollständig umkehrbar: Wählst du die Verbesserungen ab, erhält der Export sein exaktes Original-HTML verlustfrei zurück.",
+  safe_convert: "Es fügt nur Dateien neben den vorhandenen hinzu und überschreibt nie einen offiziellen Telegram-Export. Die einzigen zwei destruktiven Optionen werden vor dem Ausführen rot gewarnt.",
+  st_keep: "Aktiv",
+  st_remove: "Wird entfernt",
+  st_add: "Wird hinzugefügt",
+  change_btn: "Verbesserungen ändern",
+  enh_detected: "Dieser Export ist bereits verbessert: Was angewendet ist, erscheint grün. Setze oder entferne Häkchen, um es zu ändern.",
+  enh_why_nochange: "Nichts zu tun: Der Export hat bereits genau diese Verbesserungen. Setze oder entferne ein Häkchen, um sie zu ändern.",
+  enh_why_none: "Nichts zu tun: Aktiviere mindestens eine Option, um den Export zu verbessern.",
+  enh_clear_all: "Alle Verbesserungen entfernen",
+  enh_inplace_hint: "Der Export selbst wird verändert. Das ist umkehrbar: Du kannst jederzeit zum Originaldesign zurück, indem du die Verbesserungen abwählst.",
+  enh_inplace_restore_hint: "Die Verbesserungen werden aus dem Export selbst entfernt, der wieder sein Original-HTML erhält. Du kannst sie jederzeit erneut anwenden.",
+  confirm_title: "Verschiedene Chats?",
+  btn_continue: "Trotzdem hinzufügen",
+  res_written_fuse: "Ergebnis im neuen Ordner „{name}“ gespeichert. Öffne messages.html, um es anzusehen.",
+  cancel_fuse_removed: "Das unvollständige Zusammenführen wurde entfernt; deine Quell-Exporte wurden nicht verändert.",
 },
 pt: {
   cta_download: "Versão para computador",
@@ -1076,7 +1192,7 @@ pt: {
   fuse_add_more: "Adicione ou arraste outra pasta aqui",
   dest_pagination: "Paginação",
   size_label: "Tamanho da página", chip_single: "Arquivo único", chip_custom: "Personalizado",
-  fuse_out_hint: "Ao mesclar, será pedido que escolha a pasta de destino (use uma pasta vazia).",
+  fuse_out_hint: "Ao mesclar, você escolhe onde salvar, e ali é criada uma pasta nova «ChatExport_fused» com o resultado. Seus exports de origem não são tocados.",
   fuse_btn: "Mesclar exports", fuse_btn_n: "Mesclar {n} exports",
   compact_source: "Export a compactar",
   compact_pick: "Escolha ou arraste aqui a pasta do export",
@@ -1100,10 +1216,9 @@ pt: {
   feat_quotes: "Citações de resposta", feat_quotes_d: "Caixa com autor e trecho da mensagem citada",
   feat_theme: "Modo claro / escuro", feat_theme_d: "Botão flutuante para trocar o tema",
   feat_media: "Mídia ao vivo", feat_media_d: "Vídeos e áudios reproduzíveis, fotos em um visualizador",
-  feat_note: "Nota final", feat_note_d: "Nota no fim do chat sobre como usar estas ferramentas",
+  feat_note: "Mensagem final com instruções", feat_note_d: "Nota no fim do chat sobre como usar estas ferramentas",
   enhance_btn: "Melhorar export", restore_btn: "Desfazer melhorias",
   need_me: "Escolha quem é você para o modo conversa",
-  already_enhanced: "Este export já estava melhorado; será atualizado",
   kind_group: "👥 Grupo · {n} participantes", kind_private: "👤 Chat privado",
   item_sub: "{msgs} mensagens · {pages} página(s)",
   confirm_mix: "“{a}” não corresponde a “{b}”. Estes exports parecem de chats diferentes. Adicionar mesmo assim?",
@@ -1191,6 +1306,25 @@ pt: {
   res_convert: "{msgs} mensagens",
   res_enriched: "{msgs} mensagens · {n} campos adicionados do HTML",
   convert_nothing: "«{name}» não contém messages.html, result.json nem result_enriched.json",
+  safe_title: "Salvo aviso em vermelho, tudo é reversível e se preserva o máximo de informação possível.",
+  safe_fuse: "Seus exports de origem nunca são modificados: o resultado é gravado em outra pasta.",
+  safe_compact: "Nenhuma mensagem se perde: muda apenas como elas se dividem em páginas, e você pode compactar de novo com outro tamanho quando quiser. Com «Criar uma cópia» o original fica intacto.",
+  safe_enhance: "Totalmente reversível: ao desmarcar as melhorias, o export volta ao seu HTML original exato, sem perdas.",
+  safe_convert: "Só adiciona arquivos ao lado dos que você já tem e nunca sobrescreve um export oficial do Telegram. As duas únicas opções destrutivas são avisadas em vermelho antes de executar.",
+  st_keep: "Aplicada",
+  st_remove: "Será removida",
+  st_add: "Será adicionada",
+  change_btn: "Alterar melhorias",
+  enh_detected: "Este export já está melhorado: o que está aplicado aparece em verde. Marque ou desmarque opções para alterá-lo.",
+  enh_why_nochange: "Nada a fazer: o export já tem exatamente estas melhorias. Marque ou desmarque alguma opção para alterá-las.",
+  enh_why_none: "Nada a fazer: ative pelo menos uma opção para melhorar o export.",
+  enh_clear_all: "Remover todas as melhorias",
+  enh_inplace_hint: "O próprio export é modificado. É reversível: você sempre poderá voltar ao design original desmarcando as melhorias.",
+  enh_inplace_restore_hint: "As melhorias são removidas do próprio export, que volta ao seu HTML original. Você poderá aplicá-las de novo quando quiser.",
+  confirm_title: "Chats diferentes?",
+  btn_continue: "Adicionar mesmo assim",
+  res_written_fuse: "Resultado salvo na pasta nova «{name}». Abra messages.html para vê-lo.",
+  cancel_fuse_removed: "A mesclagem incompleta foi removida; seus exports de origem não foram modificados.",
 },
 it: {
   cta_download: "Versione desktop",
@@ -1206,7 +1340,7 @@ it: {
   fuse_add_more: "Aggiungi o trascina qui un'altra cartella",
   dest_pagination: "Impaginazione",
   size_label: "Dimensione pagina", chip_single: "File unico", chip_custom: "Personalizzato",
-  fuse_out_hint: "Durante l'unione ti verrà chiesto di scegliere la cartella di destinazione (usane una vuota).",
+  fuse_out_hint: "Durante l'unione scegli dove salvarla, e lì viene creata una nuova cartella «ChatExport_fused» con il risultato. I tuoi export di origine non vengono toccati.",
   fuse_btn: "Unisci export", fuse_btn_n: "Unisci {n} export",
   compact_source: "Export da compattare",
   compact_pick: "Scegli o trascina qui la cartella dell'export",
@@ -1227,13 +1361,12 @@ it: {
   layout_hint_both: "Un pulsante flottante nella chat alterna tra le due disposizioni.",
   feat_fullwidth: "Larghezza piena", feat_fullwidth_d: "La chat occupa tutto lo schermo, senza colonna centrata",
   feat_bubbles: "Bolle e sfondo chat", feat_bubbles_d: "Aspetto reale di Telegram",
-  feat_quotes: "Citazioni di risposta", feat_quotes_d: "Riquadro con autore ed estratto del messaggio citato",
+  feat_quotes: "Citazioni delle risposte", feat_quotes_d: "Riquadro con autore ed estratto del messaggio citato",
   feat_theme: "Modalità chiara / scura", feat_theme_d: "Pulsante flottante per cambiare tema",
   feat_media: "Media dal vivo", feat_media_d: "Video e audio riproducibili, foto in un visualizzatore",
-  feat_note: "Nota finale", feat_note_d: "Nota alla fine della chat su come usare questi strumenti",
+  feat_note: "Messaggio finale con istruzioni", feat_note_d: "Nota alla fine della chat su come usare questi strumenti",
   enhance_btn: "Migliora export", restore_btn: "Ripristina originale",
   need_me: "Scegli chi sei per la modalità conversazione",
-  already_enhanced: "Questo export era già migliorato; verrà aggiornato",
   kind_group: "👥 Gruppo · {n} partecipanti", kind_private: "👤 Chat privata",
   item_sub: "{msgs} messaggi · {pages} pagina(e)",
   confirm_mix: "«{a}» non corrisponde a «{b}». Questi export sembrano di chat diverse. Aggiungerlo comunque?",
@@ -1321,6 +1454,25 @@ it: {
   res_convert: "{msgs} messaggi",
   res_enriched: "{msgs} messaggi · {n} campi aggiunti dall'HTML",
   convert_nothing: "«{name}» non contiene messages.html, result.json né result_enriched.json",
+  safe_title: "Salvo avviso in rosso, tutto è reversibile e si conservano quante più informazioni possibile.",
+  safe_fuse: "I tuoi export di origine non vengono mai modificati: il risultato viene scritto in un'altra cartella.",
+  safe_compact: "Nessun messaggio va perso: cambia solo come sono suddivisi in pagine, e puoi ricompattare con un'altra misura quando vuoi. Con «Crea una copia» l'originale resta intatto.",
+  safe_enhance: "Completamente reversibile: deselezionando i miglioramenti l'export torna al suo HTML originale esatto, senza perdite.",
+  safe_convert: "Aggiunge solo file accanto a quelli che hai già e non sovrascrive mai un export ufficiale di Telegram. Le uniche due opzioni distruttive sono segnalate in rosso prima di eseguirle.",
+  st_keep: "Applicata",
+  st_remove: "Verrà rimossa",
+  st_add: "Verrà aggiunta",
+  change_btn: "Modifica miglioramenti",
+  enh_detected: "Questo export è già migliorato: ciò che è applicato appare in verde. Seleziona o deseleziona le opzioni per modificarlo.",
+  enh_why_nochange: "Niente da fare: l'export ha già esattamente questi miglioramenti. Seleziona o deseleziona un'opzione per modificarli.",
+  enh_why_none: "Niente da fare: attiva almeno un'opzione per migliorare l'export.",
+  enh_clear_all: "Rimuovi tutti i miglioramenti",
+  enh_inplace_hint: "Viene modificato l'export stesso. È reversibile: potrai sempre tornare al design originale deselezionando i miglioramenti.",
+  enh_inplace_restore_hint: "I miglioramenti vengono rimossi dall'export stesso, che torna al suo HTML originale. Potrai applicarli di nuovo quando vuoi.",
+  confirm_title: "Chat diverse?",
+  btn_continue: "Aggiungi comunque",
+  res_written_fuse: "Risultato salvato nella nuova cartella «{name}». Apri messages.html per vederlo.",
+  cancel_fuse_removed: "L'unione incompleta è stata rimossa; i tuoi export di origine non sono stati modificati.",
 },
 ru: {
   cta_download: "Настольная версия",
@@ -1336,7 +1488,7 @@ ru: {
   fuse_add_more: "Добавьте или перетащите сюда ещё одну папку",
   dest_pagination: "Разбиение на страницы",
   size_label: "Размер страницы", chip_single: "Один файл", chip_custom: "Свой размер",
-  fuse_out_hint: "При объединении вас попросят выбрать папку назначения (используйте пустую).",
+  fuse_out_hint: "При объединении вы выбираете, куда сохранить, и там создаётся новая папка «ChatExport_fused» с результатом. Исходные экспорты не затрагиваются.",
   fuse_btn: "Объединить экспорты", fuse_btn_n: "Объединить {n} экспорта(ов)",
   compact_source: "Экспорт для сжатия",
   compact_pick: "Выберите или перетащите сюда папку экспорта",
@@ -1360,10 +1512,9 @@ ru: {
   feat_quotes: "Цитаты ответов", feat_quotes_d: "Рамка с автором и фрагментом цитируемого сообщения",
   feat_theme: "Светлая / тёмная тема", feat_theme_d: "Плавающая кнопка для смены темы",
   feat_media: "Живое медиа", feat_media_d: "Воспроизводимые видео и аудио, фото в просмотрщике",
-  feat_note: "Заключительная заметка", feat_note_d: "Заметка в конце чата о том, как пользоваться этими инструментами",
+  feat_note: "Заключительное сообщение с инструкциями", feat_note_d: "Заметка в конце чата о том, как пользоваться этими инструментами",
   enhance_btn: "Улучшить экспорт", restore_btn: "Вернуть оригинал",
   need_me: "Укажите, кто вы, для режима диалога",
-  already_enhanced: "Этот экспорт уже был улучшен; он будет обновлён",
   kind_group: "👥 Группа · {n} участников", kind_private: "👤 Личный чат",
   item_sub: "{msgs} сообщений · {pages} страниц(ы)",
   confirm_mix: "«{a}» не совпадает с «{b}». Похоже, это экспорты разных чатов. Всё равно добавить?",
@@ -1451,6 +1602,25 @@ ru: {
   res_convert: "{msgs} сообщений",
   res_enriched: "{msgs} сообщений · {n} полей добавлено из HTML",
   convert_nothing: "«{name}» не содержит messages.html, result.json или result_enriched.json",
+  safe_title: "Если нет предупреждения красным, всё обратимо и сохраняется как можно больше информации.",
+  safe_fuse: "Исходные экспорты никогда не изменяются: результат записывается в другую папку.",
+  safe_compact: "Ни одно сообщение не теряется: меняется только их разбивка на страницы, и вы в любой момент можете уплотнить заново с другим размером. С «Создать копию» оригинал остаётся нетронутым.",
+  safe_enhance: "Полностью обратимо: если снять улучшения, экспорт вернётся к точному исходному HTML без потерь.",
+  safe_convert: "Только добавляет файлы рядом с уже имеющимися и никогда не перезаписывает официальный экспорт Telegram. Единственные две разрушительные опции помечаются красным до запуска.",
+  st_keep: "Применено",
+  st_remove: "Будет убрано",
+  st_add: "Будет добавлено",
+  change_btn: "Изменить улучшения",
+  enh_detected: "Этот экспорт уже улучшен: применённое показано зелёным. Отметьте или снимите опции, чтобы изменить его.",
+  enh_why_nochange: "Делать нечего: у экспорта уже ровно эти улучшения. Отметьте или снимите какую-нибудь опцию, чтобы их изменить.",
+  enh_why_none: "Делать нечего: включите хотя бы одну опцию, чтобы улучшить экспорт.",
+  enh_clear_all: "Убрать все улучшения",
+  enh_inplace_hint: "Изменяется сам экспорт. Это обратимо: вы всегда сможете вернуть исходный вид, сняв улучшения.",
+  enh_inplace_restore_hint: "Улучшения убираются из самого экспорта, и он возвращается к исходному HTML. Вы сможете применить их снова в любой момент.",
+  confirm_title: "Разные чаты?",
+  btn_continue: "Добавить всё равно",
+  res_written_fuse: "Результат сохранён в новой папке «{name}». Откройте messages.html, чтобы посмотреть.",
+  cancel_fuse_removed: "Незавершённое объединение удалено; исходные экспорты не изменены.",
 },
 zh: {
   cta_download: "桌面版",
@@ -1466,7 +1636,7 @@ zh: {
   fuse_add_more: "在此添加或拖入另一个文件夹",
   dest_pagination: "分页",
   size_label: "页面大小", chip_single: "单个文件", chip_custom: "自定义",
-  fuse_out_hint: "合并时会要求你选择目标文件夹（请使用空文件夹）。",
+  fuse_out_hint: "合并时由你选择保存位置，并在那里新建一个包含结果的「ChatExport_fused」文件夹。源导出不会被改动。",
   fuse_btn: "合并导出", fuse_btn_n: "合并 {n} 个导出",
   compact_source: "要压缩的导出",
   compact_pick: "选择或拖入导出文件夹",
@@ -1490,10 +1660,9 @@ zh: {
   feat_quotes: "回复引用", feat_quotes_d: "显示作者和被引用消息片段的引用框",
   feat_theme: "明亮 / 暗黑模式", feat_theme_d: "悬浮按钮切换主题",
   feat_media: "实时媒体", feat_media_d: "视频和音频可播放，照片在查看器中打开",
-  feat_note: "结尾说明", feat_note_d: "在聊天末尾附上这些工具的使用说明",
+  feat_note: "结尾说明消息", feat_note_d: "在聊天末尾附上这些工具的使用说明",
   enhance_btn: "美化导出", restore_btn: "撤销美化",
   need_me: "请选择你是谁以启用对话模式",
-  already_enhanced: "此导出已经美化过；将会更新",
   kind_group: "👥 群组 · {n} 位成员", kind_private: "👤 私聊",
   item_sub: "{msgs} 条消息 · {pages} 页",
   confirm_mix: "「{a}」与「{b}」不匹配。这些导出似乎来自不同的聊天。仍要添加吗？",
@@ -1581,6 +1750,25 @@ zh: {
   res_convert: "{msgs} 条消息",
   res_enriched: "{msgs} 条消息 · 从 HTML 添加了 {n} 个字段",
   convert_nothing: "“{name}” 中没有 messages.html、result.json 或 result_enriched.json",
+  safe_title: "除非以红色警告，所有操作都可撤销，并尽可能保留全部信息。",
+  safe_fuse: "源导出永远不会被修改：结果会写入另一个文件夹。",
+  safe_compact: "不会丢失任何消息：只改变消息在页面间的划分，你随时可以用其他大小重新压缩。选择「创建副本」则原始导出保持不变。",
+  safe_enhance: "完全可撤销：取消勾选美化后，导出会无损恢复为完全相同的原始 HTML。",
+  safe_convert: "只会在现有文件旁添加文件，绝不会覆盖 Telegram 的官方导出。仅有的两个破坏性选项会在执行前以红色警告。",
+  st_keep: "已应用",
+  st_remove: "将移除",
+  st_add: "将添加",
+  change_btn: "更改美化",
+  enh_detected: "此导出已美化：已应用的内容显示为绿色。勾选或取消勾选选项即可更改。",
+  enh_why_nochange: "无需操作：此导出已经恰好具有这些美化。勾选或取消勾选某个选项即可更改。",
+  enh_why_none: "无需操作：请至少开启一个选项来美化导出。",
+  enh_clear_all: "移除全部美化",
+  enh_inplace_hint: "将直接修改导出本身。此操作可撤销：取消勾选美化即可随时恢复原始设计。",
+  enh_inplace_restore_hint: "将从导出本身移除美化，恢复其原始 HTML。你可以随时重新应用。",
+  confirm_title: "不同的聊天？",
+  btn_continue: "仍然添加",
+  res_written_fuse: "结果已保存到新文件夹「{name}」。打开 messages.html 即可查看。",
+  cancel_fuse_removed: "未完成的合并已删除；源导出未被修改。",
 },
 ja: {
   cta_download: "デスクトップ版",
@@ -1596,7 +1784,7 @@ ja: {
   fuse_add_more: "別のフォルダをここに追加またはドラッグ",
   dest_pagination: "ページ分割",
   size_label: "ページサイズ", chip_single: "単一ファイル", chip_custom: "カスタム",
-  fuse_out_hint: "結合時に保存先フォルダの選択を求められます（空のフォルダを使ってください）。",
+  fuse_out_hint: "結合時に保存先を選ぶと、そこに結果を入れた新しいフォルダー「ChatExport_fused」が作成されます。元のエクスポートには触れません。",
   fuse_btn: "エクスポートを結合", fuse_btn_n: "{n} 件のエクスポートを結合",
   compact_source: "圧縮するエクスポート",
   compact_pick: "エクスポートフォルダを選択またはドラッグ",
@@ -1620,10 +1808,9 @@ ja: {
   feat_quotes: "返信の引用", feat_quotes_d: "作者と引用元の抜粋を表示する引用枠",
   feat_theme: "ライト / ダークモード", feat_theme_d: "フローティングボタンでテーマを切替",
   feat_media: "ライブメディア", feat_media_d: "動画と音声を再生可能、写真はビューアで表示",
-  feat_note: "最終メッセージ", feat_note_d: "チャットの最後にツールの使い方を記載",
+  feat_note: "使い方の最終メッセージ", feat_note_d: "チャットの最後にツールの使い方を記載",
   enhance_btn: "エクスポートを強化", restore_btn: "元に戻す",
   need_me: "会話モードにはあなたが誰かを選んでください",
-  already_enhanced: "このエクスポートは既に強化済みです。更新されます",
   kind_group: "👥 グループ · {n} 人", kind_private: "👤 個人チャット",
   item_sub: "{msgs} 件のメッセージ · {pages} ページ",
   confirm_mix: "「{a}」は「{b}」と一致しません。別のチャットのエクスポートのようです。それでも追加しますか？",
@@ -1711,6 +1898,25 @@ ja: {
   res_convert: "{msgs} 件のメッセージ",
   res_enriched: "{msgs} 件のメッセージ · HTML から {n} 個のフィールドを追加",
   convert_nothing: "「{name}」に messages.html、result.json、result_enriched.json のいずれもありません",
+  safe_title: "赤で警告されない限り、すべて元に戻せ、できる限り多くの情報を保持します。",
+  safe_fuse: "元のエクスポートは一切変更されません。結果は別のフォルダーに書き込まれます。",
+  safe_compact: "メッセージは失われません。ページへの分け方が変わるだけで、いつでも別のサイズで再圧縮できます。「コピーを作成」なら元のエクスポートはそのままです。",
+  safe_enhance: "完全に元に戻せます。改善のチェックを外せば、エクスポートは元の HTML に損失なく正確に戻ります。",
+  safe_convert: "既存のファイルの横にファイルを追加するだけで、Telegram の公式エクスポートを上書きすることはありません。破壊的な 2 つのオプションだけは、実行前に赤で警告されます。",
+  st_keep: "適用済み",
+  st_remove: "解除されます",
+  st_add: "追加されます",
+  change_btn: "改善を変更",
+  enh_detected: "このエクスポートはすでに改善済みです。適用中のものは緑で表示されます。オプションのチェックを付け外しして変更できます。",
+  enh_why_nochange: "何もすることがありません。エクスポートにはすでにこの改善がそのまま適用されています。変更するにはオプションのチェックを付け外ししてください。",
+  enh_why_none: "何もすることがありません。改善するにはオプションを 1 つ以上オンにしてください。",
+  enh_clear_all: "すべての改善を解除",
+  enh_inplace_hint: "エクスポート自体が変更されます。元に戻せます。改善のチェックを外せば、いつでも元のデザインに戻せます。",
+  enh_inplace_restore_hint: "エクスポート自体から改善が解除され、元の HTML に戻ります。いつでも再適用できます。",
+  confirm_title: "別のチャット？",
+  btn_continue: "それでも追加",
+  res_written_fuse: "結果を新しいフォルダー「{name}」に保存しました。messages.html を開いて確認してください。",
+  cancel_fuse_removed: "未完了の結合は削除されました。元のエクスポートは変更されていません。",
 },
 hi: {
   cta_download: "डेस्कटॉप संस्करण",
@@ -1726,7 +1932,7 @@ hi: {
   fuse_add_more: "यहाँ एक और फ़ोल्डर जोड़ें या खींचें",
   dest_pagination: "पेज विभाजन",
   size_label: "पेज का आकार", chip_single: "एक ही फ़ाइल", chip_custom: "कस्टम",
-  fuse_out_hint: "मिलाते समय आपसे गंतव्य फ़ोल्डर चुनने को कहा जाएगा (खाली फ़ोल्डर इस्तेमाल करें)।",
+  fuse_out_hint: "मर्ज करते समय आप सहेजने की जगह चुनते हैं, और वहाँ परिणाम के साथ एक नया फ़ोल्डर “ChatExport_fused” बनाया जाता है। आपके स्रोत एक्सपोर्ट को छुआ नहीं जाता।",
   fuse_btn: "एक्सपोर्ट मिलाएँ", fuse_btn_n: "{n} एक्सपोर्ट मिलाएँ",
   compact_source: "संक्षिप्त करने के लिए एक्सपोर्ट",
   compact_pick: "एक्सपोर्ट फ़ोल्डर चुनें या यहाँ खींचें",
@@ -1750,10 +1956,9 @@ hi: {
   feat_quotes: "जवाब के उद्धरण", feat_quotes_d: "लेखक और उद्धृत संदेश के अंश वाला बॉक्स",
   feat_theme: "लाइट / डार्क मोड", feat_theme_d: "थीम बदलने के लिए फ़्लोटिंग बटन",
   feat_media: "लाइव मीडिया", feat_media_d: "वीडियो-ऑडियो चलते हैं, फ़ोटो व्यूअर में खुलती हैं",
-  feat_note: "अंतिम संदेश", feat_note_d: "चैट के अंत में इन टूल्स के इस्तेमाल की जानकारी",
+  feat_note: "निर्देशों वाला अंतिम संदेश", feat_note_d: "चैट के अंत में इन टूल्स के इस्तेमाल की जानकारी",
   enhance_btn: "एक्सपोर्ट बेहतर बनाएँ", restore_btn: "मूल रूप लौटाएँ",
   need_me: "बातचीत मोड के लिए चुनें कि आप कौन हैं",
-  already_enhanced: "यह एक्सपोर्ट पहले से बेहतर बनाया गया था; इसे अपडेट किया जाएगा",
   kind_group: "👥 समूह · {n} सदस्य", kind_private: "👤 निजी चैट",
   item_sub: "{msgs} संदेश · {pages} पेज",
   confirm_mix: "«{a}» का «{b}» से मेल नहीं है। ये एक्सपोर्ट अलग-अलग चैट के लगते हैं। फिर भी जोड़ें?",
@@ -1841,6 +2046,25 @@ hi: {
   res_convert: "{msgs} संदेश",
   res_enriched: "{msgs} संदेश · HTML से {n} फ़ील्ड जोड़े गए",
   convert_nothing: "“{name}” में messages.html, result.json या result_enriched.json नहीं है",
+  safe_title: "जब तक लाल रंग में चेतावनी न दी जाए, सब कुछ वापस किया जा सकता है और जितनी हो सके उतनी जानकारी सुरक्षित रखी जाती है।",
+  safe_fuse: "आपके स्रोत एक्सपोर्ट कभी नहीं बदले जाते: परिणाम किसी दूसरे फ़ोल्डर में लिखा जाता है।",
+  safe_compact: "कोई संदेश नहीं खोता: केवल पेजों में उनका बँटवारा बदलता है, और आप जब चाहें किसी दूसरे आकार के साथ फिर से कॉम्पैक्ट कर सकते हैं। «कॉपी बनाएँ» चुनने पर मूल एक्सपोर्ट जस का तस रहता है।",
+  safe_enhance: "पूरी तरह वापस किया जा सकता है: सुधार हटाने पर एक्सपोर्ट बिना किसी नुकसान के हूबहू अपने मूल HTML पर लौट आता है।",
+  safe_convert: "यह केवल आपकी मौजूदा फ़ाइलों के बगल में फ़ाइलें जोड़ता है और Telegram के आधिकारिक एक्सपोर्ट को कभी ओवरराइट नहीं करता। केवल दो विनाशकारी विकल्पों के लिए चलाने से पहले लाल रंग में चेतावनी दी जाती है।",
+  st_keep: "लागू",
+  st_remove: "हटाया जाएगा",
+  st_add: "जोड़ा जाएगा",
+  change_btn: "सुधार बदलें",
+  enh_detected: "यह एक्सपोर्ट पहले से बेहतर बनाया गया है: जो लागू है वह हरे रंग में दिखता है। बदलने के लिए विकल्पों को चुनें या हटाएँ।",
+  enh_why_nochange: "करने को कुछ नहीं: एक्सपोर्ट में पहले से ठीक यही सुधार हैं। इन्हें बदलने के लिए कोई विकल्प चुनें या हटाएँ।",
+  enh_why_none: "करने को कुछ नहीं: एक्सपोर्ट बेहतर बनाने के लिए कम से कम एक विकल्प चालू करें।",
+  enh_clear_all: "सभी सुधार हटाएँ",
+  enh_inplace_hint: "एक्सपोर्ट ख़ुद बदला जाता है। यह वापस किया जा सकता है: सुधारों को हटाकर आप कभी भी मूल डिज़ाइन पर लौट सकते हैं।",
+  enh_inplace_restore_hint: "सुधार एक्सपोर्ट से ही हटा दिए जाते हैं और वह अपने मूल HTML पर लौट आता है। आप जब चाहें इन्हें फिर से लागू कर सकते हैं।",
+  confirm_title: "अलग-अलग चैट?",
+  btn_continue: "फिर भी जोड़ें",
+  res_written_fuse: "परिणाम नए फ़ोल्डर “{name}” में सहेजा गया। देखने के लिए messages.html खोलें।",
+  cancel_fuse_removed: "अधूरा मर्ज हटा दिया गया; आपके स्रोत एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
 },
 ar: {
   cta_download: "نسخة سطح المكتب",
@@ -1856,7 +2080,7 @@ ar: {
   fuse_add_more: "أضف أو اسحب هنا مجلدًا آخر",
   dest_pagination: "تقسيم الصفحات",
   size_label: "حجم الصفحة", chip_single: "ملف واحد", chip_custom: "مخصص",
-  fuse_out_hint: "عند الدمج سيُطلب منك اختيار مجلد الوجهة (استخدم مجلدًا فارغًا).",
+  fuse_out_hint: "عند الدمج تختار مكان الحفظ، ويُنشأ هناك مجلد جديد «ChatExport_fused» يحتوي على النتيجة. لا تُمَس تصديراتك المصدر.",
   fuse_btn: "دمج التصديرات", fuse_btn_n: "دمج {n} تصديرات",
   compact_source: "التصدير المراد ضغطه",
   compact_pick: "اختر أو اسحب هنا مجلد التصدير",
@@ -1880,10 +2104,9 @@ ar: {
   feat_quotes: "اقتباسات الردود", feat_quotes_d: "إطار يعرض الكاتب ومقتطفًا من الرسالة المقتبسة",
   feat_theme: "الوضع الفاتح / الداكن", feat_theme_d: "زر عائم لتغيير السمة",
   feat_media: "وسائط مباشرة", feat_media_d: "فيديو وصوت قابلان للتشغيل، وصور في عارض",
-  feat_note: "رسالة ختامية", feat_note_d: "ملاحظة في نهاية المحادثة عن كيفية استخدام هذه الأدوات",
+  feat_note: "رسالة ختامية مع التعليمات", feat_note_d: "ملاحظة في نهاية المحادثة عن كيفية استخدام هذه الأدوات",
   enhance_btn: "تحسين التصدير", restore_btn: "إزالة التحسين",
   need_me: "اختر من أنت لوضع المحادثة",
-  already_enhanced: "هذا التصدير محسَّن مسبقًا؛ سيتم تحديثه",
   kind_group: "👥 مجموعة · {n} مشاركًا", kind_private: "👤 محادثة خاصة",
   item_sub: "{msgs} رسالة · {pages} صفحة",
   confirm_mix: "«{a}» لا يطابق «{b}». يبدو أن هذه التصديرات من محادثات مختلفة. أتريد إضافته على أي حال؟",
@@ -1971,6 +2194,25 @@ ar: {
   res_convert: "{msgs} رسالة",
   res_enriched: "{msgs} رسالة · أُضيف {n} حقلًا من HTML",
   convert_nothing: "«{name}» لا يحتوي على messages.html أو result.json أو result_enriched.json",
+  safe_title: "ما لم يظهر تحذير باللون الأحمر، فكل شيء قابل للتراجع ويُحتفظ بأكبر قدر ممكن من المعلومات.",
+  safe_fuse: "لا تُعدَّل تصديراتك المصدر أبدًا: تُكتب النتيجة في مجلد آخر.",
+  safe_compact: "لا تضيع أي رسالة: يتغير فقط توزيعها على الصفحات، ويمكنك إعادة الضغط بحجم آخر متى شئت. مع «إنشاء نسخة» يبقى الأصل كما هو.",
+  safe_enhance: "قابل للتراجع بالكامل: بإلغاء تحديد التحسينات يعود التصدير إلى ملف HTML الأصلي تمامًا دون أي فقدان.",
+  safe_convert: "يضيف ملفات فقط بجانب ما لديك ولا يستبدل أبدًا تصديرًا رسميًا من تيليجرام. الخياران المدمِّران الوحيدان يظهر لهما تحذير باللون الأحمر قبل التنفيذ.",
+  st_keep: "مطبَّق",
+  st_remove: "ستُزال",
+  st_add: "ستُضاف",
+  change_btn: "تغيير التحسينات",
+  enh_detected: "هذا التصدير محسَّن بالفعل: ما هو مطبَّق يظهر باللون الأخضر. حدِّد الخيارات أو ألغِ تحديدها لتغييره.",
+  enh_why_nochange: "لا شيء لفعله: التصدير يحتوي بالفعل على هذه التحسينات تمامًا. حدِّد خيارًا أو ألغِ تحديده لتغييرها.",
+  enh_why_none: "لا شيء لفعله: فعِّل خيارًا واحدًا على الأقل لتحسين التصدير.",
+  enh_clear_all: "إزالة كل التحسينات",
+  enh_inplace_hint: "يُعدَّل التصدير نفسه. العملية قابلة للتراجع: يمكنك دائمًا العودة إلى التصميم الأصلي بإلغاء تحديد التحسينات.",
+  enh_inplace_restore_hint: "تُزال التحسينات من التصدير نفسه فيعود إلى ملف HTML الأصلي. يمكنك تطبيقها من جديد متى شئت.",
+  confirm_title: "محادثات مختلفة؟",
+  btn_continue: "إضافة على أي حال",
+  res_written_fuse: "حُفظت النتيجة في المجلد الجديد «{name}». افتح messages.html لعرضها.",
+  cancel_fuse_removed: "حُذف الدمج غير المكتمل؛ ولم تُعدَّل تصديراتك المصدر.",
 }
 };
 document.querySelectorAll(".srclink").forEach(a => { a.href = REPO_URL; });
@@ -1997,8 +2239,10 @@ function applyLang() {
   updateDestHints();
   renderExports();
   renderMeOptions();
+  updateEnhanceAction();
   updateConvertLabels();
-  requestAnimationFrame(movePill);
+  updateSafeNote();
+  requestAnimationFrame(() => { movePill(); updateTabsFade(); });
   applyAndroidWarn();
 }
 
@@ -2041,6 +2285,10 @@ function pyError(e) {
   else if (e && e.stack) dbg(`error: ${e.name}: ${m}\n${e.stack}`);
   return lines[lines.length - 1].replace(/^\w+Error: /, "");
 }
+function updateSafeNote() {
+  const b = document.querySelector("#tabs button.active");
+  $("safe-note-text").textContent = t("safe_" + b.dataset.view);
+}
 function movePill() {
   const btn = document.querySelector("#tabs button.active");
   if (!btn) return;
@@ -2054,10 +2302,24 @@ document.querySelectorAll("#tabs button").forEach(b => {
     ["fuse", "compact", "enhance", "convert"].forEach(v => {
       $("view-" + v).style.display = v === b.dataset.view ? "" : "none";
     });
+    updateSafeNote();
     movePill();
+    b.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   };
 });
 window.addEventListener("resize", movePill);
+// Fades whichever edge of the tab bar hides more tabs. scrollLeft is 0 at
+// the start and grows (LTR) or goes negative (RTL) towards the end.
+function updateTabsFade() {
+  const el = $("tabs");
+  const max = el.scrollWidth - el.clientWidth;
+  const pos = Math.abs(el.scrollLeft);
+  el.classList.toggle("fade-start", max > 1 && pos > 1);
+  el.classList.toggle("fade-end", max > 1 && pos < max - 1);
+}
+$("tabs").addEventListener("scroll", updateTabsFade, { passive: true });
+window.addEventListener("resize", updateTabsFade);
+
 
 function wireChips(chipsId, customId, onSel) {
   $(chipsId).querySelectorAll(".chip").forEach(c => {
@@ -2071,7 +2333,7 @@ function wireChips(chipsId, customId, onSel) {
 }
 wireChips("fuse-chips", "fuse-custom");
 wireChips("compact-chips", "compact-custom");
-wireChips("layout-chips", null, updateLayoutHint);
+wireChips("layout-chips", null, () => { updateLayoutHint(); updateEnhanceAction(); });
 
 /* explicaciones dinamicas: cambian con la opcion elegida */
 function updateGoalHint() {
@@ -2096,9 +2358,6 @@ document.querySelectorAll("#compact-mode button").forEach(b => {
     updateGoalHint();
   };
 });
-$("opt-bubbles").onchange = () => {
-  $("bubbles-sub").classList.toggle("off", !$("opt-bubbles").checked);
-};
 
 // Compact/enhance destination: rewrite the export in place, or work on a
 // fresh copy and leave the original untouched.
@@ -2108,7 +2367,8 @@ function destIsCopy(id) {
 }
 function updateDestHints() {
   for (const id of DEST_SEGS) {
-    $(id + "-hint").textContent = t(destIsCopy(id) ? "dest_copy_hint" : "dest_inplace_hint");
+    const inplace = id === "enhance-dest" ? enhanceDestHint() : "dest_inplace_hint";
+    $(id + "-hint").textContent = t(destIsCopy(id) ? "dest_copy_hint" : inplace);
   }
 }
 for (const id of DEST_SEGS) {
@@ -2273,14 +2533,22 @@ def inspect(path):
             if first is None:
                 first = "/".join(ds[0][:3])
             last = "/".join(ds[-1][:3])
+    head = pages[0].read_text(encoding="utf-8")
+    enhanced = "css/enhanced.css" in head[:4000]
+    # which enhancements it already has, so the UI can show them applied;
+    # a page enhanced before the config was written counts as "all on"
+    config = E.read_config(head) if enhanced else None
+    if enhanced and config is None:
+        config = {"me": None, "layout": "both", "fullwidth": True,
+                  "features": {k: True for k in E.ALL_FEATURES}}
     return json.dumps({
         "title": title, "messages": len(ids),
         "pages": [p.name for p in pages],
         "first": first, "last": last,
         "senders": [{"name": n, "count": c} for n, c in senders.most_common()],
         "kind": "group" if len(senders) > 2 else "private",
-        "enhanced": "css/enhanced.css" in
-                    pages[0].read_text(encoding="utf-8")[:4000],
+        "enhanced": enhanced,
+        "config": config,
     })
 
 def run_fuse(paths_json, out, page_size, force, media_maps_json):
@@ -3136,7 +3404,7 @@ function hideJob() {
   document.querySelectorAll(".btn.filled").forEach(b => b.disabled = false);
   renderExports();
   if (!state.compact) $("compact-btn").disabled = true;
-  if (!state.enhance) $("enhance-btn").disabled = true;
+  updateEnhanceAction();
   if (!state.convert) $("convert-btn").disabled = true;
 }
 function setStage(text, frac) {
@@ -3198,7 +3466,7 @@ function endJob(ok, res, errText, subText, cancelled) {
   document.querySelectorAll(".btn.filled").forEach(b => b.disabled = false);
   renderExports();
   if (!state.compact) $("compact-btn").disabled = true;
-  if (!state.enhance) $("enhance-btn").disabled = true;
+  updateEnhanceAction();
   if (!state.convert) $("convert-btn").disabled = true;
   const icon = $("job-ricon");
   $("job-result").classList.add("show");
@@ -3275,6 +3543,14 @@ async function inspectHandle(handle, target) {
   return info;
 }
 
+// Same in-page question card as the other prompts (not the browser's own
+// confirm(), whose buttons can't be translated).
+async function confirmAdd(text) {
+  return await askChoice(t("confirm_title"), text, [
+    { id: "add", label: t("btn_continue"), style: "filled" },
+    { id: "cancel", label: t("size_warn_cancel") },
+  ]) === "add";
+}
 async function addExportHandle(handle) {
   for (const e of state.exports) {
     if (await handle.isSameEntry(e.handle)) return snack(t("snack_dup"));
@@ -3283,12 +3559,12 @@ async function addExportHandle(handle) {
   if (state.exports.length) {
     const first = state.exports[0];
     if (first.title && info.title && first.title !== info.title) {
-      const ok = confirm(t("confirm_mix", { a: info.title, b: first.title }));
+      const ok = await confirmAdd(t("confirm_mix", { a: info.title, b: first.title }));
       dbg(`añadir export: títulos distintos → ${ok ? "añadido igualmente" : "descartado"}`);
       if (!ok) return;
       state.forceMix = true;
     } else if (first.kind !== info.kind) {
-      const ok = confirm(t("confirm_kind"));
+      const ok = await confirmAdd(t("confirm_kind"));
       dbg(`añadir export: mezcla grupo/privado → ${ok ? "añadido igualmente" : "descartado"}`);
       if (!ok) return;
       state.forceMix = true;
@@ -3351,16 +3627,11 @@ async function preflight(handles) {
 async function runFuse() {
   if (!await preflight(state.exports.map(e => e.handle))) return;
 
-  let out;
-  try {
-    out = await showDirectoryPicker({ id: "tgx-out", mode: "readwrite" });
-  } catch (e) {
-    dbg(`runFuse: selector de carpeta cerrado/fallido — ${e.name}: ${e.message}`);
-    return;
-  }
-  for (const e of state.exports) {
-    if (await out.isSameEntry(e.handle)) return snack("⚠ output = input");
-  }
+  // Always a new folder, like the desktop's "ChatExport_fused" default: no
+  // need to find an empty one, and a cancelled merge can simply be removed.
+  const dest = await pickNewFolder(state.exports.map(e => e.handle), "ChatExport_fused");
+  if (!dest) return;
+  const out = dest.handle;
   showJob(t("job_fusing"), true);
   try {
     mediaDone = 0;
@@ -3387,10 +3658,11 @@ async function runFuse() {
     checkCancel();
     setStage(t("stage_saving"), null);
     await writeBackPages("/out", out, res.pages);
-    endJob(true, res);
-    if (failed.length) offerRescue(out.name, failed);
+    endJob(true, res, null, t("res_written_fuse", { name: dest.name }));
+    if (failed.length) offerRescue(dest.name, failed);
   } catch (e) {
-    if (e instanceof JobCancelled) endCancelled(t("cancel_partial_dir"));
+    await discardCopy(dest);
+    if (e instanceof JobCancelled) endCancelled(t("cancel_fuse_removed"));
     else endJob(false, null, pyError(e));
   }
 }
@@ -3492,31 +3764,35 @@ function clearCompact() {
 }
 /* ---- copy mode shared by compact / enhance / restore ---- */
 
-// Asks for a folder and creates a fresh "<export><suffix>" subfolder in it
-// (numbered if taken). Returns { parent, name, handle }, or null if the
-// picker was dismissed. Refuses the export itself or any folder inside it:
-// copying into your own tree would make the copy walk into itself.
-async function pickCopyTarget(src, suffix) {
+// Asks for a folder and creates a fresh "<base>" subfolder in it (numbered
+// if taken). Returns { parent, name, handle }, or null if the picker was
+// dismissed. Refuses a source export itself or any folder inside it:
+// writing into your own tree would make the copy walk into itself.
+async function pickNewFolder(sources, base) {
   let parent;
   try {
     parent = await showDirectoryPicker({ id: "tgx-out", mode: "readwrite" });
   } catch (e) {
-    dbg(`pickCopyTarget: selector cerrado/fallido — ${e.name}: ${e.message}`);
+    dbg(`pickNewFolder: selector cerrado/fallido — ${e.name}: ${e.message}`);
     return null;
   }
-  if ((await src.resolve(parent)) !== null) {
-    snack(t("copy_inside_source"));
-    return null;
+  for (const src of sources) {
+    if ((await src.resolve(parent)) !== null) {
+      snack(t("copy_inside_source"));
+      return null;
+    }
   }
-  const base = src.name + suffix;
   let name = base;
   for (let n = 2; ; n++) {
     try { await parent.getDirectoryHandle(name); } catch (_) { break; }
     name = `${base} (${n})`;
   }
   const handle = await parent.getDirectoryHandle(name, { create: true });
-  dbg(`pickCopyTarget: copia en «${parent.name}/${name}»`);
+  dbg(`pickNewFolder: resultado en «${parent.name}/${name}»`);
   return { parent, name, handle };
+}
+function pickCopyTarget(src, suffix) {
+  return pickNewFolder([src], src.name + suffix);
 }
 
 // Copies everything except the messages*.html pages (the job writes those)
@@ -3664,17 +3940,19 @@ function renderMeOptions() {
   });
   if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
-async function setEnhanceHandle(handle) {
+// refresh: re-inspection of the same export after a job — keep the options
+// the user is editing unless the export's own enhancements changed.
+async function setEnhanceHandle(handle, refresh) {
+  const prev = state.enhance;
   const info = await inspectHandle(handle, "/work/e");
   state.enhance = info;
   $("ei-name").textContent = handle.name + (info.title ? " — " + info.title : "");
   $("ei-sub").textContent = itemSub(info);
   renderMeOptions();
-  if (info.enhanced) snack(t("already_enhanced"));
   $("enhance-sel").style.display = "none";
   $("enhance-info").style.display = "";
-  $("enhance-btn").disabled = false;
-  $("restore-btn").style.display = info.enhanced ? "" : "none";
+  if (refresh && prev && JSON.stringify(prev.config) === JSON.stringify(info.config)) updateEnhanceAction();
+  else loadEnhanceOptions();
 }
 async function pickEnhance() {
   if (!glue) return;
@@ -3687,9 +3965,111 @@ function clearEnhance() {
   state.enhance = null;
   $("enhance-sel").style.display = "";
   $("enhance-info").style.display = "none";
-  $("enhance-btn").disabled = true;
-  $("restore-btn").style.display = "none";
+  updateEnhanceAction();
 }
+function enhanceBusy() { return jobRunning; }
+/* ---- enhance options vs what the export already has ----
+ * An enhanced export records the options it was built with, so the switches
+ * start from that state and every change is shown against it:
+ *   applied + on  -> green "Applied"      not applied + on  -> blue "Will be added"
+ *   applied + off -> red "Will be removed" not applied + off -> grey
+ * The button follows the diff: only additions -> Enhance, only removals ->
+ * Un-enhance (a full restore once everything is off), both (or a new "who
+ * are you" / layout) -> Change enhancements, nothing -> disabled, saying why. */
+const ENH_OPTS = ["bubbles", "fullwidth", "quotes", "theme", "media", "note"];
+function enhConfig() {
+  return state.enhance ? state.enhance.config : null;
+}
+function enhApplied(k) {
+  const c = enhConfig();
+  if (!c) return false;
+  return k === "fullwidth" ? !!c.fullwidth : !!c.features[k];
+}
+function enhOn(k) { return $("opt-" + k).checked; }
+function enhLayout() { return $("layout-chips").querySelector(".chip.sel").dataset.layout; }
+
+// Switches, "who are you" and layout as the export has them (defaults for a
+// plain export).
+function loadEnhanceOptions() {
+  const c = enhConfig();
+  for (const k of ENH_OPTS) $("opt-" + k).checked = c ? enhApplied(k) : true;
+  const layout = c ? c.layout : "both";
+  $("layout-chips").querySelectorAll(".chip").forEach(x =>
+    x.classList.toggle("sel", x.dataset.layout === layout));
+  const sel = $("me-select");
+  sel.value = c && c.me && [...sel.options].some(o => o.value === c.me) ? c.me : "";
+  $("bubbles-sub").classList.toggle("off", !enhOn("bubbles"));
+  updateLayoutHint();
+  updateEnhanceAction();
+}
+
+// { kind: "enhance" | "restore" | null, label, why, needMe }
+function enhanceAction() {
+  if (!state.enhance) return { kind: null };
+  const c = enhConfig();
+  const added = ENH_OPTS.filter(k => enhOn(k) && !enhApplied(k));
+  const removed = ENH_OPTS.filter(k => !enhOn(k) && enhApplied(k));
+  const me = $("me-select").value, layout = enhLayout();
+  const needMe = enhOn("bubbles") && layout !== "original" && !me;
+  if (!c) {
+    if (!added.length) return { kind: null, why: "enh_why_none" };
+    if (needMe) return { kind: null, why: "need_me", needMe };
+    return { kind: "enhance", label: "enhance_btn" };
+  }
+  const retuned = enhOn("bubbles") && enhApplied("bubbles")
+    && (me !== (c.me || "") || layout !== c.layout);
+  if (!added.length && !removed.length && !retuned) return { kind: null, why: "enh_why_nochange" };
+  if (ENH_OPTS.every(k => !enhOn(k))) return { kind: "restore", label: "restore_btn" };
+  if (needMe) return { kind: null, why: "need_me", needMe };
+  const label = added.length && !removed.length && !retuned ? "enhance_btn"
+    : removed.length && !added.length && !retuned ? "restore_btn" : "change_btn";
+  return { kind: "enhance", label };
+}
+
+function updateEnhanceAction() {
+  const c = enhConfig();
+  const a = enhanceAction();
+  for (const k of ENH_OPTS) {
+    const row = $("opt-" + k).closest(".switchrow");
+    let tag = row.querySelector(".st-tag");
+    if (!tag) {
+      tag = document.createElement("span");
+      tag.className = "st-tag";
+      row.insertBefore(tag, row.querySelector(".switch"));
+    }
+    const st = !c ? "" : enhApplied(k) ? (enhOn(k) ? "keep" : "remove") : (enhOn(k) ? "add" : "");
+    row.classList.remove("st-keep", "st-remove", "st-add");
+    if (st) row.classList.add("st-" + st);
+    tag.textContent = st ? t("st_" + st) : "";
+  }
+  $("layout-chips").querySelectorAll(".chip").forEach(x => x.classList.toggle("applied",
+    !!c && enhApplied("bubbles") && x.dataset.layout === c.layout));
+  $("me-select").classList.toggle("invalid", !!a.needMe);
+  $("ei-state").textContent = c ? t("enh_detected") : "";
+  $("ei-state").style.display = c ? "" : "none";
+  $("enh-clear-all").style.display = c && ENH_OPTS.some(enhOn) ? "" : "none";
+  $("enhance-btn-label").textContent = t(a.label || "enhance_btn");
+  $("enhance-btn").disabled = !a.kind || enhanceBusy();
+  $("enhance-why").textContent = a.why ? t(a.why) : "";
+  $("enhance-why").style.display = a.why ? "" : "none";
+  updateDestHints();
+}
+function enhanceDestHint() {
+  return enhanceAction().kind === "restore" ? "enh_inplace_restore_hint" : "enh_inplace_hint";
+}
+function clearAllEnhancements() {
+  for (const k of ENH_OPTS) $("opt-" + k).checked = false;
+  $("bubbles-sub").classList.add("off");
+  updateEnhanceAction();
+}
+for (const k of ENH_OPTS) {
+  $("opt-" + k).addEventListener("change", () => {
+    if (k === "bubbles") $("bubbles-sub").classList.toggle("off", !enhOn("bubbles"));
+    updateEnhanceAction();
+  });
+}
+$("me-select").addEventListener("change", updateEnhanceAction);
+
 async function writeAsset(handle, dir, name, fsPath) {
   const dh = await handle.getDirectoryHandle(dir, { create: true });
   const fh = await dh.getFileHandle(name, { create: true });
@@ -3704,16 +4084,16 @@ async function removeAsset(handle, dir, name) {
   } catch (_) {}
 }
 async function runEnhance() {
-  if (!state.enhance) return;
+  const a = enhanceAction();
+  if (!a.kind) return;
+  if (a.kind === "restore") return runRestore();
   const f = {
-    bubbles: $("opt-bubbles").checked, quotes: $("opt-quotes").checked,
-    theme: $("opt-theme").checked, media: $("opt-media").checked,
-    note: $("opt-note").checked
+    bubbles: enhOn("bubbles"), quotes: enhOn("quotes"),
+    theme: enhOn("theme"), media: enhOn("media"), note: enhOn("note")
   };
-  const layout = $("layout-chips").querySelector(".chip.sel").dataset.layout;
+  const layout = enhLayout();
   const me = $("me-select").value;
-  if (f.bubbles && !me && layout !== "original") return snack(t("need_me"));
-  const fullwidth = $("opt-fullwidth").checked;
+  const fullwidth = enhOn("fullwidth");
   dbg(`mejorar: disposición=${layout}, ancho completo=${fullwidth}, remitente propio=${me ? "sí" : "no"}, ` +
       `opciones=${Object.keys(f).filter(k => f[k]).join(",") || "ninguna"}`);
   const copy = destIsCopy("enhance-dest");
@@ -3732,7 +4112,7 @@ async function runEnhance() {
             ["js/enhanced.js", "/work/e/js/enhanced.js"]],
     }),
   });
-  if (ok && !copy) await setEnhanceHandle(src);
+  if (ok && !copy) await setEnhanceHandle(src, true);
 }
 async function runRestore() {
   if (!state.enhance) return;
@@ -3751,7 +4131,7 @@ async function runRestore() {
       remove: ["css/enhanced.css", "js/enhanced.js"],
     }),
   });
-  if (ok && !copy) await setEnhanceHandle(src);
+  if (ok && !copy) await setEnhanceHandle(src, true);
 }
 
 /* ================= convert ================= */
@@ -3850,7 +4230,9 @@ function clearConvert() {
   $("convert-btn").disabled = true;
 }
 
-async function setConvertHandle(handle) {
+// silent: re-analysis after a conversion — the folder may now hold both
+// formats because of it, so no need to ask about that again.
+async function setConvertHandle(handle, silent) {
   await loadConvertToFS(handle);
   let info;
   try {
@@ -3866,7 +4248,7 @@ async function setConvertHandle(handle) {
   if (info.has_html && info.has_json) {
     // both formats at once: the only useful operation is enriching the
     // official JSON with the HTML's extra data — ask harshly first
-    const c = await askChoice(t("both_title"), t("both_body"), [
+    const c = silent ? "enrich" : await askChoice(t("both_title"), t("both_body"), [
       { id: "enrich", label: t("btn_enrich"), style: "filled" },
       { id: "cancel", label: t("size_warn_cancel") },
     ]);
@@ -3916,6 +4298,8 @@ async function runConvert() {
   } catch (e) {
     endJob(false, null, pyError(e));
   }
+  // what the folder holds now (e.g. HTML + the new JSON -> enrich next)
+  try { await setConvertHandle(handle, true); } catch (_) { clearConvert(); }
 }
 
 /* ================= init ================= */
