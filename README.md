@@ -30,6 +30,8 @@ Las operaciones largas se pueden **cancelar** desde la propia tarjeta de progres
 
 **Compactar y mejorar** te dejan elegir el resultado: **modificar el original** (rápido, solo reescribe los `messages*.html`) o **crear una copia** completa del export con el cambio aplicado, dejando el original intacto. En la web la copia va a una subcarpeta nueva (`<export>_compacted`, `_enhanced` o `_restored`) de la carpeta que elijas (con el mismo ZIP de rescate si Chrome bloquea algo); en la versión de escritorio indicas la ruta de la copia, que debe no existir o estar vacía.
 
+El **Conversor** (HTML ↔ JSON, ver [`convert`](#convert--convertir-entre-html-y-json-el-conversor-de-la-interfaz)) también está en la web, con la misma autodetección y los mismos modos que en escritorio. Trabaja siempre dentro de la propia carpeta del export, porque el resultado referencia la media por ruta relativa; solo lee y escribe las páginas `messages*.html`, los `result*.json` y, al generar la vista HTML, los recursos `css/`, `js/` e `images/`: la media no se toca.
+
 ### Opción 2 · Aplicación de escritorio — un solo archivo, sin tocar código
 
 La forma más sencilla de usarlo si no quieres nada relacionado con programación. Descarga uno de estos archivos desde la [página de releases](https://github.com/Marcos-SA-git/Telegram-Export-Studio/releases/latest) y ya está:
@@ -164,7 +166,7 @@ Los archivos de `releases/` (`telegram_export_studio_aio_vX.Y.Z.py`, `.pyw`, `.e
 python build_aio.py
 ```
 
-La versión web tiene su propio generador, `build_pages.py`, que reutiliza los mismos tres módulos (sin `telegram_export_studio.py`, ya que no hay servidor en el navegador). Un workflow de GitHub Actions (`.github/workflows/deploy-pages.yml`) lo ejecuta automáticamente en cada push que toque un módulo, la carpeta `web/` o `telegram_export_version.py`, y publica el resultado en GitHub Pages — no hace falta ningún paso manual.
+La versión web tiene su propio generador, `build_pages.py`, que reutiliza los mismos cuatro módulos del motor — fuser, compactor, enhancer y converter — (sin `telegram_export_studio.py`, ya que no hay servidor en el navegador). Un workflow de GitHub Actions (`.github/workflows/deploy-pages.yml`) lo ejecuta automáticamente en cada push que toque un módulo, la carpeta `web/` o `telegram_export_version.py`, y publica el resultado en GitHub Pages — no hace falta ningún paso manual.
 
 ### `tools/` — utilidades de mantenimiento
 

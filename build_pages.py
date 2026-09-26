@@ -4,7 +4,7 @@
 _site/ es un directorio de salida efímero (en .gitignore, nunca se
 commitea): junta las dos páginas mantenidas a mano en web/ (index.html
 y app.html, que cargan el motor con Pyodide) con copias frescas de los
-tres módulos del motor (fuser, compactor, enhancer — la GUI de
+cuatro módulos del motor (fuser, compactor, enhancer, converter — la GUI de
 escritorio de telegram_export_studio.py no aplica aquí, no hay
 servidor en el navegador).
 
@@ -29,6 +29,7 @@ ENGINE_MODULES = [
     "telegram_export_fuser.py",
     "telegram_export_compactor.py",
     "telegram_export_enhancer.py",
+    "telegram_export_converter.py",
 ]
 
 

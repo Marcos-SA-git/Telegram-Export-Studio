@@ -30,6 +30,8 @@ Long operations can be **cancelled** from the progress card itself. While one is
 
 **Compact and enhance** let you choose the result: **modify the original** (fast, only rewrites the `messages*.html` files) or **create a full copy** of the export with the change applied, leaving the original untouched. On the web the copy goes into a new subfolder (`<export>_compacted`, `_enhanced` or `_restored`) of the folder you pick (with the same rescue ZIP if Chrome blocks anything); in the desktop version you give the copy's path, which must not exist or must be empty.
 
+The **Converter** (HTML ↔ JSON, see [`convert`](#convert--convert-between-html-and-json-the-uis-converter)) is on the web too, with the same auto-detection and modes as on desktop. It always works inside the export folder itself, since the result references the media by relative path; it only reads and writes the `messages*.html` pages, the `result*.json` files and, when generating the HTML view, the `css/`, `js/` and `images/` assets: media is never touched.
+
 ### Option 2 · Desktop app — a single file, no code involved
 
 The simplest option if you don't want anything programming-related. Download one of these files from the [releases page](https://github.com/Marcos-SA-git/Telegram-Export-Studio/releases/latest) and you're done:
@@ -164,7 +166,7 @@ The files in `releases/` (`telegram_export_studio_aio_vX.Y.Z.py`, `.pyw`, `.exe`
 python build_aio.py
 ```
 
-The web version has its own generator, `build_pages.py`, which reuses the same three modules (without `telegram_export_studio.py`, since there's no server in the browser). A GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) runs it automatically on every push that touches a module, the `web/` folder or `telegram_export_version.py`, and publishes the result to GitHub Pages — no manual "publish" step needed.
+The web version has its own generator, `build_pages.py`, which reuses the same four engine modules — fuser, compactor, enhancer and converter — (without `telegram_export_studio.py`, since there's no server in the browser). A GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) runs it automatically on every push that touches a module, the `web/` folder or `telegram_export_version.py`, and publishes the result to GitHub Pages — no manual "publish" step needed.
 
 ### `tools/` — maintenance utilities
 
