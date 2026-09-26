@@ -652,17 +652,20 @@ def inspect_convert(path: str) -> dict:
     return info
 
 
-def do_convert(export, mode, faithful=False):
-    d = Path(export).resolve()
-    if mode == "tojson":
-        return to_json(d, faithful=faithful)
-    if mode == "tohtml":
-        return from_json(d)
-    if mode == "enrich":
-        return enrich_json(d)
-    if mode == "downgrade":
-        return downgrade_json(d)
-    raise ValueError(f"Modo de conversión desconocido: {mode}")
+def do_convert(export, mode, faithful=False, output=None):
+    # A copy has to be complete (media included): the result links the
+    # media by relative path, so it only works next to it.
+    def job(d):
+        if mode == "tojson":
+            return to_json(d, faithful=faithful)
+        if mode == "tohtml":
+            return from_json(d)
+        if mode == "enrich":
+            return enrich_json(d)
+        if mode == "downgrade":
+            return downgrade_json(d)
+        raise ValueError(f"Modo de conversión desconocido: {mode}")
+    return on_export(export, output, job)
 
 
 # ---------------------------------------------------------------------------
@@ -1399,6 +1402,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
         <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
         <span data-i18n="faithful_warn"></span>
       </div>
+      <div class="hint cv-copy-safe" style="display:none" data-i18n="cv_copy_safe"></div>
       <div class="hint" data-i18n="tojson_hint" style="margin-top:12px"></div>
     </div>
     <div id="cv-tohtml" style="display:none">
@@ -1418,7 +1422,23 @@ footer { text-align: center; color: var(--muted); font-size: 12px;
         <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
         <span data-i18n="downgrade_warn"></span>
       </div>
+      <div class="hint cv-copy-safe" style="display:none" data-i18n="cv_copy_safe"></div>
     </div>
+  </div>
+
+  <div class="card" id="convert-dest-card" style="display:none">
+    <h2 data-i18n="dest_h"></h2>
+    <div class="seg2" id="convert-dest">
+      <button data-dest="inplace" class="active" data-i18n="dest_inplace"></button>
+      <button data-dest="copy" data-i18n="dest_copy"></button>
+    </div>
+    <div class="field" id="convert-dest-field" style="display:none;margin-top:16px">
+      <input type="text" id="convert-dest-out" spellcheck="false">
+      <button class="browse" onclick="browseCopyOut('convert')">
+        <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="margin-top:12px" id="convert-dest-hint"></div>
   </div>
 
   <button class="btn filled" id="convert-btn" onclick="runConvert()" disabled>
@@ -1646,6 +1666,8 @@ es: {
   enh_clear_all: "Quitar todas las mejoras",
   enh_inplace_hint: "Se modifica el propio export. Es reversible: siempre podrás volver al diseño original desmarcando las mejoras.",
   enh_inplace_restore_hint: "Las mejoras se quitan del propio export, que vuelve a su HTML original. Podrás aplicarlas de nuevo cuando quieras.",
+  cv_inplace_hint: "El resultado se escribe dentro del propio export, junto a su media. Salvo en los modos marcados en rojo, solo se añaden archivos: lo que ya había no se modifica.",
+  cv_copy_safe: "Como trabajas sobre una copia, el export original no se modificará: la pérdida solo afecta a la copia.",
 },
 en: {
   subtitle: "Merge, compact and enhance chat exports — 100% local",
@@ -1798,6 +1820,8 @@ en: {
   enh_clear_all: "Remove all enhancements",
   enh_inplace_hint: "The export itself is modified. It's reversible: you can always go back to the original design by unticking the enhancements.",
   enh_inplace_restore_hint: "The enhancements are removed from the export itself, which goes back to its original HTML. You can apply them again whenever you like.",
+  cv_inplace_hint: "The result is written inside the export itself, next to its media. Except in the modes flagged in red, files are only added: what was already there isn't modified.",
+  cv_copy_safe: "Since you're working on a copy, the original export won't be modified: the loss only affects the copy.",
 },
 fr: {
   subtitle: "Fusionnez, compactez et améliorez vos exports — 100 % local",
@@ -1952,6 +1976,8 @@ fr: {
   enh_clear_all: "Retirer toutes les améliorations",
   enh_inplace_hint: "L'export lui-même est modifié. C'est réversible : vous pourrez toujours revenir au design original en décochant les améliorations.",
   enh_inplace_restore_hint: "Les améliorations sont retirées de l'export lui-même, qui retrouve son HTML d'origine. Vous pourrez les appliquer de nouveau quand vous voudrez.",
+  cv_inplace_hint: "Le résultat est écrit dans l'export lui-même, à côté de ses médias. Sauf dans les modes signalés en rouge, des fichiers sont seulement ajoutés : ce qui existait n'est pas modifié.",
+  cv_copy_safe: "Comme vous travaillez sur une copie, l'export d'origine ne sera pas modifié : la perte ne concerne que la copie.",
 },
 de: {
   subtitle: "Chat-Exporte zusammenführen, kompaktieren und verbessern — 100 % lokal",
@@ -2106,6 +2132,8 @@ de: {
   enh_clear_all: "Alle Verbesserungen entfernen",
   enh_inplace_hint: "Der Export selbst wird verändert. Das ist umkehrbar: Du kannst jederzeit zum Originaldesign zurück, indem du die Verbesserungen abwählst.",
   enh_inplace_restore_hint: "Die Verbesserungen werden aus dem Export selbst entfernt, der wieder sein Original-HTML erhält. Du kannst sie jederzeit erneut anwenden.",
+  cv_inplace_hint: "Das Ergebnis wird im Export selbst gespeichert, neben seinen Medien. Außer in den rot markierten Modi werden nur Dateien hinzugefügt: Vorhandenes wird nicht verändert.",
+  cv_copy_safe: "Da du mit einer Kopie arbeitest, wird der ursprüngliche Export nicht verändert: Der Verlust betrifft nur die Kopie.",
 },
 pt: {
   subtitle: "Mescle, compacte e melhore exports de chats — 100% local",
@@ -2260,6 +2288,8 @@ pt: {
   enh_clear_all: "Remover todas as melhorias",
   enh_inplace_hint: "O próprio export é modificado. É reversível: você sempre poderá voltar ao design original desmarcando as melhorias.",
   enh_inplace_restore_hint: "As melhorias são removidas do próprio export, que volta ao seu HTML original. Você poderá aplicá-las de novo quando quiser.",
+  cv_inplace_hint: "O resultado é gravado dentro do próprio export, junto com sua mídia. Exceto nos modos marcados em vermelho, apenas se adicionam arquivos: o que já existia não é modificado.",
+  cv_copy_safe: "Como você está trabalhando em uma cópia, o export original não será modificado: a perda só afeta a cópia.",
 },
 it: {
   subtitle: "Unisci, compatta e migliora gli export delle chat — 100% locale",
@@ -2414,6 +2444,8 @@ it: {
   enh_clear_all: "Rimuovi tutti i miglioramenti",
   enh_inplace_hint: "Viene modificato l'export stesso. È reversibile: potrai sempre tornare al design originale deselezionando i miglioramenti.",
   enh_inplace_restore_hint: "I miglioramenti vengono rimossi dall'export stesso, che torna al suo HTML originale. Potrai applicarli di nuovo quando vuoi.",
+  cv_inplace_hint: "Il risultato viene scritto nell'export stesso, accanto ai suoi media. Tranne nelle modalità segnalate in rosso, vengono solo aggiunti file: ciò che c'era già non viene modificato.",
+  cv_copy_safe: "Poiché lavori su una copia, l'export originale non verrà modificato: la perdita riguarda solo la copia.",
 },
 ru: {
   subtitle: "Объединяйте, сжимайте и улучшайте экспорты чатов — 100% локально",
@@ -2568,6 +2600,8 @@ ru: {
   enh_clear_all: "Убрать все улучшения",
   enh_inplace_hint: "Изменяется сам экспорт. Это обратимо: вы всегда сможете вернуть исходный вид, сняв улучшения.",
   enh_inplace_restore_hint: "Улучшения убираются из самого экспорта, и он возвращается к исходному HTML. Вы сможете применить их снова в любой момент.",
+  cv_inplace_hint: "Результат записывается в сам экспорт, рядом с его медиа. Кроме режимов, отмеченных красным, файлы только добавляются: то, что уже было, не изменяется.",
+  cv_copy_safe: "Вы работаете с копией, поэтому исходный экспорт не изменится: потеря затронет только копию.",
 },
 zh: {
   subtitle: "合并、压缩并美化聊天导出 — 100% 本地运行",
@@ -2722,6 +2756,8 @@ zh: {
   enh_clear_all: "移除全部美化",
   enh_inplace_hint: "将直接修改导出本身。此操作可撤销：取消勾选美化即可随时恢复原始设计。",
   enh_inplace_restore_hint: "将从导出本身移除美化，恢复其原始 HTML。你可以随时重新应用。",
+  cv_inplace_hint: "结果会写入导出本身，与其媒体放在一起。除红色标出的模式外，只会添加文件：已有内容不会被修改。",
+  cv_copy_safe: "由于你在副本上操作，原始导出不会被修改：数据损失只影响副本。",
 },
 ja: {
   subtitle: "チャットのエクスポートを結合・圧縮・強化 — 100% ローカル",
@@ -2876,6 +2912,8 @@ ja: {
   enh_clear_all: "すべての改善を解除",
   enh_inplace_hint: "エクスポート自体が変更されます。元に戻せます。改善のチェックを外せば、いつでも元のデザインに戻せます。",
   enh_inplace_restore_hint: "エクスポート自体から改善が解除され、元の HTML に戻ります。いつでも再適用できます。",
+  cv_inplace_hint: "結果はエクスポート自体の中、メディアの横に書き込まれます。赤で示したモード以外では、ファイルが追加されるだけで既存のものは変更されません。",
+  cv_copy_safe: "コピー上で作業しているため、元のエクスポートは変更されません。失われるのはコピーのデータだけです。",
 },
 hi: {
   subtitle: "चैट एक्सपोर्ट को मिलाएँ, संक्षिप्त करें और बेहतर बनाएँ — 100% लोकल",
@@ -3030,6 +3068,8 @@ hi: {
   enh_clear_all: "सभी सुधार हटाएँ",
   enh_inplace_hint: "एक्सपोर्ट ख़ुद बदला जाता है। यह वापस किया जा सकता है: सुधारों को हटाकर आप कभी भी मूल डिज़ाइन पर लौट सकते हैं।",
   enh_inplace_restore_hint: "सुधार एक्सपोर्ट से ही हटा दिए जाते हैं और वह अपने मूल HTML पर लौट आता है। आप जब चाहें इन्हें फिर से लागू कर सकते हैं।",
+  cv_inplace_hint: "परिणाम एक्सपोर्ट के अंदर ही, उसकी मीडिया के साथ लिखा जाता है। लाल रंग में चिह्नित मोड को छोड़कर, केवल फ़ाइलें जोड़ी जाती हैं: जो पहले से था उसमें कोई बदलाव नहीं होता।",
+  cv_copy_safe: "चूँकि आप एक कॉपी पर काम कर रहे हैं, मूल एक्सपोर्ट में कोई बदलाव नहीं होगा: नुकसान केवल कॉपी पर होगा।",
 },
 ar: {
   subtitle: "ادمج وضغّط وحسّن تصديرات المحادثات — 100% محليًا",
@@ -3184,6 +3224,8 @@ ar: {
   enh_clear_all: "إزالة كل التحسينات",
   enh_inplace_hint: "يُعدَّل التصدير نفسه. العملية قابلة للتراجع: يمكنك دائمًا العودة إلى التصميم الأصلي بإلغاء تحديد التحسينات.",
   enh_inplace_restore_hint: "تُزال التحسينات من التصدير نفسه فيعود إلى ملف HTML الأصلي. يمكنك تطبيقها من جديد متى شئت.",
+  cv_inplace_hint: "تُكتب النتيجة داخل التصدير نفسه بجانب وسائطه. باستثناء الأوضاع المميَّزة باللون الأحمر، تُضاف ملفات فقط: لا يُعدَّل ما كان موجودًا.",
+  cv_copy_safe: "بما أنك تعمل على نسخة، فلن يُعدَّل التصدير الأصلي: الفقدان يطال النسخة فقط.",
 }
 };
 
@@ -3526,14 +3568,20 @@ document.querySelectorAll("#compact-mode button").forEach(b => {
 function destIsCopy(kind) {
   return $(kind + "-dest").querySelector("button.active").dataset.dest === "copy";
 }
+const COPY_SUFFIX = { compact: "_compacted", enhance: "_enhanced", convert: "_converted" };
 function updateDestHints() {
   $("compact-dest-hint").textContent = t(destIsCopy("compact") ? "dest_copy_hint" : "inplace_hint");
   $("enhance-dest-hint").textContent = t(destIsCopy("enhance") ? "dest_copy_hint" : enhanceDestHint());
-  for (const k of ["compact", "enhance"]) {
+  $("convert-dest-hint").textContent = t(destIsCopy("convert") ? "dest_copy_hint" : "cv_inplace_hint");
+  // on a copy, the destructive modes can't touch the original
+  document.querySelectorAll(".cv-copy-safe").forEach(el => {
+    el.style.display = destIsCopy("convert") ? "" : "none";
+  });
+  for (const k of ["compact", "enhance", "convert"]) {
     $(k + "-dest-field").style.display = destIsCopy(k) ? "" : "none";
   }
 }
-["compact", "enhance"].forEach(k => {
+["compact", "enhance", "convert"].forEach(k => {
   $(k + "-dest").querySelectorAll("button").forEach(b => {
     b.onclick = () => {
       $(k + "-dest").querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
@@ -3548,7 +3596,7 @@ function copyOutFor(srcPath, suffix) {
 // overwriting a path the user typed or browsed to themselves.
 function autoFillCopyOut(kind, srcPath) {
   const inp = $(kind + "-dest-out");
-  const auto = copyOutFor(srcPath, kind === "compact" ? "_compacted" : "_enhanced");
+  const auto = copyOutFor(srcPath, COPY_SUFFIX[kind]);
   if (!inp.value || inp.value === inp.dataset.auto) inp.value = auto;
   inp.dataset.auto = auto;
 }
@@ -3559,7 +3607,7 @@ async function browseCopyOut(kind) {
     const src = state[kind];
     const sep = path.includes("\\") ? "\\" : "/";
     const name = src ? src.path.split(/[\\/]/).filter(Boolean).pop()
-      + (kind === "compact" ? "_compacted" : "_enhanced") : "";
+      + COPY_SUFFIX[kind] : "";
     $(kind + "-dest-out").value = name ? path.replace(/[\\/]+$/, "") + sep + name : path;
   } catch (e) { snack(e.message); }
 }
@@ -3832,6 +3880,8 @@ function setConvert(info, action) {
   $("convert-sel").style.display = "none";
   $("convert-info").style.display = "";
   $("convert-opts").style.display = "";
+  $("convert-dest-card").style.display = "";
+  autoFillCopyOut("convert", info.path);
   $("cv-tojson").style.display = action === "tojson" ? "" : "none";
   $("cv-tohtml").style.display = action === "tohtml" ? "" : "none";
   $("cv-enrich").style.display = action === "enrich" ? "" : "none";
@@ -3853,6 +3903,7 @@ function clearConvert() {
   $("convert-sel").style.display = "";
   $("convert-info").style.display = "none";
   $("convert-opts").style.display = "none";
+  $("convert-dest-card").style.display = "none";
   $("convert-btn").disabled = true;
 }
 
@@ -3923,8 +3974,10 @@ function runConvert() {
     : state.convertAction;
   const faithful = mode === "tojson" &&
     document.querySelector("#cv-mode button.active").dataset.mode === "faithful";
+  const output = copyOutput("convert");
+  if (output === "") return snack(t("snack_need_copy_out"));
   startJob("/api/convert",
-    { export: state.convert.path, mode, faithful },
+    { export: state.convert.path, mode, faithful, output },
     t("job_converting"));
 }
 
@@ -4177,8 +4230,10 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/convert":
                 start_job(lambda: do_convert(
                     body["export"], body["mode"],
-                    body.get("faithful", False)),
-                    f"convertir ({body['mode']}) {body['export']}")
+                    body.get("faithful", False), body.get("output")),
+                    f"convertir ({body['mode']}) {body['export']}"
+                    f"{_dest_label(body)}",
+                    cancellable=bool(body.get("output")))
                 self._json({"ok": True})
             elif self.path == "/api/fuse":
                 start_job(lambda: do_fuse(

@@ -122,5 +122,6 @@ El HTML no contiene algunos datos del JSON oficial, así que no se pueden recupe
 
 ### Seguridad
 
+- **Sobre una copia:** desde la terminal, el conversor trabaja siempre en la carpeta indicada. Para convertir una copia completa del export sin tocar el original, usa la interfaz gráfica (*Crear una copia*).
 - **La media nunca se copia:** los dos formatos la enlazan por la misma ruta relativa (`photos/…`, `video_files/…`). Por eso el resultado se escribe dentro de la carpeta del export; si lo guardas en otro sitio con `-o`, esos enlaces dejarán de funcionar desde ahí.
 - **Sin sobrescrituras accidentales:** `--to-json`, `--enrich` y `--downgrade` se niegan a sobrescribir un `result.json` o `result_enriched.json` que no haya generado esta herramienta (lo reconocen por la marca `generated_by` / `enriched_by`). `--to-html` no sobrescribe páginas existentes sin `--force`.

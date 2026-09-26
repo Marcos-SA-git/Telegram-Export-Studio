@@ -519,6 +519,7 @@ details.warn-item[open] summary::after { transform: rotate(180deg); }
             <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
             <span data-i18n="faithful_warn"></span>
           </div>
+          <div class="hint cv-copy-safe" style="display:none" data-i18n="cv_copy_safe"></div>
           <div class="hint" data-i18n="tojson_hint" style="margin-top:12px"></div>
         </div>
         <div id="cv-tohtml" style="display:none">
@@ -538,7 +539,16 @@ details.warn-item[open] summary::after { transform: rotate(180deg); }
             <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
             <span data-i18n="downgrade_warn"></span>
           </div>
+          <div class="hint cv-copy-safe" style="display:none" data-i18n="cv_copy_safe"></div>
         </div>
+      </div>
+      <div class="card" id="convert-dest-card" style="display:none">
+        <h2 data-i18n="dest_h"></h2>
+        <div class="seg2" id="convert-dest">
+          <button data-dest="inplace" class="active" data-i18n="dest_inplace"></button>
+          <button data-dest="copy" data-i18n="dest_copy"></button>
+        </div>
+        <div class="hint" style="margin-top:12px" id="convert-dest-hint"></div>
       </div>
       <button class="btn filled wide" id="convert-btn" onclick="runConvert()" disabled>
         <svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
@@ -737,6 +747,8 @@ es: {
   btn_continue: "Añadir igualmente",
   res_written_fuse: "Resultado guardado en la carpeta nueva «{name}». Abre messages.html para verlo.",
   cancel_fuse_removed: "La fusión incompleta se ha eliminado; tus exports de origen no se han modificado.",
+  cv_inplace_hint: "El resultado se escribe dentro del propio export, junto a su media. Salvo en los modos marcados en rojo, solo se añaden archivos: lo que ya había no se modifica.",
+  cv_copy_safe: "Como trabajas sobre una copia, el export original no se modificará: la pérdida solo afecta a la copia.",
 },
 en: {
   cta_download: "Desktop version",
@@ -881,6 +893,8 @@ en: {
   btn_continue: "Add anyway",
   res_written_fuse: "Result saved in the new “{name}” folder. Open messages.html to view it.",
   cancel_fuse_removed: "The incomplete merge was removed; your source exports were not modified.",
+  cv_inplace_hint: "The result is written inside the export itself, next to its media. Except in the modes flagged in red, files are only added: what was already there isn't modified.",
+  cv_copy_safe: "Since you're working on a copy, the original export won't be modified: the loss only affects the copy.",
 },
 fr: {
   cta_download: "Version de bureau",
@@ -1029,6 +1043,8 @@ fr: {
   btn_continue: "Ajouter quand même",
   res_written_fuse: "Résultat enregistré dans le nouveau dossier « {name} ». Ouvrez messages.html pour le voir.",
   cancel_fuse_removed: "La fusion incomplète a été supprimée ; vos exports source n'ont pas été modifiés.",
+  cv_inplace_hint: "Le résultat est écrit dans l'export lui-même, à côté de ses médias. Sauf dans les modes signalés en rouge, des fichiers sont seulement ajoutés : ce qui existait n'est pas modifié.",
+  cv_copy_safe: "Comme vous travaillez sur une copie, l'export d'origine ne sera pas modifié : la perte ne concerne que la copie.",
 },
 de: {
   cta_download: "Desktop-Version",
@@ -1177,6 +1193,8 @@ de: {
   btn_continue: "Trotzdem hinzufügen",
   res_written_fuse: "Ergebnis im neuen Ordner „{name}“ gespeichert. Öffne messages.html, um es anzusehen.",
   cancel_fuse_removed: "Das unvollständige Zusammenführen wurde entfernt; deine Quell-Exporte wurden nicht verändert.",
+  cv_inplace_hint: "Das Ergebnis wird im Export selbst gespeichert, neben seinen Medien. Außer in den rot markierten Modi werden nur Dateien hinzugefügt: Vorhandenes wird nicht verändert.",
+  cv_copy_safe: "Da du mit einer Kopie arbeitest, wird der ursprüngliche Export nicht verändert: Der Verlust betrifft nur die Kopie.",
 },
 pt: {
   cta_download: "Versão para computador",
@@ -1325,6 +1343,8 @@ pt: {
   btn_continue: "Adicionar mesmo assim",
   res_written_fuse: "Resultado salvo na pasta nova «{name}». Abra messages.html para vê-lo.",
   cancel_fuse_removed: "A mesclagem incompleta foi removida; seus exports de origem não foram modificados.",
+  cv_inplace_hint: "O resultado é gravado dentro do próprio export, junto com sua mídia. Exceto nos modos marcados em vermelho, apenas se adicionam arquivos: o que já existia não é modificado.",
+  cv_copy_safe: "Como você está trabalhando em uma cópia, o export original não será modificado: a perda só afeta a cópia.",
 },
 it: {
   cta_download: "Versione desktop",
@@ -1473,6 +1493,8 @@ it: {
   btn_continue: "Aggiungi comunque",
   res_written_fuse: "Risultato salvato nella nuova cartella «{name}». Apri messages.html per vederlo.",
   cancel_fuse_removed: "L'unione incompleta è stata rimossa; i tuoi export di origine non sono stati modificati.",
+  cv_inplace_hint: "Il risultato viene scritto nell'export stesso, accanto ai suoi media. Tranne nelle modalità segnalate in rosso, vengono solo aggiunti file: ciò che c'era già non viene modificato.",
+  cv_copy_safe: "Poiché lavori su una copia, l'export originale non verrà modificato: la perdita riguarda solo la copia.",
 },
 ru: {
   cta_download: "Настольная версия",
@@ -1621,6 +1643,8 @@ ru: {
   btn_continue: "Добавить всё равно",
   res_written_fuse: "Результат сохранён в новой папке «{name}». Откройте messages.html, чтобы посмотреть.",
   cancel_fuse_removed: "Незавершённое объединение удалено; исходные экспорты не изменены.",
+  cv_inplace_hint: "Результат записывается в сам экспорт, рядом с его медиа. Кроме режимов, отмеченных красным, файлы только добавляются: то, что уже было, не изменяется.",
+  cv_copy_safe: "Вы работаете с копией, поэтому исходный экспорт не изменится: потеря затронет только копию.",
 },
 zh: {
   cta_download: "桌面版",
@@ -1769,6 +1793,8 @@ zh: {
   btn_continue: "仍然添加",
   res_written_fuse: "结果已保存到新文件夹「{name}」。打开 messages.html 即可查看。",
   cancel_fuse_removed: "未完成的合并已删除；源导出未被修改。",
+  cv_inplace_hint: "结果会写入导出本身，与其媒体放在一起。除红色标出的模式外，只会添加文件：已有内容不会被修改。",
+  cv_copy_safe: "由于你在副本上操作，原始导出不会被修改：数据损失只影响副本。",
 },
 ja: {
   cta_download: "デスクトップ版",
@@ -1917,6 +1943,8 @@ ja: {
   btn_continue: "それでも追加",
   res_written_fuse: "結果を新しいフォルダー「{name}」に保存しました。messages.html を開いて確認してください。",
   cancel_fuse_removed: "未完了の結合は削除されました。元のエクスポートは変更されていません。",
+  cv_inplace_hint: "結果はエクスポート自体の中、メディアの横に書き込まれます。赤で示したモード以外では、ファイルが追加されるだけで既存のものは変更されません。",
+  cv_copy_safe: "コピー上で作業しているため、元のエクスポートは変更されません。失われるのはコピーのデータだけです。",
 },
 hi: {
   cta_download: "डेस्कटॉप संस्करण",
@@ -2065,6 +2093,8 @@ hi: {
   btn_continue: "फिर भी जोड़ें",
   res_written_fuse: "परिणाम नए फ़ोल्डर “{name}” में सहेजा गया। देखने के लिए messages.html खोलें।",
   cancel_fuse_removed: "अधूरा मर्ज हटा दिया गया; आपके स्रोत एक्सपोर्ट में कोई बदलाव नहीं हुआ।",
+  cv_inplace_hint: "परिणाम एक्सपोर्ट के अंदर ही, उसकी मीडिया के साथ लिखा जाता है। लाल रंग में चिह्नित मोड को छोड़कर, केवल फ़ाइलें जोड़ी जाती हैं: जो पहले से था उसमें कोई बदलाव नहीं होता।",
+  cv_copy_safe: "चूँकि आप एक कॉपी पर काम कर रहे हैं, मूल एक्सपोर्ट में कोई बदलाव नहीं होगा: नुकसान केवल कॉपी पर होगा।",
 },
 ar: {
   cta_download: "نسخة سطح المكتب",
@@ -2213,6 +2243,8 @@ ar: {
   btn_continue: "إضافة على أي حال",
   res_written_fuse: "حُفظت النتيجة في المجلد الجديد «{name}». افتح messages.html لعرضها.",
   cancel_fuse_removed: "حُذف الدمج غير المكتمل؛ ولم تُعدَّل تصديراتك المصدر.",
+  cv_inplace_hint: "تُكتب النتيجة داخل التصدير نفسه بجانب وسائطه. باستثناء الأوضاع المميَّزة باللون الأحمر، تُضاف ملفات فقط: لا يُعدَّل ما كان موجودًا.",
+  cv_copy_safe: "بما أنك تعمل على نسخة، فلن يُعدَّل التصدير الأصلي: الفقدان يطال النسخة فقط.",
 }
 };
 document.querySelectorAll(".srclink").forEach(a => { a.href = REPO_URL; });
@@ -2361,15 +2393,20 @@ document.querySelectorAll("#compact-mode button").forEach(b => {
 
 // Compact/enhance destination: rewrite the export in place, or work on a
 // fresh copy and leave the original untouched.
-const DEST_SEGS = ["compact-dest", "enhance-dest"];
+const DEST_SEGS = ["compact-dest", "enhance-dest", "convert-dest"];
 function destIsCopy(id) {
   return $(id).querySelector("button.active").dataset.dest === "copy";
 }
 function updateDestHints() {
   for (const id of DEST_SEGS) {
-    const inplace = id === "enhance-dest" ? enhanceDestHint() : "dest_inplace_hint";
+    const inplace = id === "enhance-dest" ? enhanceDestHint()
+      : id === "convert-dest" ? "cv_inplace_hint" : "dest_inplace_hint";
     $(id + "-hint").textContent = t(destIsCopy(id) ? "dest_copy_hint" : inplace);
   }
+  // on a copy, the destructive converter modes can't touch the original
+  document.querySelectorAll(".cv-copy-safe").forEach(el => {
+    el.style.display = destIsCopy("convert-dest") ? "" : "none";
+  });
 }
 for (const id of DEST_SEGS) {
   $(id).querySelectorAll("button").forEach(b => {
@@ -4186,6 +4223,7 @@ function setConvert(info, action) {
   $("convert-sel").style.display = "none";
   $("convert-info").style.display = "";
   $("convert-opts").style.display = "";
+  $("convert-dest-card").style.display = "";
   $("cv-tojson").style.display = action === "tojson" ? "" : "none";
   $("cv-tohtml").style.display = action === "tohtml" ? "" : "none";
   $("cv-enrich").style.display = action === "enrich" ? "" : "none";
@@ -4227,6 +4265,7 @@ function clearConvert() {
   $("convert-sel").style.display = "";
   $("convert-info").style.display = "none";
   $("convert-opts").style.display = "none";
+  $("convert-dest-card").style.display = "none";
   $("convert-btn").disabled = true;
 }
 
@@ -4272,34 +4311,83 @@ async function pickConvert() {
   } catch (e) { if (e.name !== "AbortError") snack(pyError(e)); }
 }
 
-// Always in place, like the desktop converter: the output has to sit next
-// to the media it references by relative path. Not cancellable — the
-// Python step is quick and stopping while writing back would leave the
-// folder half converted.
+// Converts the export folder `handle` in place: mirrors its pages and JSON
+// into pyodide, runs the conversion there and writes back what it produced
+// (and removes what the official format drops). Returns the result.
+async function convertFolder(handle, mode, faithful) {
+  await loadConvertToFS(handle);
+  const res = JSON.parse(glue.run_convert(CONVERT_WORK, mode, faithful));
+  setStage(t("stage_saving"), null);
+  for (const rel of res.write) await writeFsFile(handle, rel, CONVERT_WORK + "/" + rel);
+  if (res.remove.length) await removeConvertLeftovers(handle, res.remove);
+  dbg(`convertir: escritos ${res.write.length} archivo(s) en «${handle.name}»`);
+  return res;
+}
+
+// A full copy of the export folder, pages and JSON included (copyExport
+// leaves the pages to the job that rewrites them; here they must travel).
+async function copyWholeExport(src, dst, failed) {
+  await copyExport(src, dst, failed);
+  for await (const [name, h] of src.entries()) {
+    checkCancel();
+    if (h.kind !== "file" || !HTML_RE.test(name)) continue;
+    const fh = await dst.getFileHandle(name, { create: true });
+    await (await h.getFile()).stream().pipeTo(await fh.createWritable(), { signal: cancelSignal() });
+  }
+}
+
+// In place (default) or on a new "<export>_converted" folder. The copy has
+// to be complete, media included: the result links the media by relative
+// path, so it only works next to it. Only the copy is cancellable —
+// stopping while writing back in place would leave the folder half
+// converted.
 async function runConvert() {
   if (!state.convert || !state.convertAction) return;
-  const handle = state.convert.handle;
+  const src = state.convert.handle;
   const mode = state.convertAction === "eo"
     ? document.querySelector("#cv-eo-mode button.active").dataset.eo
     : state.convertAction;
   const faithful = mode === "tojson" &&
     document.querySelector("#cv-mode button.active").dataset.mode === "faithful";
-  dbg(`convertir: modo=${mode}${faithful ? " (formato oficial)" : ""}`);
-  showJob(t("job_converting"));
-  try {
-    await loadConvertToFS(handle);
-    const res = JSON.parse(glue.run_convert(CONVERT_WORK, mode, faithful));
-    setStage(t("stage_saving"), null);
-    for (const rel of res.write) await writeFsFile(handle, rel, CONVERT_WORK + "/" + rel);
-    if (res.remove.length) await removeConvertLeftovers(handle, res.remove);
-    dbg(`convertir: escritos ${res.write.length} archivo(s)`);
-    endJob(true, res, null, mode === "tohtml"
-      ? t("res_written") : handle.name + "/" + res.write[0]);
-  } catch (e) {
-    endJob(false, null, pyError(e));
+  const copy = destIsCopy("convert-dest");
+  dbg(`convertir: modo=${mode}${faithful ? " (formato oficial)" : ""}, ` +
+      `resultado: ${copy ? "copia" : "modificar el original"}`);
+  const writtenMsg = (folder, res) => mode === "tohtml"
+    ? t("res_written") : folder + "/" + res.write[0];
+
+  if (!copy) {
+    showJob(t("job_converting"));
+    try {
+      const res = await convertFolder(src, mode, faithful);
+      endJob(true, res, null, writtenMsg(src.name, res));
+    } catch (e) {
+      endJob(false, null, pyError(e));
+    }
+    // what the folder holds now (e.g. HTML + the new JSON -> enrich next)
+    try { await setConvertHandle(src, true); } catch (_) { clearConvert(); }
+    return;
   }
-  // what the folder holds now (e.g. HTML + the new JSON -> enrich next)
-  try { await setConvertHandle(handle, true); } catch (_) { clearConvert(); }
+
+  if (!await preflight([src])) return;
+  const dest = await pickCopyTarget(src, "_converted");
+  if (!dest) return;
+  showJob(t("job_converting"), true);
+  try {
+    const failed = [];
+    await copyWholeExport(src, dest.handle, failed);
+    checkCancel();
+    const res = await convertFolder(dest.handle, mode, faithful);
+    endJob(true, res, null, t("res_written_copy", { name: dest.name }));
+    // files the conversion itself wrote or removed don't belong in the
+    // rescue ZIP (e.g. the official format drops css/, js/, images/)
+    const gone = new Set([...res.write, ...res.remove]);
+    const rescuable = failed.filter(f => !gone.has(f.target) && !gone.has(f.target.split("/")[0]));
+    if (rescuable.length) offerRescue(dest.name, rescuable);
+  } catch (e) {
+    await discardCopy(dest);
+    if (e instanceof JobCancelled) endCancelled(t("cancel_copy_removed"));
+    else endJob(false, null, pyError(e));
+  }
 }
 
 /* ================= init ================= */

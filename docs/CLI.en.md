@@ -122,5 +122,6 @@ The HTML lacks some data of the official JSON, so it can't be recovered when con
 
 ### Safety
 
+- **On a copy:** from the terminal, the converter always works in the given folder. To convert a full copy of the export without touching the original, use the graphical interface (*Create a copy*).
 - **Media is never copied:** both formats link it by the same relative path (`photos/…`, `video_files/…`). That's why the result is written inside the export folder; if you save it elsewhere with `-o`, those links will stop working from there.
 - **No accidental overwrites:** `--to-json`, `--enrich` and `--downgrade` refuse to overwrite a `result.json` or `result_enriched.json` this tool didn't generate (recognized by the `generated_by` / `enriched_by` mark). `--to-html` doesn't overwrite existing pages without `--force`.

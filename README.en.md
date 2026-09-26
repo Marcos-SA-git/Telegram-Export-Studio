@@ -27,7 +27,7 @@ Unless the app flags it in red, everything is reversible and as much information
 - **Compact** loses no message and can be repeated with another size whenever you like.
 - **Enhance** is undone by unticking the options: the export goes back to its original HTML, identical byte for byte.
 - **Convert** only adds files. The only two exceptions are flagged in red before they run.
-- **Compact** and **Enhance** can also work on a copy, leaving the original untouched.
+- **Compact**, **Enhance** and **Convert** can also work on a copy, leaving the original untouched.
 
 > **What to export:** a single chat from Telegram Desktop. Inside the chat, ⋮ menu → *Export chat history*, in HTML format.
 > The full account export (*Settings → Advanced → Export Telegram data*) is not supported yet ([issue #2](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/2)).
@@ -96,7 +96,7 @@ The app detects what the folder holds and offers the right operation:
 - **Enriched** (default): Telegram's official schema plus data that format doesn't cover, such as call status or file names.
 - ⚠️ **Official format** and **downgrade to official format** are destructive: they drop that extra data. The official format also deletes the HTML pages and `css/`, `js/`, `images/`, so the folder looks like a real JSON export.
 - It never overwrites a `result.json` the tool didn't generate itself.
-- Media isn't copied: it's linked by relative path. That's why the result is always written inside the export folder.
+- Media is linked by relative path, so the result is written inside the export folder. If you choose *Create a copy*, the whole export is copied, media included, and the copy is converted: the safe way to use the destructive modes.
 
 The exact JSON fields are in the [CLI reference](docs/CLI.en.md#convert--convert-between-html-and-json).
 

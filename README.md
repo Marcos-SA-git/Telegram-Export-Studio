@@ -27,7 +27,7 @@ Salvo que la app lo avise en rojo, todo es reversible y se conserva toda la info
 - **Compactar** no pierde ningún mensaje y se puede repetir con otro tamaño cuando quieras.
 - **Mejorar** se deshace desmarcando las opciones: el export vuelve a su HTML original, idéntico byte a byte.
 - **Convertir** solo añade archivos. Las dos únicas excepciones se avisan en rojo antes de ejecutarlas.
-- **Compactar** y **Mejorar** también pueden trabajar sobre una copia, dejando el original intacto.
+- **Compactar**, **Mejorar** y **Convertir** también pueden trabajar sobre una copia, dejando el original intacto.
 
 > **Qué exportar:** un chat concreto desde Telegram Desktop. Dentro del chat, menú ⋮ → *Exportar historial del chat*, en formato HTML.
 > La exportación completa de la cuenta (*Ajustes → Avanzado → Exportar datos de Telegram*) todavía no está soportada ([issue #2](https://github.com/Marcos-SA-git/Telegram-Export-Studio/issues/2)).
@@ -96,7 +96,7 @@ La app detecta qué contiene la carpeta y propone la operación adecuada:
 - **Enriquecido** (por defecto): el esquema oficial de Telegram más los datos que ese formato no recoge, como el estado de las llamadas o los nombres de archivo.
 - ⚠️ **Formato oficial** y **bajar a formato oficial** son destructivos: descartan esos datos extra. El formato oficial borra además las páginas HTML y `css/`, `js/`, `images/`, para que la carpeta quede como un export JSON real.
 - Nunca sobrescribe un `result.json` que no haya generado la propia herramienta.
-- La media no se copia: se enlaza por ruta relativa. Por eso el resultado se escribe siempre dentro de la carpeta del export.
+- La media se enlaza por ruta relativa, así que el resultado se escribe dentro de la carpeta del export. Si eliges *Crear una copia*, se copia el export completo, media incluida, y se convierte la copia: es la forma segura de usar los modos destructivos.
 
 Los campos exactos del JSON están en la [referencia de la CLI](docs/CLI.md#convert--convertir-entre-html-y-json).
 
